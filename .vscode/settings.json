@@ -72,5 +72,6 @@
         "valarray": "cpp"
     },
     "editor.formatOnSave": true,
-    "C_Cpp.clang_format_path": "/usr/local/bin/clang-format"
+    "C_Cpp.clang_format_path": "/usr/local/bin/clang-format",
+    "editor.defaultFormatter": "ms-vscode.cpptools"
 }
