@@ -6,4 +6,10 @@ A Trusted Lock Manager, which allows the use of different isolation levels. The 
 
 ## Getting Started
 
+Install the githooks via
+
+```
+git config core.hookspath .githooks
+```
+
 ## Requirements
