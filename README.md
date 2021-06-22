@@ -41,6 +41,7 @@ git config core.hookspath .githooks
 3. Configure the build
 ```
 # add -GNinja to build with Ninja instead of unix Makefiles
+# add -DWITH_ASAN=TRUE to build with address sanitizer enabled
 cmake -S . -B build
 ```
 4. Build the code
