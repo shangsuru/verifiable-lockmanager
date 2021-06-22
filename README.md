@@ -32,7 +32,7 @@ All (sub)folders containing C++ code follow the project structure describe in th
 
 1. Clone this repo with 
 ```
-git clone git@bitbucket.org:trustdble/trustdble-adapters.git
+git clone git@bitbucket.org:trustdble/trustdble-lockmanager.git
 ```  
 2. Install the githooks via
 ```
