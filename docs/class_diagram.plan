@@ -1,0 +1,58 @@
+@startuml uml
+scale 2
+
+class LockManager {
+    - lockTable: concurrent_hash_map<int, Lock>
+    - transactionTable: concurrent_hash_map<int, Transaction>
+    - privateKey: PrivateKey
+    
+    + lock(transactionId: int, rowId: int, mode LockMode)
+    + unlock(transactionId: int, rowId: int)
+    + deleteTransaction(transactionId: int)
+    + hasLock(transactionId: int, rowId: int) -> bool
+    + getLockMode(rowId: int) -> LockMode
+    + sign(transactionId: int, rowId: int, lockTimeout: int) -> string
+}
+
+class Lock {
+    - owners : set<Transaction>
+    - waiters: condition_variable
+    - exclusive: bool
+    - numSharedOwners: int
+
+    + getMode() -> LockMode
+    + getOwners() -> set<Transaction>
+    + acquire(t: Transaction, mode: LockMode)
+    + release(t: Transaction)
+    + upgrade(t: Transaction)
+    - acquireSharedLock(t: Transaction)
+    - acquireExclusiveLock(t: Transaction)
+    - isExclusive()
+    - isShared()
+}
+
+class Transaction {
+    - transactionId: int
+    - locks: set<Lock>
+    - phase: Phase
+    - lockBudget: int
+
+    + getId() -> int
+    + getLocks() -> set<Lock>
+    + getPhase() -> Phase
+    + addLock(lock: Lock)
+    + deleteLock(lock: Lock)
+    + getLockBudget() -> int
+}
+
+enum Phase {
+    GROWING
+    SHRINKING
+}
+
+enum LockMode {
+    SHARED
+    EXCLUSIVE
+}
+
+@enduml
