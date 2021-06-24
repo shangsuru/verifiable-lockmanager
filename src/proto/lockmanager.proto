@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+message LockRequest {
+    // Identifies the transaction, that requests the lock
+    uint32 transaction_id = 1;
+    // Identifies the rows that the transaction wants to access
+    uint32 row_id = 2;
+}
+
+message LockResponse {
+    // Returns true, if the lock got released after a call to Unlock
+    // or if the lock was acquired for the requesting transaction.
+    // Reasons the lock cannot be acquired are:
+    //  - the transaction did not register itself to the lock manager prior to requesting a lock
+    //  - the deadlock prevention mechanism detected that this lock request would cause a deadlock
+    //  - the transaction requests a lock after it already entered the shrinking phase, violating 2PL
+    bool successful = 1;
+    // If the lock got acquired, the signature of (TXID, RID, block timeout) is used to proof that
+    optional string signature = 2;
+}
+
+message Registration {
+    uint32 lock_budget = 1;
+}
+
+message Acceptance {
+    bool accepted = 1;
+}
+
+service LockingService {
+    // Sets maximum number of locks the transaction aims to acquire prior to requesting locks
+    rpc RegisterTransaction(Registration) returns (Acceptance) {};
+    // Requests a shared lock for reading a row
+    rpc LockShared(LockRequest) returns (LockResponse) {};
+    // Requests an exclusive lock for writing a row
+    // When holding a shared lock it will attempt to upgrade it to an exclusive lock
+    rpc LockExclusive(LockRequest) returns (LockResponse) {};
+    // Unlocks the specified lock
+    rpc Unlock(LockRequest) returns (LockResponse) {};
+}
