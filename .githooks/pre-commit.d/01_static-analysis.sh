@@ -57,7 +57,7 @@ fi
 # -DCMAKE_EXPORT_COMPILE_COMMANDS=ON will generate a compile_commands.json that will serve as a compile command database
 # -S refers to the folder with the source files and -B to the build folder
 # Do not use ninja since it generates realtive compile commands that run-clang-tidy cannot handle
-BUILDFOLDER=build-tidy
+BUILDFOLDER=build
 cmake -S . -B ${BUILDFOLDER} -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 echo "Running clang-tidy on the following files:"
@@ -74,5 +74,5 @@ if [[ -f "fixes.yaml" ]]; then
     # We have applied fixes that the developer need to stage => return non 0 exit code
     result=1
 fi
-rm -rf $BUILDFOLDER
+# rm -rf $BUILDFOLDER
 exit $result

@@ -26,6 +26,7 @@
  
    # folders and files that should be considered by doxygen
    ${PROJECT_SOURCE_DIR}/src
+   ${PROJECT_SOURCE_DIR}/include
    ${CMAKE_CURRENT_SOURCE_DIR}/mainpage.md
    COMMENT "Generate documentation using doxygen"
  )
