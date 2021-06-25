@@ -46,7 +46,7 @@ BUILDFOLDER=build
 # -S refers to the folder with the source files and -B to the build folder
 cmake -S . -B ${BUILDFOLDER} -DCMAKE_CXX_COMPILER=${COMPILER} -DCMAKE_BUILD_TYPE=Debug -DWITH_ASAN=ON -DCMAKE_CXX_STANDARD_LIBRARIES="-lcurl"
 # We have to build the tests
-cmake --build ${BUILDFOLDER}
+# cmake --build ${BUILDFOLDER}
 # Now we can trigger the test to run
 # cmake --build ${BUILDFOLDER} --target test -- ARGS="-R Stub* --output-on-failure"
 result=$?
