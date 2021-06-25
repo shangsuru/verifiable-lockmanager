@@ -1,8 +1,11 @@
 #pragma once
 
+#include <iostream>
+#include <libcuckoo/cuckoohash_map.hh>
 #include <string_view>
 
 #include "lock.h"
+#include "transaction.h"
 
 /**
  * A LockManager
@@ -71,5 +74,6 @@ class LockManager {
 
  private:
   int privateKey_ = 0;  // TODO
-  // TODO: lockTable, transactionTable
+  libcuckoo::cuckoohash_map<unsigned int, Lock> lockTable_;
+  libcuckoo::cuckoohash_map<unsigned int, Transaction> transactionTable_;
 };

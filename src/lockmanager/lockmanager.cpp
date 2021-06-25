@@ -1,7 +1,5 @@
 #include <lockmanager.h>
 
-#include <iostream>
-
 void LockManager::lock(unsigned int transactionId, unsigned int rowId,
                        Lock::LockMode lockMode) {
   std::cout << __FUNCTION__ << " not yet implemented" << std::endl;
