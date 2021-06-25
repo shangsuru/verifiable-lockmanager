@@ -2,10 +2,15 @@
 
 #include <set>
 
-// #include "transaction.h"
-
+/**
+ * A Lock
+ */
 class Lock {
  public:
+  /**
+   * A lock can either be shared, then it allows multiple reads
+   * or exclusive, then it allows only one write access
+   */
   enum LockMode { kShared, kExclusive };
   // auto getMode() -> LockMode;
   // auto getOwners() -> std::set<Transaction>;
@@ -14,6 +19,5 @@ class Lock {
   // void upgrade(Transaction t);
 
  private:
-  // std::set<Transaction> owners_;
   bool exclusive_;
 };

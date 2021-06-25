@@ -21,6 +21,17 @@ using grpc::Status;
  */
 class LockingServiceImpl final : public LockingService::Service {
  public:
+  /**
+   * Unpacks the LockRequest by a client to acquire the respective exclusive
+   * lock.
+   *
+   * @param context contains metadata about the request
+   * @param request containing transaction ID and row ID of the client request,
+   *                that identify client and the row it wants a lock on
+   * @param response contains if the lock was acquired successfully and if it
+   *                 was a signature of the lock
+   * @return the status code of the RPC call (OK or a specific error code)
+   */
   auto LockExclusive(ServerContext* context, const LockRequest* request,
                      LockResponse* response) -> Status override {
     unsigned int transaction_id = request->transaction_id();
@@ -34,6 +45,17 @@ class LockingServiceImpl final : public LockingService::Service {
     return Status::OK;
   }
 
+  /**
+   * Unpacks the LockRequest by a client to acquire the respective shared
+   * lock.
+   *
+   * @param context contains metadata about the request
+   * @param request containing transaction ID and row ID of the client request,
+   *                that identify client and the row it wants a lock on
+   * @param response contains if the lock was acquired successfully and if it
+   *                 was a signature of the lock
+   * @return the status code of the RPC call (OK or a specific error code)
+   */
   auto LockShared(ServerContext* context, const LockRequest* request,
                   LockResponse* response) -> Status override {
     unsigned int transaction_id = request->transaction_id();
@@ -47,6 +69,17 @@ class LockingServiceImpl final : public LockingService::Service {
     return Status::OK;
   }
 
+  /**
+   * Unpacks the LockRequest by a client to release a lock he acquired
+   * previously.
+   *
+   * @param context contains metadata about the request
+   * @param request containing transaction ID and row ID of the client request,
+   *                that identify client and the row it wants to unlock
+   * @param response contains if the lock was released successfully as
+   *                 acknowledgement
+   * @return the status code of the RPC call (OK or a specific error code)
+   */
   auto Unlock(ServerContext* context, const LockRequest* request,
               LockResponse* response) -> Status override {
     unsigned int transaction_id = request->transaction_id();

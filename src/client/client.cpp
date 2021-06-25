@@ -15,10 +15,22 @@ using grpc::Status;
  */
 class LockingServiceClient {
  public:
+  /**
+   * Initializes a new client stub, which provides the functions for
+   * the gRPC calls to the server.
+   *
+   * @param channel the abstraction of a connection to the remote server
+   */
   LockingServiceClient(const std::shared_ptr<Channel> &channel) {
     stub_ = LockingService::NewStub(channel);
   }
 
+  /**
+   * Requests a shared lock for read-only access to a row.
+   *
+   * @param transactionId identifies the transaction that makes the request
+   * @param rowId identifies the row, the transaction wants to access
+   */
   void requestSharedLock(int transactionId, int rowId) {
     LockRequest request;
     request.set_transaction_id(transactionId);
@@ -38,6 +50,12 @@ class LockingServiceClient {
     }
   }
 
+  /**
+   * Requests an exclusive lock for sole write access to a row.
+   *
+   * @param transactionId identifies the transaction that makes the request
+   * @param rowId identifies the row, the transaction wants to access
+   */
   void requestExclusiveLock(int transactionId, int rowId) {
     LockRequest request;
     request.set_transaction_id(transactionId);
@@ -57,6 +75,12 @@ class LockingServiceClient {
     }
   }
 
+  /**
+   * Requests to release a lock acquired by the transaction.
+   *
+   * @param transactionId identifies the transaction that makes the request
+   * @param rowId identifies the row, the transaction wants to unlock
+   */
   void requestUnlock(int transactionId, int rowId) {
     LockRequest request;
     request.set_transaction_id(transactionId);
