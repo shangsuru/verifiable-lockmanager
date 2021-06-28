@@ -2,13 +2,24 @@
 
 #include <iostream>
 #include <libcuckoo/cuckoohash_map.hh>
-#include <string_view>
+#include <memory>
+#include <stdexcept>
+#include <string>
 
 #include "lock.h"
 #include "transaction.h"
 
+using libcuckoo::cuckoohash_map;
+
+// TODO add exceptions to the comments
+
 /**
- * A LockManager
+ * Process lock and unlock requests from the server. It manages a lock table,
+ * where for each row ID it can store the corresponding lock object, which
+ * contains information like type of lock and number of owners. It also manages
+ * a transaction table, which maps from a transaction Id to the corresponding
+ * transaction object, which holds information like the row IDs the transaction
+ * has a lock on or the transaction's lock budget.
  */
 class LockManager {
  public:
@@ -17,11 +28,12 @@ class LockManager {
    *
    * @param transactionId identifies the transaction making the request
    * @param rowId identifies the row to be locked
-   * @param lockMode either shared for concurrent read access or exclusive for
-   *                 sole write access
+   * @param requestedMode either shared for concurrent read access or exclusive
+   * for sole write access
+   * @returns the signature for the acquired lock
    */
-  static void lock(unsigned int transactionId, unsigned int rowId,
-                   Lock::LockMode lockMode);
+  auto lock(unsigned int transactionId, unsigned int rowId,
+            Lock::LockMode requestedMode) -> std::string;
 
   /**
    * Releases a lock for the specified row
@@ -29,7 +41,23 @@ class LockManager {
    * @param transactionId identifies the transaction making the request
    * @param rowId identifies the row to be released
    */
-  static void unlock(unsigned int transactionId, unsigned int rowId);
+  void unlock(unsigned int transactionId, unsigned int rowId);
+
+ private:
+  /**
+   * Releases all locks the given transaction currently has.
+   *
+   * @param transaction the transaction to be aborted
+   */
+  void abortTransaction(const std::shared_ptr<Transaction>& transaction);
+
+  /**
+   * @returns the block timeout, which resembles a future block number of the
+   *          blockchain in the storage layer. The storage layer will decline
+   *          any requests with a signature that has a block timeout number
+   *          smaller than the current block number.
+   */
+  auto getBlockTimeout() -> unsigned int;
 
   /**
    * Signs a lock with the private key of the lock manager. The signature can be
@@ -43,37 +71,20 @@ class LockManager {
    *                     storage layer reaches the block timeout number
    * @returns the signature of the lock
    */
-  static auto sign(unsigned int transactionId, unsigned int rowId,
-                   unsigned int blockTimeout) -> std::string_view;
-
-  /**
-   * Tells for a given row, if it has a shared or exclusive lock.
-   * It assumes that this function is only called on a row, that
-   * definetly has a lock.
-   *
-   * @param rowId identifies the row
-   * @returns the mode of the lock, either shared or exclusive
-   */
-  static auto getLockMode(unsigned int rowId) -> Lock::LockMode;
+  auto sign(unsigned int transactionId, unsigned int rowId,
+            unsigned int blockTimeout) const -> std::string;
 
   /**
    * Checks if the given transaction has a lock on the specified row.
    *
-   * @param transactionId identifies the transaction
-   * @param rowId identifies the row
+   * @param transaction
+   * @param rowId
    * @returns true if it has lock, else false
    */
-  static auto hasLock(unsigned int transactionId, unsigned int rowId) -> bool;
+  static auto hasLock(const std::shared_ptr<Transaction>& transaction,
+                      unsigned int rowId) -> bool;
 
-  /**
-   * Releases all locks the given transaction currently has.
-   *
-   * @param transactionId identifies the transaction
-   */
-  static void deleteTransaction(unsigned int transactionId);
-
- private:
-  int privateKey_ = 0;  // TODO
-  libcuckoo::cuckoohash_map<unsigned int, Lock> lockTable_;
-  libcuckoo::cuckoohash_map<unsigned int, Transaction> transactionTable_;
+  int privateKey_ = 0;  // TODO set private key
+  cuckoohash_map<unsigned int, std::shared_ptr<Lock>> lockTable_;
+  cuckoohash_map<unsigned int, std::shared_ptr<Transaction>> transactionTable_;
 };
