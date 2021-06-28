@@ -20,7 +20,7 @@ class Transaction {
   /**
    * Assigns the transaction its lock budget when it is created.
    *
-   * @param transactionID identifying the transaction
+   * @param transactionId identifying the transaction
    * @param lockBudget the assigned lockBudget, as determined when registering
    *                   the transaction at the lock manager
    */
