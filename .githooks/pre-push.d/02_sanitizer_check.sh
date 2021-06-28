@@ -40,7 +40,7 @@ done
 # Perform address analysis of code, e.g., using clang-tidy
 echo '[git hook] running build with address sanitizier'
 
-BUILDFOLDER=build-san
+BUILDFOLDER=build
 # Set up a compile command database
 # -DCMAKE_BUILD_TYPE=asan will enable AddressSanitizer to detect memory leaks
 # -S refers to the folder with the source files and -B to the build folder
@@ -51,5 +51,5 @@ cmake --build ${BUILDFOLDER}
 cmake --build ${BUILDFOLDER} --target test -- ARGS="-R Stub* --output-on-failure"
 result=$?
 
-rm -rf ${BUILDFOLDER}
+# rm -rf ${BUILDFOLDER}
 exit $result
