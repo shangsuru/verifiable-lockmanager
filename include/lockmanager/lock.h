@@ -23,33 +23,39 @@ class Lock {
   /**
    * Attempts to acquire shared access for a transaction.
    *
+   * @param transactionId ID of the transaction, that wants to acquire the lock
    * @throws std::domain_error, when the lock is exclusive
    */
-  void getSharedAccess();
+  void getSharedAccess(unsigned int transactionId);
 
   /**
    * Attempts to acquire exclusive access for a transaction.
    *
+   * @param transactionId ID of the transaction, that wants to acquire the lock
    * @throws std::domain_error, if someone already has that lock
    */
-  void getExclusiveAccess();
+  void getExclusiveAccess(unsigned int transactionId);
 
   /**
    * Releases the lock for the calling transaction.
+   *
+   * @param transactionId ID of the calling transaction
    */
-  void release();
+  void release(unsigned int transactionId);
 
   /**
    * Upgrades the lock for the transaction, that currently holds the shared lock
    * alone, to an exclusive lock.
    *
+   * @param transactionId ID of the transaction, that wants to acquire the lock
    * @throws std::domain_error, if some other transaction currently still has
    * shared access to the lock
    */
-  void upgrade();
+  void upgrade(unsigned int transactionId);
 
  private:
   bool exclusive_;
-  unsigned int numSharedOwners_;
+  std::set<unsigned int>
+      owners_;  // IDs of the transactions that currently hold this lock
   std::mutex mut_;
 };
