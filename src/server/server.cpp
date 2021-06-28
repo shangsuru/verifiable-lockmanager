@@ -37,7 +37,7 @@ class LockingServiceImpl final : public LockingService::Service {
     unsigned int transaction_id = request->transaction_id();
     unsigned int row_id = request->row_id();
 
-    LockManager::lock(transaction_id, row_id, Lock::LockMode::kExclusive);
+    lockManager_.lock(transaction_id, row_id, Lock::LockMode::kExclusive);
 
     response->set_successful(true);
     response->set_signature("signature");  // TODO
@@ -61,7 +61,7 @@ class LockingServiceImpl final : public LockingService::Service {
     unsigned int transaction_id = request->transaction_id();
     unsigned int row_id = request->row_id();
 
-    LockManager::lock(transaction_id, row_id, Lock::LockMode::kShared);
+    lockManager_.lock(transaction_id, row_id, Lock::LockMode::kShared);
 
     response->set_successful(true);
     response->set_signature("signature");  // TODO
@@ -85,7 +85,7 @@ class LockingServiceImpl final : public LockingService::Service {
     unsigned int transaction_id = request->transaction_id();
     unsigned int row_id = request->row_id();
 
-    LockManager::unlock(transaction_id, row_id);
+    lockManager_.unlock(transaction_id, row_id);
 
     response->set_successful(true);
     response->set_signature("signature");  // TODO

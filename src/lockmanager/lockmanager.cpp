@@ -93,8 +93,9 @@ void LockManager::abortTransaction(
   // concurrent locking requests?
 };
 
-auto getBlockTimeout() -> unsigned int {
+auto LockManager::getBlockTimeout() const -> unsigned int {
   std::cout << __FUNCTION__ << " not yet implemented" << std::endl;
   // TODO Implement
+  std::cout << privateKey_;
   return 0;
 }

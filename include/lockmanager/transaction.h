@@ -14,6 +14,9 @@ class Transaction {
  public:
   /**
    * Assigns the transaction its lock budget when it is created.
+   *
+   * @param lockBudget the assigned lockBudget, as determined when registering
+   *                   the transaction at the lock manager
    */
   Transaction(unsigned int lockBudget) : lockBudget_(lockBudget){};
 

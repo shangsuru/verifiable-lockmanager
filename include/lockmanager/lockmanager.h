@@ -57,7 +57,7 @@ class LockManager {
    *          any requests with a signature that has a block timeout number
    *          smaller than the current block number.
    */
-  auto getBlockTimeout() -> unsigned int;
+  auto getBlockTimeout() const -> unsigned int;
 
   /**
    * Signs a lock with the private key of the lock manager. The signature can be
