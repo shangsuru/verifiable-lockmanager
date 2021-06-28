@@ -11,8 +11,6 @@
 
 using libcuckoo::cuckoohash_map;
 
-// TODO add exceptions to the comments
-
 /**
  * Process lock and unlock requests from the server. It manages a lock table,
  * where for each row ID it can store the corresponding lock object, which
@@ -31,6 +29,11 @@ class LockManager {
    * @param requestedMode either shared for concurrent read access or exclusive
    * for sole write access
    * @returns the signature for the acquired lock
+   * @throws std::invalid_argument, when transaction did not call
+   * RegisterTransaction before or the given lock mode is unknown
+   * @throws std::domain_error, when the transaction makes a request for a look,
+   *         that it already owns, makes a request for a lock while in the
+   *         shrinking phase, or when the lock budget is exhausted
    */
   auto lock(unsigned int transactionId, unsigned int rowId,
             Lock::LockMode requestedMode) -> std::string;
@@ -40,6 +43,8 @@ class LockManager {
    *
    * @param transactionId identifies the transaction making the request
    * @param rowId identifies the row to be released
+   * @throws std::invalid_argument, when the transaction didn't call
+   * RegisterTransaction before
    */
   void unlock(unsigned int transactionId, unsigned int rowId);
 
