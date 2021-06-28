@@ -1,9 +1,11 @@
 #pragma once
 
+#include <mutex>
 #include <set>
+#include <stdexcept>
 
 /**
- * A Lock
+ * The internal representation of a lock for the lock manager.
  */
 class Lock {
  public:
@@ -12,12 +14,14 @@ class Lock {
    * or exclusive, then it allows only one write access
    */
   enum LockMode { kShared, kExclusive };
-  // auto getMode() -> LockMode;
-  // auto getOwners() -> std::set<Transaction>;
-  // void acquire(Transaction t, LockMode mode);
-  // void release(Transaction t);
-  // void upgrade(Transaction t);
+  auto getMode() -> LockMode;
+  void getSharedAccess();
+  void getExclusiveAccess();
+  void release();
+  void upgrade();
 
  private:
   bool exclusive_;
+  unsigned int numSharedOwners_;
+  std::mutex mut_;
 };
