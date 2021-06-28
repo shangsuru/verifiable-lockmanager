@@ -67,14 +67,7 @@ sign:
 };
 
 void LockManager::unlock(unsigned int transactionId, unsigned int rowId) {
-  try {
-    std::shared_ptr<Lock> lock = lockTable_.find(rowId);
-    lock->release();
-  } catch (const std::out_of_range& e) {
-    std::cout << "The lock does not exist" << std::endl;
-    return;
-  }
-
+  // Get the transaction object
   std::shared_ptr<Transaction> transaction;
   try {
     transaction = transactionTable_.find(transactionId);
@@ -82,7 +75,16 @@ void LockManager::unlock(unsigned int transactionId, unsigned int rowId) {
     throw std::invalid_argument("Transaction was not registered");
   }
 
-  transaction->deleteLock(rowId);
+  // Get the lock object
+  std::shared_ptr<Lock> lock;
+  try {
+    lock = lockTable_.find(rowId);
+  } catch (const std::out_of_range& e) {
+    std::cout << "The lock does not exist" << std::endl;
+    return;
+  }
+
+  transaction->releaseLock(rowId, lock);
 };
 
 auto LockManager::sign(unsigned int transactionId, unsigned int rowId,
@@ -90,12 +92,6 @@ auto LockManager::sign(unsigned int transactionId, unsigned int rowId,
   std::cout << __FUNCTION__ << " not yet implemented" << std::endl;
   std::cout << privateKey_;
   return "DUMMY_SIGNATURE";
-};
-
-auto LockManager::hasLock(const std::shared_ptr<Transaction>& transaction,
-                          unsigned int rowId) -> bool {
-  std::set<unsigned int> locked_rows = transaction->getLockedRows();
-  return locked_rows.find(rowId) != locked_rows.end();
 };
 
 void LockManager::abortTransaction(

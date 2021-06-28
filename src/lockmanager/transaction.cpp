@@ -13,9 +13,14 @@ void Transaction::addLock(unsigned int rowId) {
   lockBudget_--;
 };
 
-void Transaction::deleteLock(unsigned int rowId) {
-  lockedRows_.erase(rowId);
-  phase_ = Phase::kShrinking;
+void Transaction::releaseLock(unsigned int rowId, std::shared_ptr<Lock>& lock) {
+  const std::lock_guard<std::mutex> latch(mut_);
+
+  if (this->hasLock(rowId)) {
+    phase_ = Phase::kShrinking;
+    lockedRows_.erase(rowId);
+    lock->release();
+  }
 };
 
 auto Transaction::hasLock(unsigned int rowId) -> bool {

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <mutex>
 #include <set>
 
 #include "lock.h"
@@ -51,13 +52,14 @@ class Transaction {
   void addLock(unsigned int rowId);
 
   /**
-   *  When the transaction releases a lock, the row ID that lock refers to is
-   * removed from the set of locked rows. Also enters the shrinking phase, if
-   * not already done.
+   * Checks if the transaction currently holds a lock on the given row ID.
+   * If so, it enters the shrinking phase and removes the row ID from the set of
+   * locked rows. Then it releases the lock.
    *
    * @param rowId row ID of the released lock
+   * @param lock the lock to release
    */
-  void deleteLock(unsigned int rowId);
+  void releaseLock(unsigned int rowId, std::shared_ptr<Lock>& lock);
 
   /**
    * @returns maximum number of locks the transaction is allowed to acquire over
@@ -77,4 +79,5 @@ class Transaction {
   std::set<unsigned int> lockedRows_;
   Phase phase_ = Phase::kGrowing;
   unsigned int lockBudget_;
+  std::mutex mut_;
 };
