@@ -34,23 +34,13 @@ auto LockManager::lock(unsigned int transactionId, unsigned int rowId,
     if (transaction->hasLock(rowId) &&
         requestedMode == Lock::LockMode::kExclusive &&
         lock->getMode() == Lock::LockMode::kShared) {
-      lock->upgrade();
+      lock->upgrade(transactionId);
       goto sign;
     }
 
-    // Check for exclusive request
-    if (requestedMode == Lock::LockMode::kExclusive &&
-        !transaction->hasLock(rowId)) {
-      lock->getExclusiveAccess();
-      transaction->addLock(rowId);
-      goto sign;
-    }
-
-    // Check for shared request
-    if (requestedMode == Lock::LockMode::kShared &&
-        !transaction->hasLock(rowId)) {
-      lock->getSharedAccess();
-      transaction->addLock(rowId);
+    // Acquire lock in requested mode (shared, exclusive)
+    if (!transaction->hasLock(rowId)) {
+      transaction->addLock(rowId, requestedMode, lock);
       goto sign;
     }
 
@@ -80,8 +70,7 @@ void LockManager::unlock(unsigned int transactionId, unsigned int rowId) {
   try {
     lock = lockTable_.find(rowId);
   } catch (const std::out_of_range& e) {
-    std::cout << "The lock does not exist" << std::endl;
-    return;
+    throw std::invalid_argument("Lock does not exist");
   }
 
   transaction->releaseLock(rowId, lock);
@@ -96,18 +85,13 @@ auto LockManager::sign(unsigned int transactionId, unsigned int rowId,
 
 void LockManager::abortTransaction(
     const std::shared_ptr<Transaction>& transaction) {
-  std::set<unsigned int> locked_rows = transaction->getLockedRows();
-  for (auto locked_row : locked_rows) {
-    lockTable_.find(locked_row)->release();
-  }
-
-  // TODO delete the transaction from the transaction table. Issues with
-  // concurrent locking requests?
+  transactionTable_.erase(transaction->getTransactionId());
+  transaction->releaseAllLocks(lockTable_);
 };
 
 auto LockManager::getBlockTimeout() const -> unsigned int {
   std::cout << __FUNCTION__ << " not yet implemented" << std::endl;
-  // TODO Implement
+  // TODO Implement signature private key
   std::cout << privateKey_;
   return 0;
-}
+};

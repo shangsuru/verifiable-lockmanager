@@ -1,9 +1,13 @@
 #pragma once
 
+#include <libcuckoo/cuckoohash_map.hh>
 #include <mutex>
 #include <set>
+#include <shared_mutex>
 
 #include "lock.h"
+
+using libcuckoo::cuckoohash_map;
 
 /**
  * The internal representation of a transaction for the lock manager.
@@ -16,10 +20,12 @@ class Transaction {
   /**
    * Assigns the transaction its lock budget when it is created.
    *
+   * @param transactionID identifying the transaction
    * @param lockBudget the assigned lockBudget, as determined when registering
    *                   the transaction at the lock manager
    */
-  Transaction(unsigned int lockBudget) : lockBudget_(lockBudget){};
+  Transaction(unsigned int transactionId, unsigned int lockBudget)
+      : transactionId_(transactionId), lockBudget_(lockBudget){};
 
   /**
    * According to 2PL, a transaction has two subsequent phases:
@@ -30,6 +36,11 @@ class Transaction {
    * the already existent locks.
    */
   enum Phase { kGrowing, kShrinking };
+
+  /**
+   * @returns ID uniquely identifying this transaction
+   */
+  [[nodiscard]] auto getTransactionId() const -> unsigned int;
 
   /**
    * @returns the set of row IDs the transaction curently holds locks for
@@ -45,11 +56,16 @@ class Transaction {
 
   /**
    * When the transaction acquires a new lock, the row ID that lock refers to is
-   * added to the set of locked rows. Also decrements the lock budget by 1.
+   * added to the set of locked rows and it decrements the lock budget by 1.
+   * Then it tries to acquire the requested mode (shared or exclusive) for the
+   * given lock.
    *
    * @param rowId row ID of the newly acquired lock
+   * @param requestedMode
+   * @param lock
    */
-  void addLock(unsigned int rowId);
+  void addLock(unsigned int rowId, Lock::LockMode requestedMode,
+               std::shared_ptr<Lock>& lock);
 
   /**
    * Checks if the transaction currently holds a lock on the given row ID.
@@ -75,9 +91,20 @@ class Transaction {
    */
   auto hasLock(unsigned int rowId) -> bool;
 
+  /**
+   * Releases all the locks, that the transaction holds. This is supposed to be
+   * called when the transaction aborts.
+   *
+   * @param lockTable containing all the locks indexed by row ID
+   */
+  void releaseAllLocks(
+      cuckoohash_map<unsigned int, std::shared_ptr<Lock>>& lockTable);
+
  private:
+  unsigned int transactionId_;
+  bool aborted_ = false;
   std::set<unsigned int> lockedRows_;
   Phase phase_ = Phase::kGrowing;
   unsigned int lockBudget_;
-  std::mutex mut_;
+  std::shared_mutex mut_;
 };

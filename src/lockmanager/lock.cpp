@@ -22,7 +22,7 @@ void Lock::getSharedAccess(unsigned int transactionId) {
 void Lock::getExclusiveAccess(unsigned int transactionId) {
   const std::lock_guard<std::mutex> latch(mut_);
 
-  if (!exclusive_ && owners_.empty()) {
+  if (owners_.empty()) {
     exclusive_ = true;
     owners_.insert(transactionId);
   } else {

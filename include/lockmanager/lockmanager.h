@@ -44,7 +44,7 @@ class LockManager {
    * @param transactionId identifies the transaction making the request
    * @param rowId identifies the row to be released
    * @throws std::invalid_argument, when the transaction didn't call
-   * RegisterTransaction before
+   * RegisterTransaction before or the lock to unlock does not exist
    */
   void unlock(unsigned int transactionId, unsigned int rowId);
 
