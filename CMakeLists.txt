@@ -79,6 +79,8 @@ find_package(Doxygen)
     message(STATUS "Doxygen not found, not building docs")
   endif()
 
+enable_testing()
+
 # Testing
 include(CTest)
   FetchContent_Declare(
@@ -90,10 +92,13 @@ include(CTest)
   FetchContent_MakeAvailable(googletest)
 endif()
 
+include(GoogleTest)
+add_subdirectory(tests)
+
 # Testing only available if this is the main app
 # Emergency override MyProjectName_BUILD_TESTING provided as well
-if((CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME OR LockManager_BUILD_TESTING)
-   AND BUILD_TESTING)
-  include(GoogleTest)
-  add_subdirectory(tests)
-endif()
+#if((CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME OR LockManager_BUILD_TESTING)
+#   AND BUILD_TESTING)
+#  include(GoogleTest)
+#  add_subdirectory(tests)
+#endif()
