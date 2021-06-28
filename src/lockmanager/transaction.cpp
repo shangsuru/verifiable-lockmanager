@@ -17,3 +17,7 @@ void Transaction::deleteLock(unsigned int rowId) {
   lockedRows_.erase(rowId);
   phase_ = Phase::kShrinking;
 };
+
+auto Transaction::hasLock(unsigned int rowId) -> bool {
+  return lockedRows_.find(rowId) != lockedRows_.end();
+};

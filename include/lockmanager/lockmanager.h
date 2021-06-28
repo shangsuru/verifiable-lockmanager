@@ -79,16 +79,6 @@ class LockManager {
   auto sign(unsigned int transactionId, unsigned int rowId,
             unsigned int blockTimeout) const -> std::string;
 
-  /**
-   * Checks if the given transaction has a lock on the specified row.
-   *
-   * @param transaction
-   * @param rowId
-   * @returns true if it has lock, else false
-   */
-  static auto hasLock(const std::shared_ptr<Transaction>& transaction,
-                      unsigned int rowId) -> bool;
-
   int privateKey_ = 0;  // TODO set private key
   cuckoohash_map<unsigned int, std::shared_ptr<Lock>> lockTable_;
   cuckoohash_map<unsigned int, std::shared_ptr<Transaction>> transactionTable_;

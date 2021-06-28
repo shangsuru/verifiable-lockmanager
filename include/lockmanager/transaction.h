@@ -65,6 +65,14 @@ class Transaction {
    */
   [[nodiscard]] auto getLockBudget() const -> unsigned int;
 
+  /**
+   * Checks if the transaction has a lock on the specified row.
+   *
+   * @param rowId
+   * @returns true if it has lock, else false
+   */
+  auto hasLock(unsigned int rowId) -> bool;
+
  private:
   std::set<unsigned int> lockedRows_;
   Phase phase_ = Phase::kGrowing;
