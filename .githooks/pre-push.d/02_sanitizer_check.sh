@@ -48,7 +48,7 @@ cmake -S . -B ${BUILDFOLDER} -DCMAKE_CXX_COMPILER=${COMPILER} -DCMAKE_BUILD_TYPE
 # We have to build the tests
 cmake --build ${BUILDFOLDER}
 # Now we can trigger the test to run
-cmake --build ${BUILDFOLDER} --target test -- ARGS="-R Stub* --output-on-failure"
+cmake --build ${BUILDFOLDER} --target test # -- ARGS="-R Stub* --output-on-failure"
 result=$?
 
 # rm -rf ${BUILDFOLDER}
