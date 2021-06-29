@@ -90,9 +90,19 @@ auto LockManager::sign(unsigned int transactionId, unsigned int rowId,
                        unsigned int blockTimeout) const -> std::string {
   // TODO Implement signing the lock
   std::cout << __FUNCTION__ << " not yet implemented" << std::endl;
-  std::cout << privateKey_;
-  return std::to_string(transactionId) + "-" + std::to_string(rowId) + "-" +
-         std::to_string(blockTimeout);
+
+  std::string mode_indicator;
+  switch (lockTable_.find(rowId)->getMode()) {
+    case Lock::LockMode::kExclusive:
+      mode_indicator = "X";
+      break;
+    case Lock::LockMode::kShared:
+      mode_indicator = "S";
+      break;
+  };
+
+  return std::to_string(transactionId) + "-" + std::to_string(rowId) +
+         mode_indicator + "-" + std::to_string(blockTimeout);
 };
 
 void LockManager::abortTransaction(
