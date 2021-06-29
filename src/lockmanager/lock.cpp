@@ -46,3 +46,5 @@ void Lock::release(unsigned int transactionId) {
   exclusive_ = false;
   owners_.erase(transactionId);
 }
+
+auto Lock::getOwners() -> std::set<unsigned int> { return owners_; }

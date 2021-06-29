@@ -53,6 +53,11 @@ class Lock {
    */
   void upgrade(unsigned int transactionId);
 
+  /**
+   * @returns the set of transaction IDs that hold this lock
+   */
+  auto getOwners() -> std::set<unsigned int>;
+
  private:
   bool exclusive_;
   std::set<unsigned int>

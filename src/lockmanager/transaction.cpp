@@ -50,7 +50,7 @@ void Transaction::releaseAllLocks(
   for (auto locked_row : lockedRows_) {
     lockTable.find(locked_row)->release(transactionId_);
   }
-
+  lockedRows_.clear();
   aborted_ = true;
 };
 
