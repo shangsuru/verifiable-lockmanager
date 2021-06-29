@@ -22,6 +22,17 @@ using libcuckoo::cuckoohash_map;
 class LockManager {
  public:
   /**
+   * Registers the transaction at the lock manager prior to being able to
+   * acquire any locks, so that the lock manager can now the transaction's lock
+   * budget.
+   *
+   * @param transactionId identifies the transaction
+   * @param lockBudget maximum number of locks the transaction is allowed to
+   * acquire
+   */
+  void registerTransaction(unsigned int transactionId, unsigned int lockBudget);
+
+  /**
    * Acquires a lock for the specified row
    *
    * @param transactionId identifies the transaction making the request
@@ -29,11 +40,11 @@ class LockManager {
    * @param requestedMode either shared for concurrent read access or exclusive
    * for sole write access
    * @returns the signature for the acquired lock
-   * @throws std::invalid_argument, when transaction did not call
-   * RegisterTransaction before or the given lock mode is unknown
-   * @throws std::domain_error, when the transaction makes a request for a look,
-   *         that it already owns, makes a request for a lock while in the
-   *         shrinking phase, or when the lock budget is exhausted
+   * @throws std::domain_error, when transaction did not call
+   * RegisterTransaction before or the given lock mode is unknown or when the
+   * transaction makes a request for a look, that it already owns, makes a
+   * request for a lock while in the shrinking phase, or when the lock budget is
+   * exhausted
    */
   auto lock(unsigned int transactionId, unsigned int rowId,
             Lock::LockMode requestedMode) -> std::string;
@@ -43,7 +54,7 @@ class LockManager {
    *
    * @param transactionId identifies the transaction making the request
    * @param rowId identifies the row to be released
-   * @throws std::invalid_argument, when the transaction didn't call
+   * @throws std::domain_error, when the transaction didn't call
    * RegisterTransaction before or the lock to unlock does not exist
    */
   void unlock(unsigned int transactionId, unsigned int rowId);

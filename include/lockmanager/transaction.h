@@ -24,8 +24,7 @@ class Transaction {
    * @param lockBudget the assigned lockBudget, as determined when registering
    *                   the transaction at the lock manager
    */
-  Transaction(unsigned int transactionId, unsigned int lockBudget)
-      : transactionId_(transactionId), lockBudget_(lockBudget){};
+  Transaction(unsigned int transactionId, unsigned int lockBudget);
 
   /**
    * According to 2PL, a transaction has two subsequent phases:

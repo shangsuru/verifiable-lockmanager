@@ -1,5 +1,8 @@
 #include "transaction.h"
 
+Transaction::Transaction(unsigned int transactionId, unsigned int lockBudget)
+    : transactionId_(transactionId), lockBudget_(lockBudget){};
+
 auto Transaction::getLockedRows() const -> std::set<unsigned int> {
   return lockedRows_;
 };

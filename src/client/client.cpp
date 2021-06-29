@@ -26,12 +26,38 @@ class LockingServiceClient {
   }
 
   /**
+   * Registers the transaction at the lock manager by setting the lock budget.
+   *
+   * @param transactionId identifies the transaction
+   * @param lockBudget the maximum number of locks the transaction can acquire
+   */
+  void registerTransaction(unsigned int transactionId,
+                           unsigned int lockBudget) {
+    Registration registration;
+    registration.set_transaction_id(transactionId);
+    registration.set_lock_budget(lockBudget);
+
+    Acceptance acceptance;
+    ClientContext context;
+
+    Status status =
+        stub_->RegisterTransaction(&context, registration, &acceptance);
+
+    if (status.ok()) {
+      std::cout << "Registered this transaction" << std::endl;
+    } else {
+      std::cout << "Registration failed with error code " << status.error_code()
+                << ": " << status.error_message() << std::endl;
+    }
+  };
+
+  /**
    * Requests a shared lock for read-only access to a row.
    *
    * @param transactionId identifies the transaction that makes the request
    * @param rowId identifies the row, the transaction wants to access
    */
-  void requestSharedLock(int transactionId, int rowId) {
+  void requestSharedLock(unsigned int transactionId, unsigned int rowId) {
     LockRequest request;
     request.set_transaction_id(transactionId);
     request.set_row_id(rowId);
@@ -42,8 +68,7 @@ class LockingServiceClient {
     Status status = stub_->LockShared(&context, request, &response);
 
     if (status.ok()) {
-      std::cout << "Received response, signature: " << response.signature()
-                << " is set: " << response.successful() << std::endl;
+      std::cout << "Signature: " << response.signature() << std::endl;
     } else {
       std::cout << status.error_code() << ": " << status.error_message()
                 << std::endl;
@@ -56,7 +81,7 @@ class LockingServiceClient {
    * @param transactionId identifies the transaction that makes the request
    * @param rowId identifies the row, the transaction wants to access
    */
-  void requestExclusiveLock(int transactionId, int rowId) {
+  void requestExclusiveLock(unsigned int transactionId, unsigned int rowId) {
     LockRequest request;
     request.set_transaction_id(transactionId);
     request.set_row_id(rowId);
@@ -67,8 +92,7 @@ class LockingServiceClient {
     Status status = stub_->LockExclusive(&context, request, &response);
 
     if (status.ok()) {
-      std::cout << "Received response, signature: " << response.signature()
-                << " is set: " << response.successful() << std::endl;
+      std::cout << "Signature: " << response.signature() << std::endl;
     } else {
       std::cout << status.error_code() << ": " << status.error_message()
                 << std::endl;
@@ -81,7 +105,7 @@ class LockingServiceClient {
    * @param transactionId identifies the transaction that makes the request
    * @param rowId identifies the row, the transaction wants to unlock
    */
-  void requestUnlock(int transactionId, int rowId) {
+  void requestUnlock(unsigned int transactionId, unsigned int rowId) {
     LockRequest request;
     request.set_transaction_id(transactionId);
     request.set_row_id(rowId);
@@ -92,8 +116,7 @@ class LockingServiceClient {
     Status status = stub_->Unlock(&context, request, &response);
 
     if (status.ok()) {
-      std::cout << "Received response, signature: " << response.signature()
-                << " is set: " << response.successful() << std::endl;
+      std::cout << "fSignature: " << response.signature() << std::endl;
     } else {
       std::cout << status.error_code() << ": " << status.error_message()
                 << std::endl;
@@ -108,7 +131,13 @@ void RunClient() {
   std::string target_address("0.0.0.0:50051");
   LockingServiceClient client(
       grpc::CreateChannel(target_address, grpc::InsecureChannelCredentials()));
-  client.requestSharedLock(1, 2);
+
+  unsigned int transaction_id = 1;
+  const unsigned int default_lock_budget = 10;
+  unsigned int row_id = 2;
+
+  client.registerTransaction(transaction_id, default_lock_budget);
+  client.requestSharedLock(transaction_id, row_id);
 }
 
 auto main() -> int {

@@ -1,5 +1,15 @@
 #include <lockmanager.h>
 
+void LockManager::registerTransaction(unsigned int transactionId,
+                                      unsigned int lockBudget) {
+  if (transactionTable_.contains(transactionId)) {
+    throw std::domain_error("Transaction already registered");
+  }
+
+  transactionTable_.insert(
+      transactionId, std::make_shared<Transaction>(transactionId, lockBudget));
+};
+
 auto LockManager::lock(unsigned int transactionId, unsigned int rowId,
                        Lock::LockMode requestedMode) -> std::string {
   // Get the transaction object for the given transaction ID
@@ -7,7 +17,7 @@ auto LockManager::lock(unsigned int transactionId, unsigned int rowId,
   try {
     transaction = transactionTable_.find(transactionId);
   } catch (const std::out_of_range& e) {
-    throw std::invalid_argument("Transaction was not registered");
+    throw std::domain_error("Transaction was not registered");
   }
 
   // Get the lock object for the given row ID
@@ -62,7 +72,7 @@ void LockManager::unlock(unsigned int transactionId, unsigned int rowId) {
   try {
     transaction = transactionTable_.find(transactionId);
   } catch (const std::out_of_range& e) {
-    throw std::invalid_argument("Transaction was not registered");
+    throw std::domain_error("Transaction was not registered");
   }
 
   // Get the lock object
@@ -70,7 +80,7 @@ void LockManager::unlock(unsigned int transactionId, unsigned int rowId) {
   try {
     lock = lockTable_.find(rowId);
   } catch (const std::out_of_range& e) {
-    throw std::invalid_argument("Lock does not exist");
+    throw std::domain_error("Lock does not exist");
   }
 
   transaction->releaseLock(rowId, lock);
@@ -78,9 +88,11 @@ void LockManager::unlock(unsigned int transactionId, unsigned int rowId) {
 
 auto LockManager::sign(unsigned int transactionId, unsigned int rowId,
                        unsigned int blockTimeout) const -> std::string {
+  // TODO Implement signing the lock
   std::cout << __FUNCTION__ << " not yet implemented" << std::endl;
   std::cout << privateKey_;
-  return "DUMMY_SIGNATURE";
+  return std::to_string(transactionId) + "-" + std::to_string(rowId) + "-" +
+         std::to_string(blockTimeout);
 };
 
 void LockManager::abortTransaction(
@@ -91,7 +103,7 @@ void LockManager::abortTransaction(
 
 auto LockManager::getBlockTimeout() const -> unsigned int {
   std::cout << __FUNCTION__ << " not yet implemented" << std::endl;
-  // TODO Implement signature private key
-  std::cout << privateKey_;
+  // TODO Implement getting the block timeout from the blockchain
+  std::cout << privateKey_ << std::endl;
   return 0;
 };

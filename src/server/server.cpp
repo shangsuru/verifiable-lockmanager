@@ -22,6 +22,30 @@ using grpc::Status;
 class LockingServiceImpl final : public LockingService::Service {
  public:
   /**
+   * Registers the transaction at the lock manager prior to being able to
+   * acquire any locks, so that the lock manager can now the transaction's lock
+   * budget.
+   *
+   * @param context contains metadata about the request
+   * @param request containing transaction ID and lock budget
+   * @param response contains if the registration was successful
+   * @return the status code of the RPC call (OK or a specific error code)
+   */
+  auto RegisterTransaction(ServerContext* context, const Registration* request,
+                           Acceptance* response) -> Status override {
+    unsigned int transaction_id = request->transaction_id();
+    unsigned int lock_budget = request->lock_budget();
+
+    try {
+      lockManager_.registerTransaction(transaction_id, lock_budget);
+    } catch (const std::domain_error& e) {
+      return Status::CANCELLED;
+    }
+
+    return Status::OK;
+  };
+
+  /**
    * Unpacks the LockRequest by a client to acquire the respective exclusive
    * lock.
    *
@@ -29,7 +53,7 @@ class LockingServiceImpl final : public LockingService::Service {
    * @param request containing transaction ID and row ID of the client request,
    *                that identify client and the row it wants a lock on
    * @param response contains if the lock was acquired successfully and if it
-   *                 was a signature of the lock
+   *                 was, a signature of the lock
    * @return the status code of the RPC call (OK or a specific error code)
    */
   auto LockExclusive(ServerContext* context, const LockRequest* request,
@@ -37,11 +61,15 @@ class LockingServiceImpl final : public LockingService::Service {
     unsigned int transaction_id = request->transaction_id();
     unsigned int row_id = request->row_id();
 
-    lockManager_.lock(transaction_id, row_id, Lock::LockMode::kExclusive);
+    std::string signature;
+    try {
+      signature =
+          lockManager_.lock(transaction_id, row_id, Lock::LockMode::kExclusive);
+    } catch (const std::domain_error& e) {
+      return Status::CANCELLED;
+    }
 
-    response->set_successful(true);
-    response->set_signature("signature");  // TODO
-
+    response->set_signature(signature);
     return Status::OK;
   }
 
@@ -61,11 +89,15 @@ class LockingServiceImpl final : public LockingService::Service {
     unsigned int transaction_id = request->transaction_id();
     unsigned int row_id = request->row_id();
 
-    lockManager_.lock(transaction_id, row_id, Lock::LockMode::kShared);
+    std::string signature;
+    try {
+      signature =
+          lockManager_.lock(transaction_id, row_id, Lock::LockMode::kShared);
+    } catch (const std::domain_error& e) {
+      return Status::CANCELLED;
+    }
 
-    response->set_successful(true);
-    response->set_signature("signature");  // TODO
-
+    response->set_signature(signature);
     return Status::OK;
   }
 
@@ -85,10 +117,12 @@ class LockingServiceImpl final : public LockingService::Service {
     unsigned int transaction_id = request->transaction_id();
     unsigned int row_id = request->row_id();
 
-    lockManager_.unlock(transaction_id, row_id);
+    try {
+      lockManager_.unlock(transaction_id, row_id);
+    } catch (const std::domain_error& e) {
+      return Status::CANCELLED;
+    }
 
-    response->set_successful(true);
-    response->set_signature("signature");  // TODO
     return Status::OK;
   }
 
