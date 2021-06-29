@@ -2,47 +2,45 @@
 scale 2
 
 class LockManager {
-    - lockTable: concurrent_hash_map<int, Lock>
-    - transactionTable: concurrent_hash_map<int, Transaction>
-    - privateKey: PrivateKey
+    - lockTable: map<unsigned int, Lock>
+    - transactionTable: map<unsigned int, Transaction>
+    - privateKey
     
-    + lock(transactionId: int, rowId: int, mode LockMode)
-    + unlock(transactionId: int, rowId: int)
-    + deleteTransaction(transactionId: int)
-    + hasLock(transactionId: int, rowId: int) -> bool
-    + getLockMode(rowId: int) -> LockMode
-    + sign(transactionId: int, rowId: int, lockTimeout: int) -> string
+    + registerTransaction(transactionId, lockBudget)
+    + lock(transactionId, rowId, requestedMode) -> signature
+    + unlock(transactionId, rowId)
+    - abortTransaction(Transaction)
+    - getBlockTimeout() -> blockTimeout
+    - sign(transactionId, rowId, blockTimeout) -> signature
 }
 
 class Lock {
-    - owners : set<Transaction>
-    - waiters: condition_variable
+    - owners: set<transactionId>
     - exclusive: bool
-    - numSharedOwners: int
 
     + getMode() -> LockMode
-    + getOwners() -> set<Transaction>
-    + acquire(t: Transaction, mode: LockMode)
-    + release(t: Transaction)
-    + upgrade(t: Transaction)
-    - acquireSharedLock(t: Transaction)
-    - acquireExclusiveLock(t: Transaction)
-    - isExclusive()
-    - isShared()
+    + release(transactionId)
+    + upgrade(transactionId)
+    + getSharedAccess(transactionId)
+    + getExclusiveAccess(transactionId)
 }
 
 class Transaction {
     - transactionId: int
-    - locks: set<Lock>
+    - aborted: bool
+    - lockedRows: set<rowId>
     - phase: Phase
     - lockBudget: int
 
-    + getId() -> int
-    + getLocks() -> set<Lock>
+    + Transaction(transactionId, lockBudget)
+    + getTransactionId() -> transactionId
+    + getLockedRows() -> set<rowId>
     + getPhase() -> Phase
-    + addLock(lock: Lock)
-    + deleteLock(lock: Lock)
-    + getLockBudget() -> int
+    + addLock(rowId, requestedMode, lock)
+    + releaseLock(rowId, lock)
+    + getLockBudget() -> lockBudget
+    + hasLock(rowId) -> bool
+    + releaseAllLocks(lockTable)
 }
 
 enum Phase {
