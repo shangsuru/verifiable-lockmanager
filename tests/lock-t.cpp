@@ -4,20 +4,16 @@
 
 #include "lock.h"
 
-Lock lock = Lock();
 const unsigned int kTransactionIdA = 0;
 const unsigned int kTransactionIdB = 1;
 
-void threadSharedAccess(unsigned int id) { lock.getSharedAccess(id); }
-
-void threadRelease(unsigned int id) { lock.release(id); }
-
 // Shared access works
 TEST(LockTest, sharedAccess) {
-  std::thread t1{threadSharedAccess, 1};
-  std::thread t2{threadSharedAccess, 2};
-  std::thread t3{threadSharedAccess, 3};
-  std::thread t4{threadSharedAccess, 4};
+  Lock lock = Lock();
+  std::thread t1{&Lock::getSharedAccess, &lock, 1};
+  std::thread t2{&Lock::getSharedAccess, &lock, 2};
+  std::thread t3{&Lock::getSharedAccess, &lock, 3};
+  std::thread t4{&Lock::getSharedAccess, &lock, 4};
 
   t1.join();
   t2.join();
@@ -30,6 +26,7 @@ TEST(LockTest, sharedAccess) {
 
 // Exclusive access works
 TEST(LockTest, exclusiveAccess) {
+  Lock lock = Lock();
   lock.getExclusiveAccess(kTransactionIdA);
   EXPECT_EQ(lock.getMode(), Lock::LockMode::kExclusive);
   auto owners = lock.getOwners();
@@ -39,6 +36,7 @@ TEST(LockTest, exclusiveAccess) {
 
 // Cannot acquire shared access on an exclusive lock
 TEST(LockTest, noSharedOnExclusive) {
+  Lock lock = Lock();
   lock.getExclusiveAccess(kTransactionIdA);
   try {
     lock.getSharedAccess(kTransactionIdB);
@@ -52,6 +50,7 @@ TEST(LockTest, noSharedOnExclusive) {
 
 // Cannot get exclusive access on an exclusive lock
 TEST(LockTest, noExclusiveOnExclusive) {
+  Lock lock = Lock();
   lock.getExclusiveAccess(kTransactionIdA);
   try {
     lock.getExclusiveAccess(kTransactionIdB);
@@ -65,6 +64,7 @@ TEST(LockTest, noExclusiveOnExclusive) {
 
 // Cannot acquire exclusive access on a shared lock
 TEST(LockTest, noExclusiveOnShared) {
+  Lock lock = Lock();
   lock.getSharedAccess(kTransactionIdA);
   try {
     lock.getExclusiveAccess(kTransactionIdB);
@@ -78,6 +78,7 @@ TEST(LockTest, noExclusiveOnShared) {
 
 // Upgrade
 TEST(LockTest, upgrade) {
+  Lock lock = Lock();
   lock.getSharedAccess(kTransactionIdA);
   lock.upgrade(kTransactionIdA);
   auto owners = lock.getOwners();
@@ -88,14 +89,15 @@ TEST(LockTest, upgrade) {
 
 // Concurrently adding and releasing locks
 TEST(LockTest, concurrentlyAddingAndReleasingLocks) {
+  Lock lock = Lock();
   lock.getSharedAccess(1);
   lock.getSharedAccess(2);
   lock.getSharedAccess(3);
   lock.getSharedAccess(4);
 
-  std::thread t1{threadRelease, 1};
-  std::thread t2{threadSharedAccess, 0};
-  std::thread t3{threadRelease, 3};
+  std::thread t1{&Lock::release, &lock, 1};
+  std::thread t2{&Lock::getSharedAccess, &lock, 0};
+  std::thread t3{&Lock::release, &lock, 3};
 
   t1.join();
   t2.join();
