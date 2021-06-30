@@ -3,7 +3,6 @@
 #include <libcuckoo/cuckoohash_map.hh>
 #include <mutex>
 #include <set>
-#include <shared_mutex>
 
 #include "lock.h"
 
@@ -44,7 +43,7 @@ class Transaction {
   /**
    * @returns the set of row IDs the transaction curently holds locks for
    */
-  [[nodiscard]] auto getLockedRows() const -> std::set<unsigned int>;
+  [[nodiscard]] auto getLockedRows() -> std::set<unsigned int>;
 
   /**
    * @returns the phase the transaction is currently in, which is important for
@@ -105,5 +104,5 @@ class Transaction {
   std::set<unsigned int> lockedRows_;
   Phase phase_ = Phase::kGrowing;
   unsigned int lockBudget_;
-  std::shared_mutex mut_;
+  std::mutex mut_;
 };
