@@ -90,6 +90,20 @@ TEST(LockManagerTest, multipleTransactionsSharedLock) {
   }
 };
 
+// Cannot get the same lock twice
+TEST(LockManagerTest, sameLockTwice) {
+  lock_manager.registerTransaction(kTransactionIdA, kLockBudget);
+  lock_manager.lock(kTransactionIdA, kRowId, Lock::LockMode::kShared);
+  try {
+    lock_manager.lock(kTransactionIdA, kRowId, Lock::LockMode::kShared);
+    FAIL() << "Expected std::domain_error";
+  } catch (const std::domain_error& e) {
+    EXPECT_EQ(e.what(), std::string("Request for already acquired lock"));
+  } catch (...) {
+    FAIL() << "Expected std::domain_error";
+  }
+};
+
 // Lock budget runs out
 TEST(LockManagerTest, lockBudgetRunsOut) {
   lock_manager.registerTransaction(kTransactionIdA, kLockBudget);
