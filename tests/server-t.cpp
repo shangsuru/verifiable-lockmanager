@@ -1,14 +1,14 @@
 
 #include <gtest/gtest.h>
-/*
+
 #include "client.h"
 #include "server.h"
 
 class ClientServerTest : public ::testing::Test {
  protected:
-  void SetUp() override { serverThread = std::thread(startServer); };
+  void SetUp() override { serverThread_ = std::thread(startServer); };
 
-  void TearDown() override { serverThread.join(); };
+  void TearDown() override { serverThread_.join(); };
 
  public:
   static void startServer() {
@@ -58,7 +58,7 @@ auto client = ClientServerTest::getClient();
 // Make lock request without registering
 TEST(ServerTest, noRegister) {
   try {
-    client.requestSharedLock(transactionId, rowId);
+    client.requestSharedLock(transaction_id, row_id);
     FAIL() << true;
   } catch (const std::domain_error& e) {
     EXPECT_EQ(e.what(), std::string("Request failed"));
@@ -69,32 +69,32 @@ TEST(ServerTest, noRegister) {
 
 // Registering twice
 TEST(ServerTest, registerTwice) {
-  EXPECT_TRUE(client.registerTransaction(transactionId, lockBudget));
-  EXPECT_FALSE(client.registerTransaction(transactionId, lockBudget));
+  EXPECT_TRUE(client.registerTransaction(transaction_id, kLockBudget));
+  EXPECT_FALSE(client.registerTransaction(transaction_id, kLockBudget));
 };
 
 // Simple request for shared access
 TEST(ServerTest, sharedAccess) {
   const int number_of_concurrent_requests = 5;
   for (int i = 0; i < number_of_concurrent_requests; i++) {
-    client.registerTransaction(transactionId, lockBudget);
+    client.registerTransaction(transaction_id, kLockBudget);
 
-    EXPECT_EQ(client.requestSharedLock(transactionId, rowId),
-              ClientServerTest::getExpectedSignature(transactionId, rowId,
-                                                     lockBudget));
+    EXPECT_EQ(client.requestSharedLock(transaction_id, row_id),
+              ClientServerTest::getExpectedSignature(transaction_id, row_id,
+                                                     kLockBudget));
     transaction_id++;
   }
 };
 
 // Lock budget runs out
 TEST(ServerTest, lockBudget) {
-  EXPECT_TRUE(client.registerTransaction(transactionId, lockBudget));
-  EXPECT_EQ(
-      client.requestSharedLock(transactionId, rowId),
-      ClientServerTest::getExpectedSignature(transactionId, rowId, lockBudget));
+  EXPECT_TRUE(client.registerTransaction(transaction_id, kLockBudget));
+  EXPECT_EQ(client.requestSharedLock(transaction_id, row_id),
+            ClientServerTest::getExpectedSignature(transaction_id, row_id,
+                                                   kLockBudget));
   row_id++;
   try {
-    client.requestSharedLock(transactionId, rowId);
+    client.requestSharedLock(transaction_id, row_id);
     FAIL() << true;
   } catch (const std::domain_error& e) {
     EXPECT_EQ(e.what(), std::string("Request failed"));
@@ -105,52 +105,52 @@ TEST(ServerTest, lockBudget) {
 
 // Simple request for exclusive access
 TEST(ServerTest, exclusiveAccess) {
-  EXPECT_TRUE(client.registerTransaction(transactionId, lockBudget));
-  EXPECT_EQ(client.requestExclusiveLock(transactionId, rowId),
-            ClientServerTest::getExpectedSignature(transactionId, rowId,
-                                                   lockBudget, true));
+  EXPECT_TRUE(client.registerTransaction(transaction_id, kLockBudget));
+  EXPECT_EQ(client.requestExclusiveLock(transaction_id, row_id),
+            ClientServerTest::getExpectedSignature(transaction_id, row_id,
+                                                   kLockBudget, true));
 }
 
 // Upgrade
 TEST(ServerTest, upgrade) {
-  EXPECT_TRUE(client.registerTransaction(transactionId, lockBudget));
-  EXPECT_EQ(
-      client.requestSharedLock(transactionId, rowId),
-      ClientServerTest::getExpectedSignature(transactionId, rowId, lockBudget));
-  EXPECT_EQ(client.requestExclusiveLock(transactionId, rowId),
-            ClientServerTest::getExpectedSignature(transactionId, rowId,
-                                                   lockBudget, true));
+  EXPECT_TRUE(client.registerTransaction(transaction_id, kLockBudget));
+  EXPECT_EQ(client.requestSharedLock(transaction_id, row_id),
+            ClientServerTest::getExpectedSignature(transaction_id, row_id,
+                                                   kLockBudget));
+  EXPECT_EQ(client.requestExclusiveLock(transaction_id, row_id),
+            ClientServerTest::getExpectedSignature(transaction_id, row_id,
+                                                   kLockBudget, true));
 };
 
 // Unlock
 TEST(ServerTest, unlock) {
-  EXPECT_TRUE(client.registerTransaction(transactionId, lockBudget));
-  EXPECT_EQ(
-      client.requestSharedLock(transactionId, rowId),
-      ClientServerTest::getExpectedSignature(transactionId, rowId, lockBudget));
-  EXPECT_TRUE(client.requestUnlock(transactionId, rowId));
+  EXPECT_TRUE(client.registerTransaction(transaction_id, kLockBudget));
+  EXPECT_EQ(client.requestSharedLock(transaction_id, row_id),
+            ClientServerTest::getExpectedSignature(transaction_id, row_id,
+                                                   kLockBudget));
+  EXPECT_TRUE(client.requestUnlock(transaction_id, row_id));
 };
 
 // Unlock twice
 TEST(ServerTest, unlockTwice) {
-  EXPECT_TRUE(client.registerTransaction(transactionId, lockBudget));
-  EXPECT_EQ(
-      client.requestSharedLock(transactionId, rowId),
-      ClientServerTest::getExpectedSignature(transactionId, rowId, lockBudget));
-  EXPECT_TRUE(client.requestUnlock(transactionId, rowId));
-  EXPECT_TRUE(client.requestUnlock(transactionId, rowId));
+  EXPECT_TRUE(client.registerTransaction(transaction_id, kLockBudget));
+  EXPECT_EQ(client.requestSharedLock(transaction_id, row_id),
+            ClientServerTest::getExpectedSignature(transaction_id, row_id,
+                                                   kLockBudget));
+  EXPECT_TRUE(client.requestUnlock(transaction_id, row_id));
+  EXPECT_TRUE(client.requestUnlock(transaction_id, row_id));
 };
 
 // No shared while exclusive
 TEST(ServerTest, noSharedWhileExclusive) {
-  EXPECT_TRUE(client.registerTransaction(transactionId, lockBudget));
-  EXPECT_EQ(
-      client.requestSharedLock(transactionId, rowId),
-      ClientServerTest::getExpectedSignature(transactionId, rowId, lockBudget));
+  EXPECT_TRUE(client.registerTransaction(transaction_id, kLockBudget));
+  EXPECT_EQ(client.requestSharedLock(transaction_id, row_id),
+            ClientServerTest::getExpectedSignature(transaction_id, row_id,
+                                                   kLockBudget));
 
-  transactionId++;
+  transaction_id++;
   try {
-    client.requestSharedLock(transactionId, rowId);
+    client.requestSharedLock(transaction_id, row_id);
     FAIL() << true;
   } catch (const std::domain_error& e) {
     EXPECT_EQ(e.what(), std::string("Request failed"));
@@ -161,14 +161,14 @@ TEST(ServerTest, noSharedWhileExclusive) {
 
 // No exclusive while exclusive
 TEST(ServerTest, noExclusiveWhileExclusive) {
-  EXPECT_TRUE(client.registerTransaction(transactionId, lockBudget));
-  EXPECT_EQ(client.requestExclusiveLock(transactionId, rowId),
-            ClientServerTest::getExpectedSignature(transactionId, rowId,
-                                                   lockBudget, true));
+  EXPECT_TRUE(client.registerTransaction(transaction_id, kLockBudget));
+  EXPECT_EQ(client.requestExclusiveLock(transaction_id, row_id),
+            ClientServerTest::getExpectedSignature(transaction_id, row_id,
+                                                   kLockBudget, true));
 
-  transactionId++;
+  transaction_id++;
   try {
-    client.requestExclusive(transactionId, rowId);
+    client.requestExclusiveLock(transaction_id, row_id);
     FAIL() << true;
   } catch (const std::domain_error& e) {
     EXPECT_EQ(e.what(), std::string("Request failed"));
@@ -179,14 +179,14 @@ TEST(ServerTest, noExclusiveWhileExclusive) {
 
 // No exclusive while shared
 TEST(ServerTest, noExclusiveWhileShared) {
-  EXPECT_TRUE(client.registerTransaction(transactionId, lockBudget));
-  EXPECT_EQ(
-      client.requestSharedLock(transactionId, rowId),
-      ClientServerTest::getExpectedSignature(transactionId, rowId, lockBudget));
+  EXPECT_TRUE(client.registerTransaction(transaction_id, kLockBudget));
+  EXPECT_EQ(client.requestSharedLock(transaction_id, row_id),
+            ClientServerTest::getExpectedSignature(transaction_id, row_id,
+                                                   kLockBudget));
 
-  transactionId++;
+  transaction_id++;
   try {
-    client.requestExclusive(transactionId, rowId);
+    client.requestExclusiveLock(transaction_id, row_id);
     FAIL() << true;
   } catch (const std::domain_error& e) {
     EXPECT_EQ(e.what(), std::string("Request failed"));
@@ -194,4 +194,3 @@ TEST(ServerTest, noExclusiveWhileShared) {
     FAIL() << true;
   }
 };
-*/

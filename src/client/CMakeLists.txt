@@ -1,12 +1,30 @@
-cmake_minimum_required(VERSION 3.16...3.20)
+# Note that headers are optional, and do not affect add_library, but they will not
+# show up in IDEs unless they are listed in add_library.
 
-add_library(Client client.cpp)
-target_link_libraries(Client
+# Optionally glob, but only for CMake 3.12 or later:
+#file(GLOB HEADER_LIST CONFIGURE_DEPENDS "${TrustdbleStubAdapter_SOURCE_DIR}/include/adapter_stub/*.h")
+set(HEADER_LIST 
+  "${LockManager_SOURCE_DIR}/include/client/client.h"
+  )
+
+# Make an automatic library - will be static or dynamic based on user setting
+add_library(lckMgrClient client.cpp ${HEADER_LIST})
+# Add an alias so that library can be used inside the build tree, e.g. when testing
+add_library(TrustDBle::lckMgrClient ALIAS lckMgrClient)
+
+# We need this directory, and users of our library will need it too
+# target_include_directories(lckMgrClient PUBLIC "${CMAKE_BINARY_DIR}" PUBLIC "${CMAKE_SOURCE_DIR}/include/client")
+target_include_directories(lckMgrClient PUBLIC ../../include/client)
+# target_include_directories(lckMgrClient PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+
+target_link_libraries(lckMgrClient
     lm_grpc_proto
     ${_REFLECTION}
     ${_GRPC_GRPCPP}
     ${_PROTOBUF_LIBPROTOBUF})
-target_include_directories(Client PUBLIC "${CMAKE_BINARY_DIR}" PUBLIC "${CMAKE_SOURCE_DIR}/include/client")
 
-add_executable(ClientMain main.cpp)
-target_link_libraries(ClientMain Client)
+# All users of this library will need at least C++17
+target_compile_features(lckMgrClient PUBLIC cxx_std_17)
+
+# Help IDEs to find header files easier
+target_sources(lckMgrClient INTERFACE "$<BUILD_INTERFACE:${HEADERLIST}>")
