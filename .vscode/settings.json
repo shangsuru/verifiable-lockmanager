@@ -97,7 +97,8 @@
         "semaphore": "cpp",
         "stack": "cpp",
         "hash_map": "cpp",
-        "hash_set": "cpp"
+        "hash_set": "cpp",
+        "*.inc": "cpp"
     },
     "editor.formatOnSave": true,
     "C_Cpp.clang_format_path": "/usr/local/bin/clang-format",
