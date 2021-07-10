@@ -17,6 +17,12 @@ include(FetchContent)
 
 find_package(Threads REQUIRED)
 
+FetchContent_Declare(
+  trustdble-adapters
+  GIT_REPOSITORY git@bitbucket.org:trustdble/trustdble-adapters.git
+  GIT_TAG origin/master)
+FetchContent_MakeAvailable(trustdble-adapters)
+
 # Concurrent Hashmap
 FetchContent_Declare(
     libcuckoo
