@@ -17,10 +17,6 @@ add_library(TrustDBle::lckMgr ALIAS lckMgr)
 
 # We need this directory, and users of our library will need it too
 target_include_directories(lckMgr PUBLIC ../../include/lockmanager ${FETCHCONTENT_BASE_DIR}/libcuckoo-src) 
-# target_include_directories(lockManager PRIVATE ${FETCHCONTENT_BASE_DIR}/libcuckoo-src)
-
-#target_link_libraries(LockManager PRIVATE Boost::boost) # Header only
-# target_link_libraries(lckMgr PRIVATE libcuckoo>)
 
 # All users of this library will need at least C++17
 target_compile_features(lckMgr PUBLIC cxx_std_17)

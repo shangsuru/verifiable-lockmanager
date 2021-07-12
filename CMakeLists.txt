@@ -17,12 +17,6 @@ include(FetchContent)
 
 find_package(Threads REQUIRED)
 
-FetchContent_Declare(
-  trustdble-adapters
-  GIT_REPOSITORY git@bitbucket.org:trustdble/trustdble-adapters.git
-  GIT_TAG origin/master)
-FetchContent_MakeAvailable(trustdble-adapters)
-
 # Concurrent Hashmap
 FetchContent_Declare(
     libcuckoo
@@ -67,16 +61,10 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
   FetchContent_MakeAvailable(googletest)
 endif()
 
-message("Value of BUILD_TESTING")
-message(${BUILD_TESTING})
-
 # Testing only available if this is the main app
 # Emergency override MyProjectName_BUILD_TESTING provided as well
 if((CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME OR LockManager_BUILD_TESTING)
   AND BUILD_TESTING)
-  message("WITH TESTS!!!!!!!!!!!!!!!!!!1")
  include(GoogleTest)
  add_subdirectory(tests)
-else()
-  message("WITHOUT TESTS!!!!!!!!!!!!!!!!!!")
 endif()
