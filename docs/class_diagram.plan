@@ -1,0 +1,56 @@
+@startuml uml
+scale 2
+
+class LockManager {
+    - lockTable: map<unsigned int, Lock>
+    - transactionTable: map<unsigned int, Transaction>
+    - privateKey
+    
+    + registerTransaction(transactionId, lockBudget)
+    + lock(transactionId, rowId, requestedMode) -> signature
+    + unlock(transactionId, rowId)
+    - abortTransaction(Transaction)
+    - getBlockTimeout() -> blockTimeout
+    - sign(transactionId, rowId, blockTimeout) -> signature
+}
+
+class Lock {
+    - owners: set<transactionId>
+    - exclusive: bool
+
+    + getMode() -> LockMode
+    + release(transactionId)
+    + upgrade(transactionId)
+    + getSharedAccess(transactionId)
+    + getExclusiveAccess(transactionId)
+}
+
+class Transaction {
+    - transactionId: int
+    - aborted: bool
+    - lockedRows: set<rowId>
+    - phase: Phase
+    - lockBudget: int
+
+    + Transaction(transactionId, lockBudget)
+    + getTransactionId() -> transactionId
+    + getLockedRows() -> set<rowId>
+    + getPhase() -> Phase
+    + addLock(rowId, requestedMode, lock)
+    + releaseLock(rowId, lock)
+    + getLockBudget() -> lockBudget
+    + hasLock(rowId) -> bool
+    + releaseAllLocks(lockTable)
+}
+
+enum Phase {
+    GROWING
+    SHRINKING
+}
+
+enum LockMode {
+    SHARED
+    EXCLUSIVE
+}
+
+@enduml
