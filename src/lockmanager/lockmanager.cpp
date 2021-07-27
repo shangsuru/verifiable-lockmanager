@@ -117,10 +117,10 @@ auto LockManager::getBlockTimeout() const -> unsigned int {
   return 0;
 };
 
-auto LockManager::initialize_enclave() -> bool
-{
+auto LockManager::initialize_enclave() -> bool {
   sgx_status_t ret = SGX_ERROR_UNEXPECTED;
-  ret = sgx_create_enclave(ENCLAVE_FILENAME, SGX_DEBUG_FLAG, NULL, NULL, &global_eid, NULL);
+  ret = sgx_create_enclave(ENCLAVE_FILENAME, SGX_DEBUG_FLAG, NULL, NULL,
+                           &global_eid, NULL);
   if (ret != SGX_SUCCESS) {
     ret_error_support(ret);
     return false;
@@ -135,11 +135,13 @@ auto LockManager::seal_and_save_keys() -> bool {
   if (ret != SGX_SUCCESS) {
     ret_error_support(ret);
     return false;
-  } else if (sealed_data_size == UINT32_MAX) {
+  }
+
+  if (sealed_data_size == UINT32_MAX) {
     return false;
   }
 
-  uint8_t *temp_sealed_buf = (uint8_t *)malloc(sealed_data_size);
+  uint8_t* temp_sealed_buf = (uint8_t*)malloc(sealed_data_size);
   if (temp_sealed_buf == NULL) {
     std::cerr << "Out of memory" << std::endl;
     return false;
@@ -151,15 +153,19 @@ auto LockManager::seal_and_save_keys() -> bool {
     ret_error_support(ret);
     free(temp_sealed_buf);
     return false;
-  } else if (retval != SGX_SUCCESS) {
+  }
+
+  if (retval != SGX_SUCCESS) {
     ret_error_support(retval);
     free(temp_sealed_buf);
     return false;
   }
 
   // Save the sealed blob
-  if (write_buf_to_file(SEALED_KEY_FILE, temp_sealed_buf, sealed_data_size, 0) == false) {
-    std::cerr << "Failed to save the sealed data blob to \"" << SEALED_KEY_FILE << "\"" << std::endl;
+  if (!write_buf_to_file(SEALED_KEY_FILE, temp_sealed_buf, sealed_data_size,
+                         0)) {
+    std::cerr << "Failed to save the sealed data blob to \"" << SEALED_KEY_FILE
+              << "\"" << std::endl;
     free(temp_sealed_buf);
     return false;
   }
@@ -175,12 +181,12 @@ auto LockManager::read_and_unseal_keys() -> bool {
   if (fsize == (size_t)-1) {
     return false;
   }
-  uint8_t *temp_buf = (uint8_t *)malloc(fsize);
+  uint8_t* temp_buf = (uint8_t*)malloc(fsize);
   if (temp_buf == NULL) {
     std::cerr << "Out of memory" << std::endl;
     return false;
   }
-  if (read_file_to_buf(SEALED_KEY_FILE, temp_buf, fsize) == false) {
+  if (!read_file_to_buf(SEALED_KEY_FILE, temp_buf, fsize)) {
     free(temp_buf);
     return false;
   }
@@ -192,7 +198,9 @@ auto LockManager::read_and_unseal_keys() -> bool {
     ret_error_support(ret);
     free(temp_buf);
     return false;
-  } else if (retval != SGX_SUCCESS) {
+  }
+
+  if (retval != SGX_SUCCESS) {
     ret_error_support(retval);
     free(temp_buf);
     return false;

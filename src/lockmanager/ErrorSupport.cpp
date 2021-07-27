@@ -28,22 +28,21 @@ SGX_ErrorList sgx_errlist[] = {
 
     {SGX_ERROR_SERVICE_UNAVAILABLE, "AESM service is not responsive."},
     {SGX_ERROR_SERVICE_TIMEOUT, "Request to AESM is time out."},
-    {SGX_ERROR_SERVICE_INVALID_PRIVILEGE, "Error occurred while getting launch token."},
+    {SGX_ERROR_SERVICE_INVALID_PRIVILEGE,
+     "Error occurred while getting launch token."},
 };
 
-void ret_error_support(sgx_status_t ret)
-{
+void ret_error_support(sgx_status_t ret) {
   size_t idx = 0;
   size_t ttl = sizeof sgx_errlist / sizeof sgx_errlist[0];
 
-  for (idx = 0; idx < ttl; idx++)
-  {
-    if (ret == sgx_errlist[idx].err)
-    {
+  for (idx = 0; idx < ttl; idx++) {
+    if (ret == sgx_errlist[idx].err) {
       std::cout << "Error: " << sgx_errlist[idx].msg << std::endl;
       break;
     }
   }
-  if (idx == ttl)
-    std::cout << "Error: Unexpected error occurred." << std::endl;
+  if (idx == ttl) {
+    std::cout << "Error: Unexpected error occurred." << std::endl
+  };
 }

@@ -6,18 +6,17 @@
 #include <stdexcept>
 #include <string>
 
-#include "lock.h"
-#include "transaction.h"
-#include "ErrorSupport.h"
-#include "Enclave_u.h"
 #include "Base64Encoding.h"
-#include "sgx_eid.h"
-#include "sgx_urts.h"
-#include "sgx_tcrypto.h"
+#include "Enclave_u.h"
+#include "ErrorSupport.h"
 #include "FileIO.h"
+#include "lock.h"
+#include "sgx_eid.h"
+#include "sgx_tcrypto.h"
+#include "sgx_urts.h"
+#include "transaction.h"
 
 using libcuckoo::cuckoohash_map;
-
 
 #define TOKEN_FILENAME "enclave.token"
 #define ENCLAVE_FILENAME "enclave.signed.so"
@@ -105,14 +104,14 @@ class LockManager {
 
   /**
    * Initializes the enclave (in DEBUG mode).
-   * 
+   *
    * @returns true if successful, else false
    */
-  auto initialize_enclave() -> bool; 
+  auto initialize_enclave() -> bool;
 
   /**
    * Stores key pair for ECDSA signature inside the sealed key file.
-   * 
+   *
    * @returns true if successful, else false
    */
   auto seal_and_save_keys() -> bool;
@@ -120,7 +119,7 @@ class LockManager {
   /**
    * Unseals key pair for ECDSA signature from the sealed key file
    * and sets them as the current public and private key.
-   *  
+   *
    * @returns true, if successful, else false
    */
   auto read_and_unseal_keys() -> bool;

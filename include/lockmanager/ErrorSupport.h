@@ -4,10 +4,9 @@
 
 #include "sgx_error.h"
 
-struct SGX_ErrorList
-{
-  sgx_status_t err; // Error type
-  const char *msg;  // Error message for corresponding error type
+struct SGX_ErrorList {
+  sgx_status_t err;  // Error type
+  const char *msg;   // Error message for corresponding error type
 };
 
 /**
