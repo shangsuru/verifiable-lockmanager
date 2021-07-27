@@ -1,4 +1,4 @@
-#include "Base64Encoding.h"
+#include "base64-encoding.h"
 
 std::string base64_chars =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ"

@@ -1,4 +1,4 @@
-#include "Enclave.h"
+#include "enclave.h"
 
 auto get_sealed_data_size() -> uint32_t {
   return sgx_calc_sealed_data_size(NULL, sizeof(DataToSeal{}));

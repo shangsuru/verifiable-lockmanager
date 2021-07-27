@@ -1,4 +1,4 @@
-#include "FileIO.h"
+#include "files.h"
 
 auto get_file_size(const char *filename) -> size_t {
   std::ifstream ifs(filename, std::ios::in | std::ios::binary);

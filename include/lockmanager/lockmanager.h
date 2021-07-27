@@ -6,10 +6,10 @@
 #include <stdexcept>
 #include <string>
 
-#include "Base64Encoding.h"
+#include "base64-encoding.h"
 #include "Enclave_u.h"
-#include "ErrorSupport.h"
-#include "FileIO.h"
+#include "errors.h"
+#include "files.h"
 #include "lock.h"
 #include "sgx_eid.h"
 #include "sgx_tcrypto.h"

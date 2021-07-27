@@ -1,13 +1,13 @@
 # Intel SGX
 find_package(SGX REQUIRED)
 
-set(E_SRCS enclave/Enclave.cpp)
+set(E_SRCS enclave/enclave.cpp)
 set(T_SCRS "")
 set(EDL_SEARCH_PATHS enclave)
 
-add_trusted_library(trusted_lib SRCS ${T_SRCS} EDL enclave/Enclave.edl EDL_SEARCH_PATHS ${EDL_SEARCH_PATHS})
-add_enclave_library(enclave SRCS ${E_SRCS} TRUSTED_LIBS trusted_lib EDL enclave/Enclave.edl EDL_SEARCH_PATHS ${EDL_SEARCH_PATHS} LDSCRIPT ${LDS})
-enclave_sign(enclave KEY enclave/Enclave_private_test.pem CONFIG enclave/Enclave.config.xml)
+add_trusted_library(trusted_lib SRCS ${T_SRCS} EDL enclave/enclave.edl EDL_SEARCH_PATHS ${EDL_SEARCH_PATHS})
+add_enclave_library(enclave SRCS ${E_SRCS} TRUSTED_LIBS trusted_lib EDL enclave/enclave.edl EDL_SEARCH_PATHS ${EDL_SEARCH_PATHS} LDSCRIPT ${LDS})
+enclave_sign(enclave KEY enclave/Enclave_private_test.pem CONFIG enclave/enclave.config.xml)
 target_include_directories(enclave PUBLIC ../include/enclave ../include/)
 
 
@@ -16,13 +16,13 @@ set(HEADER_LIST
     ${LOCK_MANAGER_INCLUDE_PATH}/lockmanager.h
     ${LOCK_MANAGER_INCLUDE_PATH}/lock.h
     ${LOCK_MANAGER_INCLUDE_PATH}/transaction.h
-    ${LOCK_MANAGER_INCLUDE_PATH}/ErrorSupport.h
-    ${LOCK_MANAGER_INCLUDE_PATH}/FileIO.h
-    ${LockManager_SOURCE_DIR}/include/Base64Encoding.h
+    ${LOCK_MANAGER_INCLUDE_PATH}/errors.h
+    ${LOCK_MANAGER_INCLUDE_PATH}/files.h
+    ${LockManager_SOURCE_DIR}/include/base64-encoding.h
   )
 
-set(SRCS lockmanager/lockmanager.cpp lockmanager/ErrorSupport.cpp lockmanager/FileIO.cpp Base64Encoding.cpp lockmanager/lock.cpp lockmanager/transaction.cpp ${HEADER_LIST})
-add_untrusted_library(lckMgr SHARED SRCS ${SRCS} EDL enclave/Enclave.edl EDL_SEARCH_PATHS ${EDL_SEARCH_PATHS})
+set(SRCS lockmanager/lockmanager.cpp lockmanager/errors.cpp lockmanager/files.cpp base64-encoding.cpp lockmanager/lock.cpp lockmanager/transaction.cpp ${HEADER_LIST})
+add_untrusted_library(lckMgr SHARED SRCS ${SRCS} EDL enclave/enclave.edl EDL_SEARCH_PATHS ${EDL_SEARCH_PATHS})
 
 # Add an alias so that library can be used inside the build tree, e.g. when testing
 add_library(TrustDBle::lckMgr ALIAS lckMgr)

@@ -8,7 +8,7 @@
 #include <cstring>
 #include <string>
 
-#include "Base64Encoding.h"
+#include "base64-encoding.h"
 #include "Enclave_t.h"
 #include "sgx_tcrypto.h"
 #include "sgx_tseal.h"

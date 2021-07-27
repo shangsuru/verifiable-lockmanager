@@ -1,4 +1,4 @@
-#include "ErrorSupport.h"
+#include "errors.h"
 
 SGX_ErrorList sgx_errlist[] = {
     {SGX_ERROR_UNEXPECTED, "Unexpected error occurred."},
@@ -43,6 +43,6 @@ void ret_error_support(sgx_status_t ret) {
     }
   }
   if (idx == ttl) {
-    std::cout << "Error: Unexpected error occurred." << std::endl
-  };
+    std::cout << "Error: Unexpected error occurred." << std::endl;
+  }
 }
