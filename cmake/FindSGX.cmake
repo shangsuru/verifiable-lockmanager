@@ -218,7 +218,7 @@ if(SGX_FOUND)
             add_custom_target(${target}-sign ALL ${SGX_ENCLAVE_SIGNER} sign -key ${KEY_ABSPATH}
                               $<$<NOT:$<STREQUAL:${SGX_CONFIG},>>:-config> $<$<NOT:$<STREQUAL:${SGX_CONFIG},>>:${CONFIG_ABSPATH}>
                               -enclave $<TARGET_FILE:${target}>
-                              -out $<TARGET_FILE_DIR:${target}>/${OUTPUT_NAME}
+                              -out ${PROJECT_BINARY_DIR}/apps/${OUTPUT_NAME}
 			      ${IGN_INIT} ${IGN_REL}
                               WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
         endif()

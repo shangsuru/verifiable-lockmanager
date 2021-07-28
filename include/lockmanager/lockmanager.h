@@ -7,7 +7,7 @@
 #include <string>
 
 #include "base64-encoding.h"
-#include "Enclave_u.h"
+#include "enclave_u.h"
 #include "errors.h"
 #include "files.h"
 #include "lock.h"
@@ -30,9 +30,23 @@ using libcuckoo::cuckoohash_map;
  * a transaction table, which maps from a transaction Id to the corresponding
  * transaction object, which holds information like the row IDs the transaction
  * has a lock on or the transaction's lock budget.
+ * 
+ * It makes use of Intel SGX to have a secure enclave for signing the locks and protecting
+ * its internal data structures.
  */
 class LockManager {
  public:
+
+  /**
+   * Initializes the enclave and seals the public and private key for signing.
+   */
+  LockManager();
+
+  /**
+   * Destroys the enclave.
+   */
+  virtual ~LockManager();
+
   /**
    * Registers the transaction at the lock manager prior to being able to
    * acquire any locks, so that the lock manager can now the transaction's lock
@@ -99,7 +113,7 @@ class LockManager {
    *                     storage layer reaches the block timeout number
    * @returns the signature of the lock
    */
-  auto sign(unsigned int transactionId, unsigned int rowId,
+  auto getLockSignature(unsigned int transactionId, unsigned int rowId,
             unsigned int blockTimeout) const -> std::string;
 
   /**

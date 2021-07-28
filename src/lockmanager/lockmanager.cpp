@@ -1,5 +1,25 @@
 #include <lockmanager.h>
 
+LockManager::LockManager() {
+  if (!initialize_enclave()) {
+    std::cerr << "Error at initializing enclave" << std::endl;
+  };
+
+  // Generate new keys if keys from sealed storage cannot be found
+  int res = -1;
+  if (read_and_unseal_keys() == false) {
+    std::cout << "Generating new keys";
+    generate_key_pair(global_eid, &res);
+    if (!seal_and_save_keys()) {
+      std::cerr << "Error at sealing keys" << std::endl;
+    };
+  }
+}
+
+LockManager::~LockManager() {
+  sgx_destroy_enclave(global_eid);
+}
+
 void LockManager::registerTransaction(unsigned int transactionId,
                                       unsigned int lockBudget) {
   if (transactionTable_.contains(transactionId)) {
@@ -63,7 +83,7 @@ auto LockManager::lock(unsigned int transactionId, unsigned int rowId,
 
 sign:
   unsigned int block_timeout = getBlockTimeout();
-  return sign(transactionId, rowId, block_timeout);
+  return getLockSignature(transactionId, rowId, block_timeout);
 };
 
 void LockManager::unlock(unsigned int transactionId, unsigned int rowId) {
@@ -86,23 +106,43 @@ void LockManager::unlock(unsigned int transactionId, unsigned int rowId) {
   transaction->releaseLock(rowId, lock);
 };
 
-auto LockManager::sign(unsigned int transactionId, unsigned int rowId,
+auto LockManager::getLockSignature(unsigned int transactionId, unsigned int rowId,
                        unsigned int blockTimeout) const -> std::string {
-  // TODO Implement signing the lock
-  std::cout << __FUNCTION__ << " not yet implemented" << std::endl;
-
-  std::string mode_indicator;
+  /* Get string representation of the lock tuple:
+   * <TRANSACTION-ID>_<ROW-ID>_<MODE>_<BLOCKTIMEOUT>,
+   * where mode means, if the lock is for shared or exclusive access
+   */
+  std::string mode;
   switch (lockTable_.find(rowId)->getMode()) {
     case Lock::LockMode::kExclusive:
-      mode_indicator = "X";
+      mode = "X"; // exclusive
       break;
     case Lock::LockMode::kShared:
-      mode_indicator = "S";
+      mode = "S"; // shared
       break;
   };
 
-  return std::to_string(transactionId) + "-" + std::to_string(rowId) +
-         mode_indicator + "-" + std::to_string(blockTimeout);
+  std::string string_to_sign = std::to_string(transactionId) + "_" + std::to_string(rowId) + "_" +
+         mode + "_" + std::to_string(blockTimeout);
+  
+  int res = -1;
+  sgx_ec256_signature_t sig;
+  sgx_status_t ret = sign(global_eid, &res, string_to_sign.c_str(), (void*)&sig, sizeof(sgx_ec256_signature_t));
+  if (ret != SGX_SUCCESS || res != SGX_SUCCESS) {
+    std::cerr << "Failed at signing" << std::endl;
+  }
+
+  std::string signature_string = base64_encode((unsigned char*) &sig, sizeof(sig));
+
+  // Verify signature for demonstration purposes (remove this later!)
+  ret = verify(global_eid, &res, string_to_sign.c_str(), (void *)(base64_decode(signature_string).c_str()), sizeof(sgx_ec256_signature_t));
+  if (ret != SGX_SUCCESS || res != SGX_EC_VALID) {
+    std::cerr << "Failed at verify" << std::endl;
+  } else {
+      std::cout << "Verify successful" << std::endl;
+  }
+
+  return signature_string;
 };
 
 void LockManager::abortTransaction(
