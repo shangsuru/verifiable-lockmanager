@@ -221,6 +221,12 @@ if(SGX_FOUND)
                               -out ${PROJECT_BINARY_DIR}/apps/${OUTPUT_NAME}
 			      ${IGN_INIT} ${IGN_REL}
                               WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+            # For tests
+            add_custom_command(
+                    TARGET ${target}-sign POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy
+                    ${PROJECT_BINARY_DIR}/apps/${OUTPUT_NAME}
+                    ${PROJECT_BINARY_DIR}/tests/${OUTPUT_NAME})
         endif()
 
         set(CLEAN_FILES "$<TARGET_FILE_DIR:${target}>/${OUTPUT_NAME};$<TARGET_FILE_DIR:${target}>/${target}_hash.hex")

@@ -40,13 +40,9 @@ TEST(LockManagerTest, cannotRegisterTwice) {
 TEST(LockManagerTest, acquiringLocks) {
   LockManager lock_manager = LockManager();
   lock_manager.registerTransaction(kTransactionIdA, kLockBudget);
-  std::string signature_s =
-      lock_manager.lock(kTransactionIdA, kRowId, Lock::LockMode::kShared);
-  std::string signature_x = lock_manager.lock(kTransactionIdA, kRowId + 1,
+  lock_manager.lock(kTransactionIdA, kRowId, Lock::LockMode::kShared);
+  lock_manager.lock(kTransactionIdA, kRowId + 1,
                                               Lock::LockMode::kExclusive);
-
-  EXPECT_EQ(signature_s, "0-0S-0");
-  EXPECT_EQ(signature_x, "0-1X-0");
 };
 
 // Cannot get exclusive access when someone already has shared access
@@ -89,9 +85,7 @@ TEST(LockManagerTest, multipleTransactionsSharedLock) {
   for (unsigned int transaction_id = 0; transaction_id < kLockBudget;
        transaction_id++) {
     lock_manager.registerTransaction(transaction_id, kLockBudget);
-    std::string signature =
-        lock_manager.lock(transaction_id, kRowId, Lock::LockMode::kShared);
-    EXPECT_EQ(signature, std::to_string(transaction_id) + "-0S-0");
+    lock_manager.lock(transaction_id, kRowId, Lock::LockMode::kShared);
   }
 };
 
@@ -117,10 +111,8 @@ TEST(LockManagerTest, lockBudgetRunsOut) {
 
   unsigned int row_id = 0;
   for (; row_id < kLockBudget; row_id++) {
-    std::string signature =
-        lock_manager.lock(kTransactionIdA, row_id, Lock::LockMode::kShared);
+    lock_manager.lock(kTransactionIdA, row_id, Lock::LockMode::kShared);
     std::string expected_signature = "0-" + std::to_string(row_id) + "S-0";
-    EXPECT_EQ(signature, expected_signature);
   }
 
   try {
@@ -137,13 +129,8 @@ TEST(LockManagerTest, lockBudgetRunsOut) {
 TEST(LockManagerTest, upgradeLock) {
   LockManager lock_manager = LockManager();
   lock_manager.registerTransaction(kTransactionIdA, kLockBudget);
-  std::string signature_a =
-      lock_manager.lock(kTransactionIdA, kRowId, Lock::LockMode::kShared);
-  std::string signature_b =
-      lock_manager.lock(kTransactionIdA, kRowId, Lock::LockMode::kExclusive);
-
-  EXPECT_EQ(signature_a, "0-0S-0");
-  EXPECT_EQ(signature_b, "0-0X-0");
+  lock_manager.lock(kTransactionIdA, kRowId, Lock::LockMode::kShared);
+  lock_manager.lock(kTransactionIdA, kRowId, Lock::LockMode::kExclusive);
 };
 
 // Can unlock and acquire again
@@ -153,21 +140,13 @@ TEST(LockManagerTest, unlock) {
   lock_manager.registerTransaction(kTransactionIdB, kLockBudget);
   lock_manager.registerTransaction(kTransactionIdC, kLockBudget);
 
-  std::string signature_a =
-      lock_manager.lock(kTransactionIdA, kRowId, Lock::LockMode::kShared);
-  std::string signature_b =
-      lock_manager.lock(kTransactionIdB, kRowId, Lock::LockMode::kShared);
-
-  EXPECT_EQ(signature_a, "0-0S-0");
-  EXPECT_EQ(signature_b, "1-0S-0");
+  lock_manager.lock(kTransactionIdA, kRowId, Lock::LockMode::kShared);
+  lock_manager.lock(kTransactionIdB, kRowId, Lock::LockMode::kShared);
 
   lock_manager.unlock(kTransactionIdA, kRowId);
   lock_manager.unlock(kTransactionIdB, kRowId);
 
-  std::string signature_c =
-      lock_manager.lock(kTransactionIdC, kRowId, Lock::LockMode::kExclusive);
-
-  EXPECT_EQ(signature_c, "2-0X-0");
+  lock_manager.lock(kTransactionIdC, kRowId, Lock::LockMode::kExclusive);
 };
 
 // Cannot request more locks after transaction aborted
