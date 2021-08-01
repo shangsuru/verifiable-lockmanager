@@ -8,7 +8,6 @@ LockManager::LockManager() {
   // Generate new keys if keys from sealed storage cannot be found
   int res = -1;
   if (read_and_unseal_keys() == false) {
-    std::cout << "Generating new keys";
     generate_key_pair(global_eid, &res);
     if (!seal_and_save_keys()) {
       std::cerr << "Error at sealing keys" << std::endl;
