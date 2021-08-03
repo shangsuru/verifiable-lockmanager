@@ -16,6 +16,10 @@
 sgx_ecc_state_handle_t context = NULL;
 sgx_ec256_private_t ec256_private_key;
 sgx_ec256_public_t ec256_public_key;
+/* Base64 encoded ec256_public_key with char count appended at the end
+ * for easy extraction from sealed data file for third parties that want
+ * to verify lock signatures */ 
+std::string encoded_public_key;
 const size_t MAX_MESSAGE_LENGTH = 255;
 
 // Struct that gets sealed to storage to persist ECDSA keys

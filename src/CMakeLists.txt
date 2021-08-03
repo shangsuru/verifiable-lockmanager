@@ -1,7 +1,7 @@
 # Intel SGX
 find_package(SGX REQUIRED)
 
-set(E_SRCS enclave/enclave.cpp)
+set(E_SRCS enclave/enclave.cpp base64-encoding.cpp)
 set(T_SCRS "")
 set(EDL_SEARCH_PATHS enclave)
 
