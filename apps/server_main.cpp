@@ -9,7 +9,7 @@ void RunServer() {
   builder.RegisterService(&service);
 
   std::unique_ptr<Server> server(builder.BuildAndStart());
-  std::cout << "Server listening on port: " << server_address << std::endl;
+  spdlog::info("Server listening on port: " + server_address);
 
   server->Wait();
 }

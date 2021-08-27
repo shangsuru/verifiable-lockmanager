@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "sgx_error.h"
+#include "spdlog/spdlog.h"
 
 struct SGX_ErrorList {
   sgx_status_t err;  // Error type

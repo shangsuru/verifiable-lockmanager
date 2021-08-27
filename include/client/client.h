@@ -1,6 +1,7 @@
 #pragma once
 
 #include <grpcpp/grpcpp.h>
+#include "spdlog/spdlog.h"
 
 #include <iostream>
 #include <string_view>

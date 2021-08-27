@@ -1,8 +1,13 @@
 #include <lockmanager.h>
 
+/* OCALL Function */
+void print_info(const char *str){
+  spdlog::info("Enclave: " + std::string{str});
+}
+
 LockManager::LockManager() {
   if (!initialize_enclave()) {
-    std::cerr << "Error at initializing enclave" << std::endl;
+    spdlog::error("Error at initializing enclave");
   };
 
   // Generate new keys if keys from sealed storage cannot be found
@@ -10,7 +15,7 @@ LockManager::LockManager() {
   if (read_and_unseal_keys() == false) {
     generate_key_pair(global_eid, &res);
     if (!seal_and_save_keys()) {
-      std::cerr << "Error at sealing keys" << std::endl;
+      spdlog::error("Error at sealing keys");
     };
   }
 }
@@ -128,7 +133,7 @@ auto LockManager::getLockSignature(unsigned int transactionId, unsigned int rowI
   sgx_ec256_signature_t sig;
   sgx_status_t ret = sign(global_eid, &res, string_to_sign.c_str(), (void*)&sig, sizeof(sgx_ec256_signature_t));
   if (ret != SGX_SUCCESS || res != SGX_SUCCESS) {
-    std::cerr << "Failed at signing" << std::endl;
+    spdlog::error("Failed at signing");
   }
 
   return base64_encode((unsigned char*) sig.x, sizeof(sig.x)) + "-" + base64_encode((unsigned char*) sig.y, sizeof(sig.y));
@@ -141,7 +146,7 @@ void LockManager::abortTransaction(
 };
 
 auto LockManager::getBlockTimeout() const -> unsigned int {
-  std::cout << __FUNCTION__ << " not yet implemented" << std::endl;
+  spdlog::warn("Block timeout not yet implemented");
   // TODO Implement getting the block timeout from the blockchain
   return 0;
 };
@@ -172,7 +177,7 @@ auto LockManager::seal_and_save_keys() -> bool {
 
   uint8_t* temp_sealed_buf = (uint8_t*)malloc(sealed_data_size);
   if (temp_sealed_buf == NULL) {
-    std::cerr << "Out of memory" << std::endl;
+    spdlog::error("Out of memory");
     return false;
   }
 
@@ -193,8 +198,7 @@ auto LockManager::seal_and_save_keys() -> bool {
   // Save the sealed blob
   if (!write_buf_to_file(SEALED_KEY_FILE, temp_sealed_buf, sealed_data_size,
                          0)) {
-    std::cerr << "Failed to save the sealed data blob to \"" << SEALED_KEY_FILE
-              << "\"" << std::endl;
+    spdlog::error("Failed to save the sealed data blob");
     free(temp_sealed_buf);
     return false;
   }
@@ -212,7 +216,7 @@ auto LockManager::read_and_unseal_keys() -> bool {
   }
   uint8_t* temp_buf = (uint8_t*)malloc(fsize);
   if (temp_buf == NULL) {
-    std::cerr << "Out of memory" << std::endl;
+    spdlog::error("Out of memory");
     return false;
   }
   if (!read_file_to_buf(SEALED_KEY_FILE, temp_buf, fsize)) {

@@ -9,6 +9,7 @@ auto LockingServiceImpl::RegisterTransaction(ServerContext* context,
   try {
     lockManager_.registerTransaction(transaction_id, lock_budget);
   } catch (const std::domain_error& e) {
+    spdlog::warn(e.what());
     return Status::CANCELLED;
   }
 
@@ -26,6 +27,7 @@ auto LockingServiceImpl::LockExclusive(ServerContext* context,
     signature =
         lockManager_.lock(transaction_id, row_id, Lock::LockMode::kExclusive);
   } catch (const std::domain_error& e) {
+    spdlog::warn(e.what());
     return Status::CANCELLED;
   }
 
@@ -44,6 +46,7 @@ auto LockingServiceImpl::LockShared(ServerContext* context,
     signature =
         lockManager_.lock(transaction_id, row_id, Lock::LockMode::kShared);
   } catch (const std::domain_error& e) {
+    spdlog::warn(e.what());
     return Status::CANCELLED;
   }
 
@@ -60,6 +63,7 @@ auto LockingServiceImpl::Unlock(ServerContext* context,
   try {
     lockManager_.unlock(transaction_id, row_id);
   } catch (const std::domain_error& e) {
+    spdlog::warn(e.what());
     return Status::CANCELLED;
   }
 

@@ -28,7 +28,7 @@ add_untrusted_library(lckMgr SHARED SRCS ${SRCS} EDL enclave/enclave.edl EDL_SEA
 add_library(TrustDBle::lckMgr ALIAS lckMgr)
 
 # We need this directory, and users of our library will need it too
-target_include_directories(lckMgr PUBLIC ../include ../include/lockmanager ${FETCHCONTENT_BASE_DIR}/libcuckoo-src ../build/src ${SGX_INCLUDE_DIR})
+target_include_directories(lckMgr PUBLIC ../include ../include/lockmanager ${FETCHCONTENT_BASE_DIR}/libcuckoo-src ${FETCHCONTENT_BASE_DIR}/spdlog-src/include/ ../build/src ${SGX_INCLUDE_DIR})
 
 # add_dependencies(lckMgr enclave-sign)
 

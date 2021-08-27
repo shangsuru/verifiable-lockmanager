@@ -28,6 +28,12 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(libcuckoo)
 
 FetchContent_Declare(
+  spdlog
+  GIT_REPOSITORY https://github.com/gabime/spdlog.git
+  GIT_TAG        v1.9.0)
+FetchContent_MakeAvailable(spdlog)
+
+FetchContent_Declare(
     grpc
     GIT_REPOSITORY https://github.com/grpc/grpc.git
     GIT_TAG        v1.38.0)

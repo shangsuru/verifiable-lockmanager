@@ -13,7 +13,7 @@ add_library(lckMgrServer server.cpp ${HEADER_LIST})
 add_library(TrustDBle::lckMgrServer ALIAS lckMgrServer)
 
 # We need this directory, and users of our library will need it too
-target_include_directories(lckMgrServer PUBLIC ../../include/server)
+target_include_directories(lckMgrServer PUBLIC ../../include/server ${FETCHCONTENT_BASE_DIR}/spdlog-src/include/)
 
 target_link_libraries(lckMgrServer
     lm_grpc_proto

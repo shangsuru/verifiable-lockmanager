@@ -9,12 +9,17 @@ void RunClient() {
   const unsigned int default_lock_budget = 10;
   unsigned int row_id = 2;
 
+  spdlog::info("Registering transaction with TXID " + std::to_string(transaction_id));
   client.registerTransaction(transaction_id, default_lock_budget);
-  client.requestSharedLock(transaction_id, row_id);
+
+  spdlog::info("Requesting shared lock for RID " + std::to_string(row_id));
+  std::string signature = client.requestSharedLock(transaction_id, row_id);
+
+  spdlog::info("Received signature: " + signature);
 }
 
 auto main() -> int {
-  std::cout << "Starting client" << std::endl;
+  spdlog::info("Starting client");
   RunClient();
   return 0;
 }

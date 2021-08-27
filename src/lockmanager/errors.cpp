@@ -38,11 +38,11 @@ void ret_error_support(sgx_status_t ret) {
 
   for (idx = 0; idx < ttl; idx++) {
     if (ret == sgx_errlist[idx].err) {
-      std::cout << "Error: " << sgx_errlist[idx].msg << std::endl;
+      spdlog::error(sgx_errlist[idx].msg);
       break;
     }
   }
   if (idx == ttl) {
-    std::cout << "Error: Unexpected error occurred." << std::endl;
+    spdlog::error("Unexpected error occurred.");
   }
 }

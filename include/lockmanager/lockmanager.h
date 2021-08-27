@@ -6,6 +6,8 @@
 #include <stdexcept>
 #include <string>
 
+#include "spdlog/spdlog.h"
+
 #include "base64-encoding.h"
 #include "enclave_u.h"
 #include "errors.h"

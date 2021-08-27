@@ -5,6 +5,7 @@
 #include <grpcpp/server.h>
 #include <grpcpp/server_builder.h>
 #include <grpcpp/server_context.h>
+#include "spdlog/spdlog.h"
 
 #include <iostream>
 
