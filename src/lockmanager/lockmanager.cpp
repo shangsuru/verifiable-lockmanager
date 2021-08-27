@@ -131,17 +131,7 @@ auto LockManager::getLockSignature(unsigned int transactionId, unsigned int rowI
     std::cerr << "Failed at signing" << std::endl;
   }
 
-  std::string signature_string = base64_encode((unsigned char*) &sig, sizeof(sig));
-
-  // Verify signature for demonstration purposes (remove this later!)
-  ret = verify(global_eid, &res, string_to_sign.c_str(), (void *)(base64_decode(signature_string).c_str()), sizeof(sgx_ec256_signature_t));
-  if (ret != SGX_SUCCESS || res != SGX_EC_VALID) {
-    std::cerr << "Failed at verify" << std::endl;
-  } else {
-      std::cout << "Verify successful" << std::endl;
-  }
-
-  return signature_string;
+  return base64_encode((unsigned char*) sig.x, sizeof(sig.x)) + "-" + base64_encode((unsigned char*) sig.y, sizeof(sig.y));
 };
 
 void LockManager::abortTransaction(
