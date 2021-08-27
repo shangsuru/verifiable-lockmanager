@@ -6,10 +6,22 @@
 #include <stdexcept>
 #include <string>
 
+#include "base64-encoding.h"
+#include "enclave_u.h"
+#include "errors.h"
+#include "files.h"
 #include "lock.h"
+#include "sgx_eid.h"
+#include "sgx_tcrypto.h"
+#include "sgx_urts.h"
 #include "transaction.h"
 
 using libcuckoo::cuckoohash_map;
+
+#define TOKEN_FILENAME "enclave.token"
+#define ENCLAVE_FILENAME "enclave.signed.so"
+#define SEALED_KEY_FILE "sealed_data_blob.txt"
+#define MAX_PATH FILENAME_MAX
 
 /**
  * Process lock and unlock requests from the server. It manages a lock table,
@@ -18,9 +30,23 @@ using libcuckoo::cuckoohash_map;
  * a transaction table, which maps from a transaction Id to the corresponding
  * transaction object, which holds information like the row IDs the transaction
  * has a lock on or the transaction's lock budget.
+ * 
+ * It makes use of Intel SGX to have a secure enclave for signing the locks and protecting
+ * its internal data structures.
  */
 class LockManager {
  public:
+
+  /**
+   * Initializes the enclave and seals the public and private key for signing.
+   */
+  LockManager();
+
+  /**
+   * Destroys the enclave.
+   */
+  virtual ~LockManager();
+
   /**
    * Registers the transaction at the lock manager prior to being able to
    * acquire any locks, so that the lock manager can now the transaction's lock
@@ -87,10 +113,32 @@ class LockManager {
    *                     storage layer reaches the block timeout number
    * @returns the signature of the lock
    */
-  auto sign(unsigned int transactionId, unsigned int rowId,
+  auto getLockSignature(unsigned int transactionId, unsigned int rowId,
             unsigned int blockTimeout) const -> std::string;
 
-  int privateKey_ = 0;  // TODO set private key
+  /**
+   * Initializes the enclave (in DEBUG mode).
+   *
+   * @returns true if successful, else false
+   */
+  auto initialize_enclave() -> bool;
+
+  /**
+   * Stores key pair for ECDSA signature inside the sealed key file.
+   *
+   * @returns true if successful, else false
+   */
+  auto seal_and_save_keys() -> bool;
+
+  /**
+   * Unseals key pair for ECDSA signature from the sealed key file
+   * and sets them as the current public and private key.
+   *
+   * @returns true, if successful, else false
+   */
+  auto read_and_unseal_keys() -> bool;
+
   cuckoohash_map<unsigned int, std::shared_ptr<Lock>> lockTable_;
   cuckoohash_map<unsigned int, std::shared_ptr<Transaction>> transactionTable_;
+  sgx_enclave_id_t global_eid = 0;
 };

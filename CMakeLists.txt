@@ -4,7 +4,7 @@ project(
   LockManager
   VERSION 0.1
   DESCRIPTION "LockManager for TrustDBle"
-  LANGUAGES CXX)
+  LANGUAGES CXX C)
 
 set (CMAKE_CXX_STANDARD 17)
 
@@ -16,6 +16,9 @@ include(trustdble_configure)
 include(FetchContent)
 
 find_package(Threads REQUIRED)
+
+# Intel SGX
+# find_package(SGX REQUIRED)
 
 # Concurrent Hashmap
 FetchContent_Declare(
