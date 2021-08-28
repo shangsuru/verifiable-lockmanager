@@ -1,0 +1,7 @@
+{
+  "files.associations": {
+    "mutex": "cpp",
+    "shared_mutex": "cpp",
+    "stdexcept": "cpp"
+  }
+}

@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+message LockRequest {
+    // Identifies the transaction, that requests the lock
+    uint32 transaction_id = 1;
+    // Identifies the rows that the transaction wants to access
+    uint32 row_id = 2;
+}
+
+message LockResponse {
+    // Only uses the status of the resopnse, e.g. Status::OK
+}
+
+service LockingService {
+    // Requests a shared lock for reading a row
+    rpc LockShared(LockRequest) returns (LockResponse) {};
+    // Requests an exclusive lock for writing a row
+    // When holding a shared lock it will attempt to upgrade it to an exclusive lock
+    rpc LockExclusive(LockRequest) returns (LockResponse) {};
+    // Unlocks the specified lock
+    rpc Unlock(LockRequest) returns (LockResponse) {};
+}
