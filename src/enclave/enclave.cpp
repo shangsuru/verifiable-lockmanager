@@ -5,6 +5,7 @@ auto get_sealed_data_size() -> uint32_t {
 }
 
 auto seal_keys(uint8_t *sealed_blob, uint32_t sealed_size) -> sgx_status_t {
+  print_info("Sealing keys");
   sgx_status_t ret = SGX_ERROR_INVALID_PARAMETER;
   sgx_sealed_data_t *sealed_data = NULL;
   DataToSeal data;
@@ -26,6 +27,7 @@ auto seal_keys(uint8_t *sealed_blob, uint32_t sealed_size) -> sgx_status_t {
 
 auto unseal_keys(const uint8_t *sealed_blob, size_t sealed_size)
     -> sgx_status_t {
+  print_info("Unsealing keys");
   sgx_status_t ret = SGX_ERROR_INVALID_PARAMETER;
   DataToSeal *unsealed_data = NULL;
 
@@ -49,6 +51,7 @@ error:
 }
 
 auto generate_key_pair() -> int {
+  print_info("Creating new key pair");
   if (context == NULL) sgx_ecc256_open_context(&context);
   sgx_status_t ret = sgx_ecc256_create_key_pair(&ec256_private_key, &ec256_public_key,
                                     context);
@@ -61,6 +64,7 @@ auto generate_key_pair() -> int {
 
 // Signs a given message and returns the signature object
 auto sign(const char *message, void *signature, size_t sig_len) -> int {
+  print_info("Signing message");
   if (context == NULL) sgx_ecc256_open_context(&context);
   return sgx_ecdsa_sign(
       (uint8_t *)message, strnlen(message, MAX_MESSAGE_LENGTH),

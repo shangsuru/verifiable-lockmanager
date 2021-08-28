@@ -146,7 +146,7 @@ void LockManager::abortTransaction(
 };
 
 auto LockManager::getBlockTimeout() const -> unsigned int {
-  spdlog::warn("Block timeout not yet implemented");
+  spdlog::warn("Lock timeout not yet implemented");
   // TODO Implement getting the block timeout from the blockchain
   return 0;
 };
