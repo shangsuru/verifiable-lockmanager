@@ -18,6 +18,7 @@ enclave {
 
     untrusted {
         void print_info([in, string] const char *string);
+        void print_error([in, string] const char *string);
     };
 
 };

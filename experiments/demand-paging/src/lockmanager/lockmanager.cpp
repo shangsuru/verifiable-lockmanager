@@ -1,9 +1,14 @@
 #include <lockmanager.h>
 
-/* OCALL Function */
-void print_info(const char *str){
+//========= OCALL Functions ===========
+void print_info(const char* str) {
   spdlog::info("Enclave: " + std::string{str});
 }
+
+void print_error(const char* str) {
+  spdlog::error("Enclave: " + std::string{str});
+}
+//=====================================
 
 LockManager::LockManager() {
   if (!initialize_enclave()) {
@@ -20,9 +25,7 @@ LockManager::LockManager() {
   }
 }
 
-LockManager::~LockManager() {
-  sgx_destroy_enclave(global_eid);
-}
+LockManager::~LockManager() { sgx_destroy_enclave(global_eid); }
 
 void LockManager::registerTransaction(unsigned int transactionId,
                                       unsigned int lockBudget) {
@@ -110,8 +113,10 @@ void LockManager::unlock(unsigned int transactionId, unsigned int rowId) {
   transaction->releaseLock(rowId, lock);
 };
 
-auto LockManager::getLockSignature(unsigned int transactionId, unsigned int rowId,
-                       unsigned int blockTimeout) const -> std::string {
+auto LockManager::getLockSignature(unsigned int transactionId,
+                                   unsigned int rowId,
+                                   unsigned int blockTimeout) const
+    -> std::string {
   /* Get string representation of the lock tuple:
    * <TRANSACTION-ID>_<ROW-ID>_<MODE>_<BLOCKTIMEOUT>,
    * where mode means, if the lock is for shared or exclusive access
@@ -119,24 +124,27 @@ auto LockManager::getLockSignature(unsigned int transactionId, unsigned int rowI
   std::string mode;
   switch (lockTable_.find(rowId)->getMode()) {
     case Lock::LockMode::kExclusive:
-      mode = "X"; // exclusive
+      mode = "X";  // exclusive
       break;
     case Lock::LockMode::kShared:
-      mode = "S"; // shared
+      mode = "S";  // shared
       break;
   };
 
-  std::string string_to_sign = std::to_string(transactionId) + "_" + std::to_string(rowId) + "_" +
-         mode + "_" + std::to_string(blockTimeout);
-  
+  std::string string_to_sign = std::to_string(transactionId) + "_" +
+                               std::to_string(rowId) + "_" + mode + "_" +
+                               std::to_string(blockTimeout);
+
   int res = -1;
   sgx_ec256_signature_t sig;
-  sgx_status_t ret = sign(global_eid, &res, string_to_sign.c_str(), (void*)&sig, sizeof(sgx_ec256_signature_t));
+  sgx_status_t ret = sign(global_eid, &res, string_to_sign.c_str(), (void*)&sig,
+                          sizeof(sgx_ec256_signature_t));
   if (ret != SGX_SUCCESS || res != SGX_SUCCESS) {
     spdlog::error("Failed at signing");
   }
 
-  return base64_encode((unsigned char*) sig.x, sizeof(sig.x)) + "-" + base64_encode((unsigned char*) sig.y, sizeof(sig.y));
+  return base64_encode((unsigned char*)sig.x, sizeof(sig.x)) + "-" +
+         base64_encode((unsigned char*)sig.y, sizeof(sig.y));
 };
 
 void LockManager::abortTransaction(
