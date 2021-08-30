@@ -24,8 +24,7 @@ auto LockingServiceImpl::LockExclusive(ServerContext* context,
 
   std::string signature;
   try {
-    signature =
-        lockManager_.lock(transaction_id, row_id, Lock::LockMode::kExclusive);
+    signature = lockManager_.lock(transaction_id, row_id, true);
   } catch (const std::domain_error& e) {
     spdlog::warn(e.what());
     return Status::CANCELLED;
@@ -43,8 +42,7 @@ auto LockingServiceImpl::LockShared(ServerContext* context,
 
   std::string signature;
   try {
-    signature =
-        lockManager_.lock(transaction_id, row_id, Lock::LockMode::kShared);
+    signature = lockManager_.lock(transaction_id, row_id, false);
   } catch (const std::domain_error& e) {
     spdlog::warn(e.what());
     return Status::CANCELLED;
