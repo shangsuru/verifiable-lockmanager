@@ -1,7 +1,7 @@
 #include "enclave.h"
 
 auto get_block_timeout() -> unsigned int {
-  print_error("Lock timeout not yet implemented");
+  print_warn("Lock timeout not yet implemented");
   // TODO: Implement getting the lock timeout
   return 0;
 };
@@ -76,7 +76,7 @@ auto generate_key_pair() -> int {
 // Verifies a given message with its signature object and returns on success
 // SGX_EC_VALID or on failure SGX_EC_INVALID_SIGNATURE
 auto verify(const char *message, void *signature, size_t sig_len) -> int {
-  if (context == NULL) sgx_ecc256_open_context(&context);
+  sgx_ecc256_open_context(&context);
   uint8_t res;
   sgx_ec256_signature_t *sig = (sgx_ec256_signature_t *)signature;
   sgx_status_t ret =
@@ -175,14 +175,15 @@ sign:
                                std::to_string(rowId) + "_" + mode + "_" +
                                std::to_string(block_timeout);
 
-  if (context == NULL) sgx_ecc256_open_context(&context);
-  int ret = sgx_ecdsa_sign((uint8_t *)string_to_sign.c_str(),
-                           strnlen(string_to_sign.c_str(), MAX_MESSAGE_LENGTH),
-                           &ec256_private_key,
-                           (sgx_ec256_signature_t *)signature, context);
+  sgx_ecc_state_handle_t context = NULL;
+  sgx_ecc256_open_context(&context);
+  sgx_ecdsa_sign((uint8_t *)string_to_sign.c_str(),
+                 strnlen(string_to_sign.c_str(), MAX_MESSAGE_LENGTH),
+                 &ec256_private_key, (sgx_ec256_signature_t *)signature,
+                 context);
 
-  ret = verify(string_to_sign.c_str(), (void *)signature,
-               sizeof(sgx_ec256_signature_t));
+  int ret = verify(string_to_sign.c_str(), (void *)signature,
+                   sizeof(sgx_ec256_signature_t));
   if (ret != SGX_SUCCESS) {
     print_error("Failed to verify signature");
   } else {

@@ -10,6 +10,12 @@
     "unordered_map": "cpp",
     "unordered_set": "cpp",
     "vector": "cpp",
-    "forward_list": "cpp"
+    "forward_list": "cpp",
+    "*.inc": "cpp",
+    "condition_variable": "cpp",
+    "fstream": "cpp",
+    "mutex": "cpp",
+    "ostream": "cpp",
+    "shared_mutex": "cpp"
   }
 }

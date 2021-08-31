@@ -14,7 +14,6 @@ auto seal_keys(uint8_t *sealed_blob, uint32_t sealed_size) -> sgx_status_t {
 
   if (sealed_size != 0) {
     sealed_data = (sgx_sealed_data_t *)malloc(sealed_size);
-    char* aad_mac_text = "Hello World";
     ret = sgx_seal_data((uint32_t)encoded_public_key.length(), (uint8_t *)encoded_public_key.c_str(), sizeof(data), (uint8_t *)&data, sealed_size,
                         sealed_data);
     if (ret == SGX_SUCCESS)
@@ -64,8 +63,8 @@ auto generate_key_pair() -> int {
 
 // Signs a given message and returns the signature object
 auto sign(const char *message, void *signature, size_t sig_len) -> int {
-  print_info("Signing message");
-  if (context == NULL) sgx_ecc256_open_context(&context);
+  sgx_ecc_state_handle_t context = NULL;
+  sgx_ecc256_open_context(&context);
   return sgx_ecdsa_sign(
       (uint8_t *)message, strnlen(message, MAX_MESSAGE_LENGTH),
       &ec256_private_key, (sgx_ec256_signature_t *)signature, context);
@@ -74,7 +73,7 @@ auto sign(const char *message, void *signature, size_t sig_len) -> int {
 // Verifies a given message with its signature object and returns on success
 // SGX_EC_VALID or on failure SGX_EC_INVALID_SIGNATURE
 auto verify(const char *message, void *signature, size_t sig_len) -> int {
-  if (context == NULL) sgx_ecc256_open_context(&context);
+  sgx_ecc256_open_context(&context);
   uint8_t res;
   sgx_ec256_signature_t *sig = (sgx_ec256_signature_t *)signature;
   sgx_status_t ret =

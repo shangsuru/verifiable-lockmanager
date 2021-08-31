@@ -8,6 +8,10 @@ void print_info(const char* str) {
 void print_error(const char* str) {
   spdlog::error("Enclave: " + std::string{str});
 }
+
+void print_warn(const char* str) {
+  spdlog::warn("Enclave: " + std::string{str});
+}
 //=====================================
 
 LockManager::LockManager() {
@@ -39,6 +43,10 @@ auto LockManager::lock(unsigned int transactionId, unsigned int rowId,
   sgx_ec256_signature_t sig;
   acquire_lock(global_eid, &res, (void*)&sig, sizeof(sgx_ec256_signature_t),
                transactionId, rowId, isExclusive);
+  if (res == SGX_ERROR_UNEXPECTED) {
+    throw std::domain_error("Acquiring lock failed");
+  }
+
   return base64_encode((unsigned char*)sig.x, sizeof(sig.x)) + "-" +
          base64_encode((unsigned char*)sig.y, sizeof(sig.y));
 };

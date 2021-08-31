@@ -13,10 +13,25 @@ class Entry {
 template <typename V>
 class HashTable {
  public:
+  /**
+   * The hashtable implementation:
+   * 1. Hash function:
+   * Since only a numeric key is used, we just take modulo
+   * the size of the hashtable to determine its index.
+   *
+   * 2. Collisions:
+   * We resolve collisions using Chaining, that means, every entry is mapped to
+   * a bucket. Collisions are stored in the same bucket. Internally the bucket
+   * is implemented as a linked list.
+   * @param size the number of buckets for the hashtable.
+   */
   HashTable(int size);
 
   void set(int key, const V &val);
 
+  /**
+   * @returns nullptr, when the value couldn't be found
+   */
   auto get(int key) -> V;
 
   auto contains(int key) -> bool;

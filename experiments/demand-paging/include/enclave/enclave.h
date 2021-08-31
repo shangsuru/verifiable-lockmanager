@@ -90,11 +90,42 @@ auto verify(const char *message, void *signature, size_t sig_len) -> int;
  */
 auto ecdsa_close() -> int;
 
+/**
+ * Registers the transaction at the enclave prior to being able to
+ * acquire any locks, so that the enclave can now the transaction's lock
+ * budget.
+ *
+ * @param transactionId identifies the transaction
+ * @param lockBudget maximum number of locks the transaction is allowed to
+ * acquire
+ */
 int register_transaction(unsigned int transactionId, unsigned int lockBudget);
 
+/**
+ * Acquires a lock for the specified row and writes the signature into the
+ * provided buffer.
+ *
+ * @param signature buffer where the enclave will store the signature
+ * @param sig_len length of the buffer
+ * @param transactionId identifies the transaction making the request
+ * @param rowId identifies the row to be locked
+ * @param requestedMode either shared for concurrent read access or exclusive
+ * for sole write access
+ * @returns SGX_ERROR_UNEXPCTED, when transaction did not call
+ * RegisterTransaction before or the given lock mode is unknown or when the
+ * transaction makes a request for a look, that it already owns, makes a
+ * request for a lock while in the shrinking phase, or when the lock budget is
+ * exhausted
+ */
 int acquire_lock(void *signature, size_t sig_len, unsigned int transactionId,
                  unsigned int rowId, int isExclusive);
 
+/**
+ * Releases a lock for the specified row.
+ *
+ * @param transactionId identifies the transaction making the request
+ * @param rowId identifies the row to be released
+ */
 void release_lock(unsigned int transactionId, unsigned int rowId);
 
 /**
@@ -108,6 +139,6 @@ void abort_transaction(const std::shared_ptr<Transaction> &transaction);
  * @returns the block timeout, which resembles a future block number of the
  *          blockchain in the storage layer. The storage layer will decline
  *          any requests with a signature that has a block timeout number
- *          smaller than the current block number.
+ *          smaller than the current block number
  */
 auto get_block_timeout() -> unsigned int;

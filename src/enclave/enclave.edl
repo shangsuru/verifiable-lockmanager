@@ -7,7 +7,7 @@ enclave {
 
 		public int verify([in, string] const char* message, [in, size=sig_len] void* signature, size_t sig_len);
 
-		public int ecdsa_close();
+        public int ecdsa_close();
 
         public sgx_status_t unseal_keys([in, size=sealed_size] const uint8_t *sealed_blob, size_t sealed_size);
 
