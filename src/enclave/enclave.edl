@@ -1,23 +1,31 @@
 enclave {
+    from "sgx_tstdc.edl" import *;
+
+	include "sgx_thread.h"
 
     trusted {
         public int generate_key_pair();
 
-        public int sign([in, string] const char* message, [out, size=sig_len] void* signature, size_t sig_len);
-
-		public int verify([in, string] const char* message, [in, size=sig_len] void* signature, size_t sig_len);
-
-        public int ecdsa_close();
+		public int ecdsa_close();
 
         public sgx_status_t unseal_keys([in, size=sealed_size] const uint8_t *sealed_blob, size_t sealed_size);
 
         public uint32_t get_sealed_data_size();
 
 		public sgx_status_t seal_keys([out, size=sealed_size] uint8_t* sealed_blob, uint32_t sealed_size);
+
+        public int register_transaction(unsigned int transactionId, unsigned int lockBudget);
+
+        public int acquire_lock([out, size=sig_len] void* signature, size_t sig_len, unsigned int transactionId, unsigned int rowId, int isExclusive);
+
+        public void release_lock(unsigned int transactionId, unsigned int rowId);
+
     };
 
     untrusted {
         void print_info([in, string] const char *string);
+        void print_error([in, string] const char *string);
+        void print_warn([in, string] const char *string);
     };
 
 };

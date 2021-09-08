@@ -1,12 +1,11 @@
 #pragma once
 
-#include <libcuckoo/cuckoohash_map.hh>
+#include <memory>
 #include <mutex>
 #include <set>
 
+#include "hashtable.h"
 #include "lock.h"
-
-using libcuckoo::cuckoohash_map;
 
 /**
  * The internal representation of a transaction for the lock manager.
@@ -95,8 +94,7 @@ class Transaction {
    *
    * @param lockTable containing all the locks indexed by row ID
    */
-  void releaseAllLocks(
-      cuckoohash_map<unsigned int, std::shared_ptr<Lock>>& lockTable);
+  void releaseAllLocks(HashTable<std::shared_ptr<Lock>>& lockTable);
 
  private:
   unsigned int transactionId_;

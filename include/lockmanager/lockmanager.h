@@ -1,24 +1,18 @@
 #pragma once
 
 #include <iostream>
-#include <libcuckoo/cuckoohash_map.hh>
 #include <memory>
 #include <stdexcept>
 #include <string>
-
-#include "spdlog/spdlog.h"
 
 #include "base64-encoding.h"
 #include "enclave_u.h"
 #include "errors.h"
 #include "files.h"
-#include "lock.h"
 #include "sgx_eid.h"
 #include "sgx_tcrypto.h"
 #include "sgx_urts.h"
-#include "transaction.h"
-
-using libcuckoo::cuckoohash_map;
+#include "spdlog/spdlog.h"
 
 #define TOKEN_FILENAME "enclave.token"
 #define ENCLAVE_FILENAME "enclave.signed.so"
@@ -32,13 +26,12 @@ using libcuckoo::cuckoohash_map;
  * a transaction table, which maps from a transaction Id to the corresponding
  * transaction object, which holds information like the row IDs the transaction
  * has a lock on or the transaction's lock budget.
- * 
- * It makes use of Intel SGX to have a secure enclave for signing the locks and protecting
- * its internal data structures.
+ *
+ * It makes use of Intel SGX to have a secure enclave for signing the locks and
+ * protecting its internal data structures.
  */
 class LockManager {
  public:
-
   /**
    * Initializes the enclave and seals the public and private key for signing.
    */
@@ -74,50 +67,18 @@ class LockManager {
    * request for a lock while in the shrinking phase, or when the lock budget is
    * exhausted
    */
-  auto lock(unsigned int transactionId, unsigned int rowId,
-            Lock::LockMode requestedMode) -> std::string;
+  auto lock(unsigned int transactionId, unsigned int rowId, bool isExclusive)
+      -> std::string;
 
   /**
    * Releases a lock for the specified row
    *
    * @param transactionId identifies the transaction making the request
    * @param rowId identifies the row to be released
-   * @throws std::domain_error, when the transaction didn't call
-   * RegisterTransaction before or the lock to unlock does not exist
    */
   void unlock(unsigned int transactionId, unsigned int rowId);
 
  private:
-  /**
-   * Releases all locks the given transaction currently has.
-   *
-   * @param transaction the transaction to be aborted
-   */
-  void abortTransaction(const std::shared_ptr<Transaction>& transaction);
-
-  /**
-   * @returns the block timeout, which resembles a future block number of the
-   *          blockchain in the storage layer. The storage layer will decline
-   *          any requests with a signature that has a block timeout number
-   *          smaller than the current block number.
-   */
-  auto getBlockTimeout() const -> unsigned int;
-
-  /**
-   * Signs a lock with the private key of the lock manager. The signature can be
-   * returned to the client, so he can verify to the storage layer, that he
-   * acquired the lock for the respective read or write access to a row.
-   *
-   * @param transactionId identifies the transaction holding the lock
-   * @param rowId identifies the row the lock was acquired for
-   * @param blockTimeout timeout counter that invalidates the signature after
-   *                     the block number of the underlying blockchain in the
-   *                     storage layer reaches the block timeout number
-   * @returns the signature of the lock
-   */
-  auto getLockSignature(unsigned int transactionId, unsigned int rowId,
-            unsigned int blockTimeout) const -> std::string;
-
   /**
    * Initializes the enclave (in DEBUG mode).
    *
@@ -140,7 +101,5 @@ class LockManager {
    */
   auto read_and_unseal_keys() -> bool;
 
-  cuckoohash_map<unsigned int, std::shared_ptr<Lock>> lockTable_;
-  cuckoohash_map<unsigned int, std::shared_ptr<Transaction>> transactionTable_;
   sgx_enclave_id_t global_eid = 0;
 };

@@ -76,6 +76,7 @@ auto generate_key_pair() -> int {
 // Verifies a given message with its signature object and returns on success
 // SGX_EC_VALID or on failure SGX_EC_INVALID_SIGNATURE
 auto verify(const char *message, void *signature, size_t sig_len) -> int {
+  sgx_ecc_state_handle_t context = NULL;
   sgx_ecc256_open_context(&context);
   uint8_t res;
   sgx_ec256_signature_t *sig = (sgx_ec256_signature_t *)signature;

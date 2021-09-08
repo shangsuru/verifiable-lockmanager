@@ -1,7 +1,7 @@
 # Intel SGX
 find_package(SGX REQUIRED)
 
-set(E_SRCS enclave/enclave.cpp base64-encoding.cpp)
+set(E_SRCS enclave/enclave.cpp base64-encoding.cpp enclave/transaction.cpp enclave/lock.cpp)
 set(T_SCRS "")
 set(EDL_SEARCH_PATHS enclave)
 
@@ -14,21 +14,19 @@ target_include_directories(enclave PUBLIC ../include/enclave ../include/)
 set(LOCK_MANAGER_INCLUDE_PATH "${LockManager_SOURCE_DIR}/include/lockmanager")
 set(HEADER_LIST 
     ${LOCK_MANAGER_INCLUDE_PATH}/lockmanager.h
-    ${LOCK_MANAGER_INCLUDE_PATH}/lock.h
-    ${LOCK_MANAGER_INCLUDE_PATH}/transaction.h
     ${LOCK_MANAGER_INCLUDE_PATH}/errors.h
     ${LOCK_MANAGER_INCLUDE_PATH}/files.h
     ${LockManager_SOURCE_DIR}/include/base64-encoding.h
   )
 
-set(SRCS lockmanager/lockmanager.cpp lockmanager/errors.cpp lockmanager/files.cpp base64-encoding.cpp lockmanager/lock.cpp lockmanager/transaction.cpp ${HEADER_LIST})
+set(SRCS lockmanager/lockmanager.cpp lockmanager/errors.cpp lockmanager/files.cpp base64-encoding.cpp ${HEADER_LIST})
 add_untrusted_library(lckMgr SHARED SRCS ${SRCS} EDL enclave/enclave.edl EDL_SEARCH_PATHS ${EDL_SEARCH_PATHS})
 
 # Add an alias so that library can be used inside the build tree, e.g. when testing
 add_library(TrustDBle::lckMgr ALIAS lckMgr)
 
 # We need this directory, and users of our library will need it too
-target_include_directories(lckMgr PUBLIC ../include ../include/lockmanager ${FETCHCONTENT_BASE_DIR}/libcuckoo-src ${FETCHCONTENT_BASE_DIR}/spdlog-src/include/ ../build/src ${SGX_INCLUDE_DIR})
+target_include_directories(lckMgr PUBLIC ../include ../include/lockmanager ${FETCHCONTENT_BASE_DIR}/spdlog-src/include/ ../build/src ${SGX_INCLUDE_DIR})
 
 # add_dependencies(lckMgr enclave-sign)
 
