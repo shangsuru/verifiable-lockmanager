@@ -7,6 +7,9 @@
 
 #include <cstring>
 #include <string>
+#include <queue>
+#include <vector>
+
 
 #include "base64-encoding.h"
 #include "enclave_t.h"
@@ -15,6 +18,9 @@
 #include "sgx_tcrypto.h"
 #include "sgx_tseal.h"
 #include "transaction.h"
+#include "sgx_tkey_exchange.h"
+#include "sgx_trts.h"
+#include "common.h"
 
 sgx_ecc_state_handle_t context = NULL;
 sgx_ec256_private_t ec256_private_key;
@@ -36,6 +42,52 @@ struct DataToSeal {
 HashTable<std::shared_ptr<Transaction>> transactionTable_(
     TRANSACTION_TABLE_SIZE);
 HashTable<std::shared_ptr<Lock>> lockTable_(LOCK_TABLE_SIZE);
+
+/* hash table */
+extern hashtable *ht_enclave;
+/* MAC buffer */
+extern MACbuffer *MACbuf_enclave;
+
+extern int ratio_root_per_buckets;
+
+struct _bucketMAC {
+  uint8_t mac[MAC_SIZE];
+};
+typedef _bucketMAC BucketMAC;
+
+extern BucketMAC *MACTable;
+extern Arg arg_enclave;
+
+/** Hash related functions **/
+int ht_hash(char *key);
+uint8_t key_hash_func(char *key);
+char *decrypt_key_val_and_compare(char *key, char *cipher, uint32_t key_len,
+                                  uint32_t val_len, uint8_t *nac,
+                                  uint8_t *updated_nac);
+entry *ht_get_o(char *key, int32_t key_size, char **plain_key_val, int *kv_pos,
+                uint8_t (&updated_nac)[NAC_SIZE]);
+entry *ht_newpair(int key_size, int val_size, uint8_t key_hash, char *key_val,
+                  uint8_t *nac, uint8_t *mac);
+void ht_set_o(entry *updated_entry, char *key, char *key_val, uint8_t *nac,
+              uint8_t *mac, uint32_t key_len, uint32_t val_len, int kv_pos);
+void ht_append_o(entry *updated_entry, char *key, char *key_val, uint8_t *nac,
+                 uint8_t *mac, uint32_t key_len, uint32_t val_len, int kv_pos);
+
+/** Security core functions **/
+void get_chain_mac(int hash_val, uint8_t *mac);
+// void enclave_rebuild_tree_root(int hash_val);
+sgx_status_t enclave_rebuild_tree_root(int hash_val, int kv_pos, bool is_insert,
+                                       uint8_t *mac);
+sgx_status_t enclave_verify_tree_root(int hash_val);
+void enclave_encrypt(char *key_val, char *cipher, uint8_t key_idx,
+                     uint32_t key_len, uint32_t val_len, uint8_t *nac,
+                     uint8_t *mac);
+sgx_status_t enclave_verification(char *cipher, uint8_t key_idx,
+                                  uint32_t key_len, uint32_t val_len,
+                                  uint8_t *nac, uint8_t *mac);
+void enclave_decrypt(char *cipher, char *plain, uint8_t key_idx,
+                     uint32_t key_len, uint32_t val_len, uint8_t *nac,
+                     uint8_t *mac);
 
 /**
  * @returns the size of the encrypted DataToSeal struct

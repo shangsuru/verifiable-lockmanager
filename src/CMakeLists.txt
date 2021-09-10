@@ -5,11 +5,12 @@ set(E_SRCS enclave/enclave.cpp base64-encoding.cpp enclave/transaction.cpp encla
 set(T_SCRS "")
 set(EDL_SEARCH_PATHS enclave)
 
+include_directories(${SGX_INCLUDE_DIR} ../include)
+
 add_trusted_library(trusted_lib SRCS ${T_SRCS} EDL enclave/enclave.edl EDL_SEARCH_PATHS ${EDL_SEARCH_PATHS})
 add_enclave_library(enclave SRCS ${E_SRCS} TRUSTED_LIBS trusted_lib EDL enclave/enclave.edl EDL_SEARCH_PATHS ${EDL_SEARCH_PATHS} LDSCRIPT ${LDS})
 enclave_sign(enclave KEY enclave/Enclave_private_test.pem CONFIG enclave/enclave.config.xml)
 target_include_directories(enclave PUBLIC ../include/enclave ../include/)
-
 
 set(LOCK_MANAGER_INCLUDE_PATH "${LockManager_SOURCE_DIR}/include/lockmanager")
 set(HEADER_LIST 
@@ -17,6 +18,7 @@ set(HEADER_LIST
     ${LOCK_MANAGER_INCLUDE_PATH}/errors.h
     ${LOCK_MANAGER_INCLUDE_PATH}/files.h
     ${LockManager_SOURCE_DIR}/include/base64-encoding.h
+    ${LockManager_SOURCE_DIR}/include/common.h
   )
 
 set(SRCS lockmanager/lockmanager.cpp lockmanager/errors.cpp lockmanager/files.cpp base64-encoding.cpp ${HEADER_LIST})

@@ -1,5 +1,4 @@
-#ifndef __COMMON_H
-#define __COMMON_H
+#pragma once
 
 #include <stdbool.h>
 
@@ -52,5 +51,3 @@ struct argument {
   bool mac_opt;
 };
 typedef struct argument Arg;
-
-#endif

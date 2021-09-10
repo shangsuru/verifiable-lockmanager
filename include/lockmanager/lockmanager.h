@@ -13,11 +13,16 @@
 #include "sgx_tcrypto.h"
 #include "sgx_urts.h"
 #include "spdlog/spdlog.h"
+#include "common.h"
 
 #define TOKEN_FILENAME "enclave.token"
 #define ENCLAVE_FILENAME "enclave.signed.so"
 #define SEALED_KEY_FILE "sealed_data_blob.txt"
 #define MAX_PATH FILENAME_MAX
+
+static hashtable *ht = NULL;
+static MACbuffer *MACbuf = NULL;
+
 
 /**
  * Process lock and unlock requests from the server. It manages a lock table,
@@ -101,5 +106,19 @@ class LockManager {
    */
   auto read_and_unseal_keys() -> bool;
 
+  auto load_and_initialize_enclave(sgx_enclave_id_t *eid) -> sgx_status_t;
+
+  auto macbuffer_create(int size) -> MACbuffer*;
+
+  auto ht_create(int size) -> hashtable*;
+
+  void start_worker_threads();
+  
+  static auto load_and_initialize_threads(void *object) -> void*;
+  
+  void configuration_init();
+  
   sgx_enclave_id_t global_eid = 0;
+  sgx_launch_token_t token = {0};
+  Arg arg;
 };
