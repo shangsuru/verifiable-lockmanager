@@ -2,6 +2,7 @@ enclave {
     from "sgx_tstdc.edl" import *;
 
 	include "sgx_thread.h"
+    include "common.h"
 
     trusted {
         public int generate_key_pair();
