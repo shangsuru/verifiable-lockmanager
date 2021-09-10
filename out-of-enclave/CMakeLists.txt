@@ -9,7 +9,7 @@ project(
 set (CMAKE_CXX_STANDARD 17)
 
 # Help cmake find our custom cmake modules
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/../cmake)
 
 # Include required cmake modules
 include(trustdble_configure)

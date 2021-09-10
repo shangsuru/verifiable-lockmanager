@@ -132,7 +132,7 @@ LockManager::LockManager() {
 
   // Create server threads
   threads = (pthread_t *)malloc(sizeof(pthread_t) * (arg.num_threads));
-  spdlog::info("Initializing %d threads", arg.num_threads);
+  spdlog::info("Initializing " + std::to_string(arg.num_threads) +  " threads");
   for (int i = 0; i < arg.num_threads; i++) {
     pthread_create(&threads[i], NULL, &LockManager::load_and_initialize_threads, this);
   }
@@ -148,11 +148,13 @@ LockManager::LockManager() {
 
   enclave_message_pass(global_eid, &job);
   while (strncmp(job.signature, "x", 1) != 0) {
-    spdlog::info("====%c====", job.signature[0]); // TODO: It doesn't work without this line, why?
+    spdlog::info("====" + std::to_string(job.signature[0]) + "===="); // TODO: It doesn't work without this line, why?
     continue;
   }
 
-  spdlog::info("====%c====", job.signature[0]);
+  std::string return_value;
+  return_value += job.signature[0];
+  spdlog::info("====" + return_value + "====");
 
   for (int i = 0; i < arg.num_threads; i++) {
     spdlog::info("Waiting for thread to stop");
