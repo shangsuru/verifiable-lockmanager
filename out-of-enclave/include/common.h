@@ -36,8 +36,12 @@ struct entry {
 };
 typedef struct entry entry;
 
+enum Command { SHARED, EXCLUSIVE, UNLOCK, QUIT };
+
 struct job {
-  char* buf;        // contains the command
+  enum Command command;
+  int transaction_id;
+  int row_id;
   char* signature;  // return value
 };
 typedef struct job job;

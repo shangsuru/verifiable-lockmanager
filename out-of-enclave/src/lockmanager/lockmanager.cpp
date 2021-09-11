@@ -139,19 +139,12 @@ LockManager::LockManager() {
       spdlog::error("Error at sealing keys");
     };
   }
-}
-
-LockManager::~LockManager() {
-  // TODO: Destructor never called!
-
+  //===============TEST====================
   // Send exit job to server threads
   job job;
-  job.buf = (char *)malloc(sizeof(char) * arg.max_buf_size);
+  job.command = QUIT;
   job.signature = (char *)malloc(sizeof(char));
-  memset(job.buf, 0, arg.max_buf_size);
   memset(job.signature, 0, 1);
-
-  strncpy(job.buf, "quit", 4);
 
   enclave_message_pass(global_eid, &job);
   while (strncmp(job.signature, "x", 1) != 0) {
@@ -171,7 +164,12 @@ LockManager::~LockManager() {
 
   spdlog::info("Freing threads");
   free(threads);
-  spdlog::info("Destroying enclave");
+}
+
+LockManager::~LockManager() {
+  // TODO: Destructor never called (esp. on CTRL+C shutdown)!
+
+    spdlog::info("Destroying enclave");
   sgx_destroy_enclave(global_eid);
 }
 

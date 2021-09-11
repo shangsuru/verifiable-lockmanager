@@ -698,7 +698,7 @@ void enclave_init_values(hashtable *ht_, MACbuffer *MACbuf_, Arg arg) {
  * parsing the key and send the requests to specific thread
  **/
 void enclave_message_pass(void *data) {
-  char *cipher = ((job *)data)->buf;
+  Command command = ((job *)data)->command;
 
   char *key;
   uint32_t key_size;
@@ -708,18 +708,15 @@ void enclave_message_pass(void *data) {
 
   job *new_job = NULL;
 
-  print_info("Deciding what to do");
-  if (strncmp(cipher, "quit", 4) == 0) {
-    print_info("exiting");
+  if (command == QUIT) {
+    print_info("Received QUIT");
 
     // Send exit message to all of the worker threads
     for (int i = 0; i < arg_enclave.num_threads; i++) {
-      print_info("sending job");
+      print_info("Sending QUIT to all threads");
       new_job = (job *)malloc(sizeof(job));
-      new_job->buf = (char *)malloc(sizeof(char) * arg_enclave.max_buf_size);
+      new_job->command = QUIT;
       new_job->signature = ((job *)data)->signature;
-      memset(new_job->buf, 0, arg_enclave.max_buf_size);
-      memcpy(new_job->buf, "quit", 4);
 
       sgx_thread_mutex_lock(&queue_mutex[i]);
       queue[i].push(new_job);
@@ -996,7 +993,6 @@ void enclave_append(char *cipher) {
 void enclave_worker_thread(hashtable *ht_, MACbuffer *MACbuf_) {
   int thread_id;
   job *cur_job = NULL;
-  char *cipher = NULL;
 
   ht_enclave = ht_;
   MACbuf_enclave = MACbuf_;
@@ -1022,11 +1018,24 @@ void enclave_worker_thread(hashtable *ht_, MACbuffer *MACbuf_) {
 
     print_info("Worker got a job");
     cur_job = queue[thread_id].front();
-    cipher = cur_job->buf;
+    Command command = cur_job->command;
 
     sgx_thread_mutex_unlock(&queue_mutex[thread_id]);
 
-    if (strncmp(cipher, "GET", 3) == 0 || strncmp(cipher, "get", 3) == 0) {
+    if (command == QUIT) {
+      sgx_thread_mutex_lock(&queue_mutex[thread_id]);
+      queue[thread_id].pop();
+      cur_job->signature[0] = 'x';
+      free(cur_job);
+      sgx_thread_mutex_unlock(&queue_mutex[thread_id]);
+
+      sgx_thread_mutex_destroy(&queue_mutex[thread_id]);
+      sgx_thread_cond_destroy(&job_cond[thread_id]);
+      print_info("Enclave worker quitting");
+      return;
+    }
+
+    /*if (strncmp(cipher, "GET", 3) == 0 || strncmp(cipher, "get", 3) == 0) {
       enclave_get(cipher);
     } else if (strncmp(cipher, "SET", 3) == 0 ||
                strncmp(cipher, "set", 3) == 0) {
@@ -1049,11 +1058,10 @@ void enclave_worker_thread(hashtable *ht_, MACbuffer *MACbuf_) {
     } else {
       print_warn("Untyped request");
       break;
-    }
+    }*/
 
     sgx_thread_mutex_lock(&queue_mutex[thread_id]);
     queue[thread_id].pop();
-    free(cipher);
     free(cur_job);
     return;
   }
