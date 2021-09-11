@@ -3,7 +3,8 @@
 /**
  * load and initialize the enclave
  **/
-auto LockManager::load_and_initialize_enclave(sgx_enclave_id_t *eid) -> sgx_status_t {
+auto LockManager::load_and_initialize_enclave(sgx_enclave_id_t *eid)
+    -> sgx_status_t {
   sgx_status_t ret = SGX_SUCCESS;
   int retval = 0;
   int updated = 0;
@@ -32,7 +33,7 @@ auto LockManager::load_and_initialize_enclave(sgx_enclave_id_t *eid) -> sgx_stat
  * For mac bucketing optimization
  * create mac buffer
  **/
-auto LockManager::macbuffer_create(int size) -> MACbuffer* {
+auto LockManager::macbuffer_create(int size) -> MACbuffer * {
   MACbuffer *Mbuf = NULL;
 
   Mbuf = (MACbuffer *)malloc(sizeof(MACbuffer));
@@ -46,7 +47,7 @@ auto LockManager::macbuffer_create(int size) -> MACbuffer* {
 /**
  * create new hashtable
  **/
-auto LockManager::ht_create(int size) -> hashtable* {
+auto LockManager::ht_create(int size) -> hashtable * {
   hashtable *ht = NULL;
 
   if (size < 1) return NULL;
@@ -68,8 +69,8 @@ auto LockManager::ht_create(int size) -> hashtable* {
 /**
  * creating server threads working inside the enclave
  **/
-auto LockManager::load_and_initialize_threads(void *object) -> void* {
-  reinterpret_cast<LockManager*>(object)->start_worker_threads();
+auto LockManager::load_and_initialize_threads(void *object) -> void * {
+  reinterpret_cast<LockManager *>(object)->start_worker_threads();
   return 0;
 }
 
@@ -78,15 +79,15 @@ void LockManager::start_worker_threads() {
 }
 
 //========= OCALL Functions ===========
-void print_info(const char* str) {
+void print_info(const char *str) {
   spdlog::info("Enclave: " + std::string{str});
 }
 
-void print_error(const char* str) {
+void print_error(const char *str) {
   spdlog::error("Enclave: " + std::string{str});
 }
 
-void print_warn(const char* str) {
+void print_warn(const char *str) {
   spdlog::warn("Enclave: " + std::string{str});
 }
 //=====================================
@@ -107,71 +108,28 @@ void LockManager::configuration_init() {
 }
 
 LockManager::LockManager() {
-  // Demo Shieldstore approach
-  sgx_status_t ret;
-  pthread_t *threads;
-  int status;
-
   configuration_init();
 
-  /* Load and initialize the signed enclave */
-  ret = load_and_initialize_enclave(&global_eid);
+  // Load and initialize the signed enclave
+  sgx_status_t ret = load_and_initialize_enclave(&global_eid);
   if (ret != SGX_SUCCESS) {
     ret_error_support(ret);
     // TODO: implement error handling
   }
 
-  /* Make main hash table */
   ht = ht_create(arg.bucket_size);
-
-  /* MAC buffer Create */
   MACbuf = macbuffer_create(arg.bucket_size);
 
-  /* Initialize hash tree */
+  // Initialize hash tree
   enclave_init_values(global_eid, ht, MACbuf, arg);
 
   // Create server threads
   threads = (pthread_t *)malloc(sizeof(pthread_t) * (arg.num_threads));
-  spdlog::info("Initializing " + std::to_string(arg.num_threads) +  " threads");
+  spdlog::info("Initializing " + std::to_string(arg.num_threads) + " threads");
   for (int i = 0; i < arg.num_threads; i++) {
-    pthread_create(&threads[i], NULL, &LockManager::load_and_initialize_threads, this);
+    pthread_create(&threads[i], NULL, &LockManager::load_and_initialize_threads,
+                   this);
   }
-
-  // Create a job
-  job job;
-  job.buf = (char *)malloc(sizeof(char) * arg.max_buf_size);
-  job.signature = (char *)malloc(sizeof(char));
-  memset(job.buf, 0, arg.max_buf_size);
-  memset(job.signature, 0, 1);
-
-  strncpy(job.buf, "quit", 4);
-
-  enclave_message_pass(global_eid, &job);
-  while (strncmp(job.signature, "x", 1) != 0) {
-    spdlog::info("====" + std::to_string(job.signature[0]) + "===="); // TODO: It doesn't work without this line, why?
-    continue;
-  }
-
-  std::string return_value;
-  return_value += job.signature[0];
-  spdlog::info("====" + return_value + "====");
-
-  for (int i = 0; i < arg.num_threads; i++) {
-    spdlog::info("Waiting for thread to stop");
-    pthread_join(threads[i], NULL);
-    spdlog::info("joined");
-  }
-
-  spdlog::info("Freing threads");
-  free(threads);
-  spdlog::info("Destroying enclave");
-  sgx_destroy_enclave(global_eid);
-
-
-  //=========================================================================
-  if (!initialize_enclave()) {
-    spdlog::error("Error at initializing enclave");
-  };
 
   // Generate new keys if keys from sealed storage cannot be found
   int res = -1;
@@ -183,7 +141,39 @@ LockManager::LockManager() {
   }
 }
 
-LockManager::~LockManager() { sgx_destroy_enclave(global_eid); }
+LockManager::~LockManager() {
+  // TODO: Destructor never called!
+
+  // Send exit job to server threads
+  job job;
+  job.buf = (char *)malloc(sizeof(char) * arg.max_buf_size);
+  job.signature = (char *)malloc(sizeof(char));
+  memset(job.buf, 0, arg.max_buf_size);
+  memset(job.signature, 0, 1);
+
+  strncpy(job.buf, "quit", 4);
+
+  enclave_message_pass(global_eid, &job);
+  while (strncmp(job.signature, "x", 1) != 0) {
+    spdlog::info("====" + std::to_string(job.signature[0]) +
+                 "====");  // TODO: It doesn't work without this line, why?
+    continue;
+  }
+
+  std::string return_value;
+  return_value += job.signature[0];
+  spdlog::info("====" + return_value + "====");
+
+  spdlog::info("Waiting for thread to stop");
+  for (int i = 0; i < arg.num_threads; i++) {
+    pthread_join(threads[i], NULL);
+  }
+
+  spdlog::info("Freing threads");
+  free(threads);
+  spdlog::info("Destroying enclave");
+  sgx_destroy_enclave(global_eid);
+}
 
 void LockManager::registerTransaction(unsigned int transactionId,
                                       unsigned int lockBudget) {
@@ -195,14 +185,14 @@ auto LockManager::lock(unsigned int transactionId, unsigned int rowId,
                        bool isExclusive) -> std::string {
   int res;
   sgx_ec256_signature_t sig;
-  acquire_lock(global_eid, &res, (void*)&sig, sizeof(sgx_ec256_signature_t),
+  acquire_lock(global_eid, &res, (void *)&sig, sizeof(sgx_ec256_signature_t),
                transactionId, rowId, isExclusive);
   if (res == SGX_ERROR_UNEXPECTED) {
     throw std::domain_error("Acquiring lock failed");
   }
 
-  return base64_encode((unsigned char*)sig.x, sizeof(sig.x)) + "-" +
-         base64_encode((unsigned char*)sig.y, sizeof(sig.y));
+  return base64_encode((unsigned char *)sig.x, sizeof(sig.x)) + "-" +
+         base64_encode((unsigned char *)sig.y, sizeof(sig.y));
 };
 
 void LockManager::unlock(unsigned int transactionId, unsigned int rowId) {
@@ -234,7 +224,7 @@ auto LockManager::seal_and_save_keys() -> bool {
     return false;
   }
 
-  uint8_t* temp_sealed_buf = (uint8_t*)malloc(sealed_data_size);
+  uint8_t *temp_sealed_buf = (uint8_t *)malloc(sealed_data_size);
   if (temp_sealed_buf == NULL) {
     spdlog::error("Out of memory");
     return false;
@@ -273,7 +263,7 @@ auto LockManager::read_and_unseal_keys() -> bool {
   if (fsize == (size_t)-1) {
     return false;
   }
-  uint8_t* temp_buf = (uint8_t*)malloc(fsize);
+  uint8_t *temp_buf = (uint8_t *)malloc(fsize);
   if (temp_buf == NULL) {
     spdlog::error("Out of memory");
     return false;
