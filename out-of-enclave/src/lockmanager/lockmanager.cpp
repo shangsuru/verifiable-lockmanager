@@ -123,7 +123,7 @@ LockManager::LockManager() {
   // Initialize hash tree
   enclave_init_values(global_eid, ht, MACbuf, arg);
 
-  // Create server threads
+  // Create worker threads
   threads = (pthread_t *)malloc(sizeof(pthread_t) * (arg.num_threads));
   spdlog::info("Initializing " + std::to_string(arg.num_threads) + " threads");
   for (int i = 0; i < arg.num_threads; i++) {
@@ -140,21 +140,44 @@ LockManager::LockManager() {
     };
   }
   //===============TEST====================
-  // Send exit job to server threads
-  job job;
-  job.command = QUIT;
-  job.signature = (char *)malloc(sizeof(char));
-  memset(job.signature, 0, 1);
+  // Send SHARED to worker threads
+  job job1;
+  job1.command = SHARED;
+  job1.signature = (char *)malloc(sizeof(char));
+  memset(job1.signature, 0, 1);
 
-  enclave_message_pass(global_eid, &job);
-  while (strncmp(job.signature, "x", 1) != 0) {
-    spdlog::info("====" + std::to_string(job.signature[0]) +
-                 "====");  // TODO: It doesn't work without this line, why?
+  enclave_message_pass(global_eid, &job1);
+
+  job job2;
+  job2.command = EXCLUSIVE;
+  job2.signature = (char *)malloc(sizeof(char));
+  memset(job2.signature, 0, 1);
+
+  enclave_message_pass(global_eid, &job2);
+
+  job job3;
+  job3.command = UNLOCK;
+  job3.signature = (char *)malloc(sizeof(char));
+  memset(job3.signature, 0, 1);
+
+  enclave_message_pass(global_eid, &job3);
+
+  // Send QUIT to worker threads
+  job job4;
+  job4.command = QUIT;
+  job4.signature = (char *)malloc(sizeof(char));
+  memset(job4.signature, 0, 1);
+
+  enclave_message_pass(global_eid, &job4);
+  while (strncmp(job4.signature, "x", 1) != 0) {
+    spdlog::info("====" + std::to_string(job4.signature[0]) +
+                 "====");  // TODO: It doesn't work without this line, why? Use
+                           // condition variables!
     continue;
   }
 
   std::string return_value;
-  return_value += job.signature[0];
+  return_value += job4.signature[0];
   spdlog::info("====" + return_value + "====");
 
   spdlog::info("Waiting for thread to stop");
@@ -169,7 +192,7 @@ LockManager::LockManager() {
 LockManager::~LockManager() {
   // TODO: Destructor never called (esp. on CTRL+C shutdown)!
 
-    spdlog::info("Destroying enclave");
+  spdlog::info("Destroying enclave");
   sgx_destroy_enclave(global_eid);
 }
 

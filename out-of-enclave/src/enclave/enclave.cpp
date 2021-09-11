@@ -27,6 +27,7 @@ uint8_t key_hash_func(char *key) {
   return hashval % 256;  // int8_t can store 0 ~ 255
 }
 
+int ht_hash(int key) { return key % ht_enclave->size; }
 /* Hash a string for a particular hash table. */
 int ht_hash(char *key) {
   unsigned long int hashval = 7;
@@ -708,25 +709,49 @@ void enclave_message_pass(void *data) {
 
   job *new_job = NULL;
 
-  if (command == QUIT) {
-    print_info("Received QUIT");
+  switch (command) {
+    case QUIT:
+      print_info("Received QUIT");
 
-    // Send exit message to all of the worker threads
-    for (int i = 0; i < arg_enclave.num_threads; i++) {
-      print_info("Sending QUIT to all threads");
+      // Send exit message to all of the worker threads
+      for (int i = 0; i < arg_enclave.num_threads; i++) {
+        print_info("Sending QUIT to all threads");
+        new_job = (job *)malloc(sizeof(job));
+        new_job->command = QUIT;
+        new_job->signature = ((job *)data)->signature;
+
+        sgx_thread_mutex_lock(&queue_mutex[i]);
+        queue[i].push(new_job);
+        sgx_thread_cond_signal(&job_cond[i]);
+        sgx_thread_mutex_unlock(&queue_mutex[i]);
+      }
+      break;
+
+    case SHARED:
+    case EXCLUSIVE:
+    case UNLOCK:
+      print_info("Received lock request");
+
       new_job = (job *)malloc(sizeof(job));
-      new_job->command = QUIT;
+      new_job->command = ((job *)data)->command;
+      new_job->transaction_id = ((job *)data)->transaction_id;
+      new_job->row_id = ((job *)data)->row_id;
       new_job->signature = ((job *)data)->signature;
 
-      sgx_thread_mutex_lock(&queue_mutex[i]);
-      queue[i].push(new_job);
-      sgx_thread_cond_signal(&job_cond[i]);
-      sgx_thread_mutex_unlock(&queue_mutex[i]);
-    }
+      // Send the requests to specific worker thread
+      thread_id = (int)(ht_hash(new_job->row_id) /
+                        (ht_enclave->size / arg_enclave.num_threads));
+      sgx_thread_mutex_lock(&queue_mutex[thread_id]);
+      queue[thread_id].push(new_job);
+      sgx_thread_cond_signal(&job_cond[thread_id]);
+      sgx_thread_mutex_unlock(&queue_mutex[thread_id]);
+      break;
+
+    default:
+      print_error("Received unknown command");
+      break;
   }
-  /*} else if (strncmp(cipher, "LOADDONE", 8) == 0) {
-    print_info("Load process is done");
-  } else {
+  /*
     new_job = (job *)malloc(sizeof(job));
     new_job->buf = (char *)malloc(sizeof(char) * arg_enclave.max_buf_size);
     memcpy(new_job->buf, cipher, arg_enclave.max_buf_size);
@@ -1022,17 +1047,29 @@ void enclave_worker_thread(hashtable *ht_, MACbuffer *MACbuf_) {
 
     sgx_thread_mutex_unlock(&queue_mutex[thread_id]);
 
-    if (command == QUIT) {
-      sgx_thread_mutex_lock(&queue_mutex[thread_id]);
-      queue[thread_id].pop();
-      cur_job->signature[0] = 'x';
-      free(cur_job);
-      sgx_thread_mutex_unlock(&queue_mutex[thread_id]);
+    switch (command) {
+      case QUIT:
+        sgx_thread_mutex_lock(&queue_mutex[thread_id]);
+        queue[thread_id].pop();
+        cur_job->signature[0] = 'x';
+        free(cur_job);
+        sgx_thread_mutex_unlock(&queue_mutex[thread_id]);
 
-      sgx_thread_mutex_destroy(&queue_mutex[thread_id]);
-      sgx_thread_cond_destroy(&job_cond[thread_id]);
-      print_info("Enclave worker quitting");
-      return;
+        sgx_thread_mutex_destroy(&queue_mutex[thread_id]);
+        sgx_thread_cond_destroy(&job_cond[thread_id]);
+        print_info("Enclave worker quitting");
+        return;
+      case SHARED:
+        print_info("Worker received SHARED");
+        break;
+      case EXCLUSIVE:
+        print_info("Worker received EXCLUSIVE");
+        break;
+      case UNLOCK:
+        print_info("Worker received UNLOCK");
+        break;
+      default:
+        print_error("Worker received unknown command");
     }
 
     /*if (strncmp(cipher, "GET", 3) == 0 || strncmp(cipher, "get", 3) == 0) {
@@ -1063,7 +1100,6 @@ void enclave_worker_thread(hashtable *ht_, MACbuffer *MACbuf_) {
     sgx_thread_mutex_lock(&queue_mutex[thread_id]);
     queue[thread_id].pop();
     free(cur_job);
-    return;
   }
 
   return;

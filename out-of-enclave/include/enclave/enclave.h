@@ -6,21 +6,20 @@
 #include <stdlib.h>
 
 #include <cstring>
-#include <string>
 #include <queue>
+#include <string>
 #include <vector>
 
-
 #include "base64-encoding.h"
+#include "common.h"
 #include "enclave_t.h"
 #include "hashtable.h"
 #include "lock.h"
 #include "sgx_tcrypto.h"
-#include "sgx_tseal.h"
-#include "transaction.h"
 #include "sgx_tkey_exchange.h"
 #include "sgx_trts.h"
-#include "common.h"
+#include "sgx_tseal.h"
+#include "transaction.h"
 
 sgx_ecc_state_handle_t context = NULL;
 sgx_ec256_private_t ec256_private_key;
@@ -59,6 +58,7 @@ extern BucketMAC *MACTable;
 extern Arg arg_enclave;
 
 /** Hash related functions **/
+int ht_hash(int key);
 int ht_hash(char *key);
 uint8_t key_hash_func(char *key);
 char *decrypt_key_val_and_compare(char *key, char *cipher, uint32_t key_len,
