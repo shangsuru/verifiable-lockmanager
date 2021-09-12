@@ -39,8 +39,8 @@ enum Command { SHARED, EXCLUSIVE, UNLOCK, QUIT };
 
 struct job {
   enum Command command;
-  int transaction_id;
-  int row_id;
+  unsigned int transaction_id;
+  unsigned int row_id;
   volatile char* signature;
 };
 typedef struct job job;

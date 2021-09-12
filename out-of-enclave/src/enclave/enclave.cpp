@@ -1052,16 +1052,17 @@ void enclave_worker_thread(hashtable *ht_, MACbuffer *MACbuf_) {
         queue[thread_id].pop();
         free(cur_job);
         sgx_thread_mutex_unlock(&queue_mutex[thread_id]);
-
         sgx_thread_mutex_destroy(&queue_mutex[thread_id]);
         sgx_thread_cond_destroy(&job_cond[thread_id]);
         print_info("Enclave worker quitting");
         return;
       case SHARED:
         print_info("Worker received SHARED");
+        cur_job->signature[0] = 'x';  // set dummy return value
         break;
       case EXCLUSIVE:
         print_info("Worker received EXCLUSIVE");
+        cur_job->signature[0] = 'x';  // set dummy return value
         break;
       case UNLOCK:
         print_info("Worker received UNLOCK");
@@ -1078,21 +1079,6 @@ void enclave_worker_thread(hashtable *ht_, MACbuffer *MACbuf_) {
     } else if (strncmp(cipher, "APP", 3) == 0 ||
                strncmp(cipher, "app", 3) == 0) {
       enclave_append(cipher);
-    } else if (strncmp(cipher, "quit", 4) == 0) {
-      sgx_thread_mutex_lock(&queue_mutex[thread_id]);
-      queue[thread_id].pop();
-      cur_job->signature[0] = 'x';
-      free(cipher);
-      free(cur_job);
-      sgx_thread_mutex_unlock(&queue_mutex[thread_id]);
-
-      sgx_thread_mutex_destroy(&queue_mutex[thread_id]);
-      sgx_thread_cond_destroy(&job_cond[thread_id]);
-      print_info("enclave worker quitting");
-      return;
-    } else {
-      print_warn("Untyped request");
-      break;
     }*/
 
     sgx_thread_mutex_lock(&queue_mutex[thread_id]);

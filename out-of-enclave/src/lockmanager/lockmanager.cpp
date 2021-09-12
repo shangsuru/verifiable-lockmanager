@@ -140,24 +140,9 @@ LockManager::LockManager() {
     };
   }
   //===============TEST====================
-  // Send SHARED to worker threads
-  /*job job1;
-  job1.command = SHARED;
-  job1.signature = (char *)malloc(sizeof(char));
-
-  enclave_send_job(global_eid, &job1);
-
-  job job2;
-  job2.command = EXCLUSIVE;
-  job2.signature = (char *)malloc(sizeof(char));
-
-  enclave_send_job(global_eid, &job2);
-
-  job job3;
-  job3.command = UNLOCK;
-  job3.signature = (char *)malloc(sizeof(char));
-
-  enclave_send_job(global_eid, &job3);*/
+  create_job(SHARED);
+  create_job(EXCLUSIVE);
+  create_job(UNLOCK);
 
   // Send QUIT to worker threads
   create_job(QUIT);
@@ -295,11 +280,15 @@ auto LockManager::read_and_unseal_keys() -> bool {
   return true;
 }
 
-auto LockManager::create_job(Command command) -> std::string {
+auto LockManager::create_job(Command command, unsigned int transaction_id,
+                             unsigned int row_id) -> std::string {
   job job;
   job.command = command;
 
   if (command == SHARED || command == EXCLUSIVE) {
+    job.transaction_id = transaction_id;
+    job.row_id = row_id;
+
     // Allocate memory for signature return value
     job.signature = (char *)malloc(sizeof(char));
     size_t n = 1;
@@ -320,7 +309,7 @@ auto LockManager::create_job(Command command) -> std::string {
     // Return signature
     std::string return_value;
     return_value += job.signature[0];
-    spdlog::info("====" + return_value + "====");
+    spdlog::info("Signature: " + return_value);
 
     return return_value;
   }
