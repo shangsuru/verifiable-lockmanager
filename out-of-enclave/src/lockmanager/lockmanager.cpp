@@ -141,7 +141,7 @@ LockManager::LockManager() {
   }
   //===============TEST====================
   // Send SHARED to worker threads
-  job job1;
+  /*job job1;
   job1.command = SHARED;
   job1.signature = (char *)malloc(sizeof(char));
   memset(job1.signature, 0, 1);
@@ -160,19 +160,22 @@ LockManager::LockManager() {
   job3.signature = (char *)malloc(sizeof(char));
   memset(job3.signature, 0, 1);
 
-  enclave_message_pass(global_eid, &job3);
+  enclave_message_pass(global_eid, &job3);*/
 
   // Send QUIT to worker threads
   job job4;
   job4.command = QUIT;
   job4.signature = (char *)malloc(sizeof(char));
-  memset(job4.signature, 0, 1);
+
+  size_t n = 1;
+  volatile char *p = job4.signature;
+  while (n-- > 0) {
+    *p++ = 0;
+  }
 
   enclave_message_pass(global_eid, &job4);
-  while (strncmp(job4.signature, "x", 1) != 0) {
-    spdlog::info("====" + std::to_string(job4.signature[0]) +
-                 "====");  // TODO: It doesn't work without this line, why? Use
-                           // condition variables!
+
+  while (job4.signature[0] == 0) {
     continue;
   }
 

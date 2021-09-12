@@ -24,7 +24,6 @@ struct hashtable {
 };
 typedef struct hashtable hashtable;
 
-/* DATA STRUCTURE DECLARATION */
 struct entry {
   uint32_t key_size;      // key size
   uint32_t val_size;      // value size
@@ -42,7 +41,7 @@ struct job {
   enum Command command;
   int transaction_id;
   int row_id;
-  char* signature;  // return value
+  volatile char* signature;
 };
 typedef struct job job;
 
