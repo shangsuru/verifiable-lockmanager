@@ -700,13 +700,7 @@ void enclave_init_values(hashtable *ht_, MACbuffer *MACbuf_, Arg arg) {
  **/
 void enclave_send_job(void *data) {
   Command command = ((job *)data)->command;
-
-  char *key;
-  uint32_t key_size;
-  char *tok;
-  char *temp_;
   int thread_id = 0;
-
   job *new_job = NULL;
 
   switch (command) {
