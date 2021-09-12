@@ -117,6 +117,8 @@ class LockManager {
 
   void configuration_init();
 
+  auto create_job(Command command) -> std::string;
+
   sgx_enclave_id_t global_eid = 0;
   sgx_launch_token_t token = {0};
   Arg arg;

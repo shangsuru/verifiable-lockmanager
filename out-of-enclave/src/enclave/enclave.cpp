@@ -698,7 +698,7 @@ void enclave_init_values(hashtable *ht_, MACbuffer *MACbuf_, Arg arg) {
  * Bring the resquest to enclave
  * parsing the key and send the requests to specific thread
  **/
-void enclave_message_pass(void *data) {
+void enclave_send_job(void *data) {
   Command command = ((job *)data)->command;
 
   char *key;
@@ -718,7 +718,6 @@ void enclave_message_pass(void *data) {
         print_info("Sending QUIT to all threads");
         new_job = (job *)malloc(sizeof(job));
         new_job->command = QUIT;
-        new_job->signature = ((job *)data)->signature;
 
         sgx_thread_mutex_lock(&queue_mutex[i]);
         queue[i].push(new_job);
@@ -1051,7 +1050,6 @@ void enclave_worker_thread(hashtable *ht_, MACbuffer *MACbuf_) {
       case QUIT:
         sgx_thread_mutex_lock(&queue_mutex[thread_id]);
         queue[thread_id].pop();
-        cur_job->signature[0] = 'x';
         free(cur_job);
         sgx_thread_mutex_unlock(&queue_mutex[thread_id]);
 

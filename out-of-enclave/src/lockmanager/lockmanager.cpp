@@ -144,44 +144,23 @@ LockManager::LockManager() {
   /*job job1;
   job1.command = SHARED;
   job1.signature = (char *)malloc(sizeof(char));
-  memset(job1.signature, 0, 1);
 
-  enclave_message_pass(global_eid, &job1);
+  enclave_send_job(global_eid, &job1);
 
   job job2;
   job2.command = EXCLUSIVE;
   job2.signature = (char *)malloc(sizeof(char));
-  memset(job2.signature, 0, 1);
 
-  enclave_message_pass(global_eid, &job2);
+  enclave_send_job(global_eid, &job2);
 
   job job3;
   job3.command = UNLOCK;
   job3.signature = (char *)malloc(sizeof(char));
-  memset(job3.signature, 0, 1);
 
-  enclave_message_pass(global_eid, &job3);*/
+  enclave_send_job(global_eid, &job3);*/
 
   // Send QUIT to worker threads
-  job job4;
-  job4.command = QUIT;
-  job4.signature = (char *)malloc(sizeof(char));
-
-  size_t n = 1;
-  volatile char *p = job4.signature;
-  while (n-- > 0) {
-    *p++ = 0;
-  }
-
-  enclave_message_pass(global_eid, &job4);
-
-  while (job4.signature[0] == 0) {
-    continue;
-  }
-
-  std::string return_value;
-  return_value += job4.signature[0];
-  spdlog::info("====" + return_value + "====");
+  create_job(QUIT);
 
   spdlog::info("Waiting for thread to stop");
   for (int i = 0; i < arg.num_threads; i++) {
@@ -314,4 +293,37 @@ auto LockManager::read_and_unseal_keys() -> bool {
 
   free(temp_buf);
   return true;
+}
+
+auto LockManager::create_job(Command command) -> std::string {
+  job job;
+  job.command = command;
+
+  if (command == SHARED || command == EXCLUSIVE) {
+    // Allocate memory for signature return value
+    job.signature = (char *)malloc(sizeof(char));
+    size_t n = 1;
+    volatile char *p = job.signature;
+    while (n-- > 0) {
+      *p++ = 0;
+    }
+  }
+
+  enclave_send_job(global_eid, &job);
+
+  if (command == SHARED || command == EXCLUSIVE) {
+    // Wait for return value to be set
+    while (job.signature[0] == 0) {
+      continue;
+    }
+
+    // Return signature
+    std::string return_value;
+    return_value += job.signature[0];
+    spdlog::info("====" + return_value + "====");
+
+    return return_value;
+  }
+
+  return "";
 }

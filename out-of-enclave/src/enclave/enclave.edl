@@ -25,7 +25,7 @@ enclave {
 
         public void enclave_worker_thread([in] hashtable *ht, [in] MACbuffer *MACbuf);
 
-        public void enclave_message_pass([user_check]void* data) transition_using_threads;
+        public void enclave_send_job([user_check]void* data) transition_using_threads;
 
     };
 
