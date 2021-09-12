@@ -139,11 +139,10 @@ LockManager::LockManager() {
       spdlog::error("Error at sealing keys");
     };
   }
-  //===============TEST====================
-  create_job(SHARED);
-  create_job(EXCLUSIVE);
-  create_job(UNLOCK);
+}
 
+LockManager::~LockManager() {
+  // TODO: Destructor never called (esp. on CTRL+C shutdown)!
   // Send QUIT to worker threads
   create_job(QUIT);
 
@@ -154,10 +153,6 @@ LockManager::LockManager() {
 
   spdlog::info("Freing threads");
   free(threads);
-}
-
-LockManager::~LockManager() {
-  // TODO: Destructor never called (esp. on CTRL+C shutdown)!
 
   spdlog::info("Destroying enclave");
   sgx_destroy_enclave(global_eid);
@@ -171,21 +166,17 @@ void LockManager::registerTransaction(unsigned int transactionId,
 
 auto LockManager::lock(unsigned int transactionId, unsigned int rowId,
                        bool isExclusive) -> std::string {
-  int res;
-  sgx_ec256_signature_t sig;
-  acquire_lock(global_eid, &res, (void *)&sig, sizeof(sgx_ec256_signature_t),
-               transactionId, rowId, isExclusive);
-  if (res == SGX_ERROR_UNEXPECTED) {
-    throw std::domain_error("Acquiring lock failed");
+  if (isExclusive) {
+    return create_job(EXCLUSIVE, transactionId, rowId);
   }
-
-  return base64_encode((unsigned char *)sig.x, sizeof(sig.x)) + "-" +
-         base64_encode((unsigned char *)sig.y, sizeof(sig.y));
+  return create_job(SHARED, transactionId, rowId);
 };
 
-void LockManager::unlock(unsigned int transactionId, unsigned int rowId) {
-  int res = -1;
-  release_lock(global_eid, transactionId, rowId);
+void LockManager::unlock(unsigned int transactionId, unsigned int rowId){
+    /*
+    int res = -1;
+    release_lock(global_eid, transactionId, rowId);
+    */
 };
 
 auto LockManager::initialize_enclave() -> bool {
@@ -284,17 +275,17 @@ auto LockManager::create_job(Command command, unsigned int transaction_id,
                              unsigned int row_id) -> std::string {
   job job;
   job.command = command;
+  const size_t signature_size = 89;
 
   if (command == SHARED || command == EXCLUSIVE) {
     job.transaction_id = transaction_id;
     job.row_id = row_id;
 
     // Allocate memory for signature return value
-    job.signature = (char *)malloc(sizeof(char));
-    size_t n = 1;
+    job.signature = (char *)malloc(sizeof(char) * signature_size);
     volatile char *p = job.signature;
-    while (n-- > 0) {
-      *p++ = 0;
+    for (int i = 0; i < signature_size; i++) {
+      *p++ = NOT_SET;
     }
   }
 
@@ -302,17 +293,16 @@ auto LockManager::create_job(Command command, unsigned int transaction_id,
 
   if (command == SHARED || command == EXCLUSIVE) {
     // Wait for return value to be set
-    while (job.signature[0] == 0) {
+    while (job.signature[0] == NOT_SET) {
       continue;
     }
 
-    // Return signature
-    std::string return_value;
-    return_value += job.signature[0];
-    spdlog::info("Signature: " + return_value);
-
-    return return_value;
+    std::string signature;
+    for (int i = 0; i < signature_size; i++) {
+      signature += job.signature[i];
+    }
+    return signature;
   }
 
-  return "";
+  return NO_SIGNATURE;
 }

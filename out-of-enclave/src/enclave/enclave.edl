@@ -17,10 +17,6 @@ enclave {
 
         public int register_transaction(unsigned int transactionId, unsigned int lockBudget);
 
-        public int acquire_lock([out, size=sig_len] void* signature, size_t sig_len, unsigned int transactionId, unsigned int rowId, int isExclusive);
-
-        public void release_lock(unsigned int transactionId, unsigned int rowId);
-
         public void enclave_init_values([in] hashtable* ht, [in] MACbuffer* MACbuf, Arg arg);
 
         public void enclave_worker_thread([in] hashtable *ht, [in] MACbuffer *MACbuf);

@@ -727,8 +727,7 @@ void enclave_send_job(void *data) {
       break;
 
     case SHARED:
-    case EXCLUSIVE:
-    case UNLOCK:
+    case EXCLUSIVE: {
       print_info("Received lock request");
 
       new_job = (job *)malloc(sizeof(job));
@@ -745,35 +744,15 @@ void enclave_send_job(void *data) {
       sgx_thread_cond_signal(&job_cond[thread_id]);
       sgx_thread_mutex_unlock(&queue_mutex[thread_id]);
       break;
+    }
+    case UNLOCK:
+      print_info("Received unlock request");
+      break;
 
     default:
       print_error("Received unknown command");
       break;
   }
-  /*
-    new_job = (job *)malloc(sizeof(job));
-    new_job->buf = (char *)malloc(sizeof(char) * arg_enclave.max_buf_size);
-    memcpy(new_job->buf, cipher, arg_enclave.max_buf_size);
-    new_job->client_sock = client_sock;
-
-    // parsing key
-    tok = strtok_r(cipher + 4, " ", &temp_);
-    key_size = strlen(tok) + 1;
-    key = (char *)malloc(sizeof(char) * key_size);
-    memset(key, 0, key_size);
-    memcpy(key, tok, key_size - 1);
-
-    // send the requests to specific worker thread
-    thread_id =
-        (int)(ht_hash(key) / (ht_enclave->size / arg_enclave.num_threads));
-    free(key);
-    sgx_thread_mutex_lock(&queue_mutex[thread_id]);
-    queue[thread_id].push(new_job);
-    sgx_thread_cond_signal(&job_cond[thread_id]);
-    sgx_thread_mutex_unlock(&queue_mutex[thread_id]);
-  }*/
-
-  return;
 }
 
 /**
@@ -1034,7 +1013,7 @@ void enclave_worker_thread(hashtable *ht_, MACbuffer *MACbuf_) {
   sgx_thread_mutex_lock(&queue_mutex[thread_id]);
 
   while (1) {
-    print_info("Enclave worker waiting for jobs");
+    print_info("Worker waiting for jobs");
     if (queue[thread_id].size() == 0) {
       sgx_thread_cond_wait(&job_cond[thread_id], &queue_mutex[thread_id]);
       continue;
@@ -1057,29 +1036,33 @@ void enclave_worker_thread(hashtable *ht_, MACbuffer *MACbuf_) {
         print_info("Enclave worker quitting");
         return;
       case SHARED:
-        print_info("Worker received SHARED");
-        cur_job->signature[0] = 'x';  // set dummy return value
+      case EXCLUSIVE: {
+        print_info("Worker received lock request");
+
+        int res;
+        sgx_ec256_signature_t sig;
+        acquire_lock((void *)&sig, cur_job->transaction_id, cur_job->row_id,
+                     command == EXCLUSIVE);
+        if (res == SGX_ERROR_UNEXPECTED) {
+          throw std::domain_error("Acquiring lock failed");
+        }
+
+        std::string encoded_signature =
+            base64_encode((unsigned char *)sig.x, sizeof(sig.x)) + "-" +
+            base64_encode((unsigned char *)sig.y, sizeof(sig.y));
+        volatile char *p = cur_job->signature;
+        size_t signature_size = 89;
+        for (int i = 0; i < signature_size; i++) {
+          *p++ = encoded_signature.c_str()[i];
+        }
         break;
-      case EXCLUSIVE:
-        print_info("Worker received EXCLUSIVE");
-        cur_job->signature[0] = 'x';  // set dummy return value
-        break;
+      }
       case UNLOCK:
         print_info("Worker received UNLOCK");
         break;
       default:
         print_error("Worker received unknown command");
     }
-
-    /*if (strncmp(cipher, "GET", 3) == 0 || strncmp(cipher, "get", 3) == 0) {
-      enclave_get(cipher);
-    } else if (strncmp(cipher, "SET", 3) == 0 ||
-               strncmp(cipher, "set", 3) == 0) {
-      enclave_set(cipher);
-    } else if (strncmp(cipher, "APP", 3) == 0 ||
-               strncmp(cipher, "app", 3) == 0) {
-      enclave_append(cipher);
-    }*/
 
     sgx_thread_mutex_lock(&queue_mutex[thread_id]);
     queue[thread_id].pop();
@@ -1194,8 +1177,8 @@ int register_transaction(unsigned int transactionId, unsigned int lockBudget) {
   return SGX_SUCCESS;
 }
 
-int acquire_lock(void *signature, size_t sig_len, unsigned int transactionId,
-                 unsigned int rowId, int isExclusive) {
+int acquire_lock(void *signature, unsigned int transactionId,
+                 unsigned int rowId, bool isExclusive) {
   // Get the transaction object for the given transaction ID
   std::shared_ptr<Transaction> transaction =
       transactionTable_.get(transactionId);
