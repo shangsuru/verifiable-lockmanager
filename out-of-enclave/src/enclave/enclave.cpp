@@ -705,8 +705,6 @@ void enclave_send_job(void *data) {
 
   switch (command) {
     case QUIT:
-      print_info("Received QUIT");
-
       // Send exit message to all of the worker threads
       for (int i = 0; i < arg_enclave.num_threads; i++) {
         print_info("Sending QUIT to all threads");
@@ -722,8 +720,6 @@ void enclave_send_job(void *data) {
 
     case SHARED:
     case EXCLUSIVE: {
-      print_info("Received lock request");
-
       new_job = (job *)malloc(sizeof(job));
       new_job->command = ((job *)data)->command;
       new_job->transaction_id = ((job *)data)->transaction_id;
@@ -1031,7 +1027,11 @@ void enclave_worker_thread(hashtable *ht_, MACbuffer *MACbuf_) {
         return;
       case SHARED:
       case EXCLUSIVE: {
-        print_info("Worker received lock request");
+        if (command == EXCLUSIVE) {
+          print_info("Worker received EXCLUSIVE");
+        } else {
+          print_info("Worker received SHARED");
+        }
 
         int res;
         sgx_ec256_signature_t sig;
@@ -1044,6 +1044,7 @@ void enclave_worker_thread(hashtable *ht_, MACbuffer *MACbuf_) {
         std::string encoded_signature =
             base64_encode((unsigned char *)sig.x, sizeof(sig.x)) + "-" +
             base64_encode((unsigned char *)sig.y, sizeof(sig.y));
+
         volatile char *p = cur_job->signature;
         size_t signature_size = 89;
         for (int i = 0; i < signature_size; i++) {
