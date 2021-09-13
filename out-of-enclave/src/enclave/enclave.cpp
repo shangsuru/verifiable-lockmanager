@@ -703,13 +703,14 @@ void enclave_send_job(void *data) {
   int thread_id = 0;
   job *new_job = NULL;
 
+  new_job = (job *)malloc(sizeof(job));
+  new_job->command = command;
+
   switch (command) {
     case QUIT:
       // Send exit message to all of the worker threads
       for (int i = 0; i < arg_enclave.num_threads; i++) {
         print_info("Sending QUIT to all threads");
-        new_job = (job *)malloc(sizeof(job));
-        new_job->command = QUIT;
 
         sgx_thread_mutex_lock(&queue_mutex[i]);
         queue[i].push(new_job);
@@ -719,9 +720,8 @@ void enclave_send_job(void *data) {
       break;
 
     case SHARED:
-    case EXCLUSIVE: {
-      new_job = (job *)malloc(sizeof(job));
-      new_job->command = ((job *)data)->command;
+    case EXCLUSIVE:
+    case UNLOCK: {
       new_job->transaction_id = ((job *)data)->transaction_id;
       new_job->row_id = ((job *)data)->row_id;
       new_job->signature = ((job *)data)->signature;
@@ -735,10 +735,6 @@ void enclave_send_job(void *data) {
       sgx_thread_mutex_unlock(&queue_mutex[thread_id]);
       break;
     }
-    case UNLOCK:
-      print_info("Received unlock request");
-      break;
-
     default:
       print_error("Received unknown command");
       break;
@@ -1054,6 +1050,7 @@ void enclave_worker_thread(hashtable *ht_, MACbuffer *MACbuf_) {
       }
       case UNLOCK:
         print_info("Worker received UNLOCK");
+        release_lock(cur_job->transaction_id, cur_job->row_id);
         break;
       default:
         print_error("Worker received unknown command");
@@ -1161,13 +1158,13 @@ auto ecdsa_close() -> int {
 
 int register_transaction(unsigned int transactionId, unsigned int lockBudget) {
   print_info("Registering transaction");
-  if (transactionTable_.contains(transactionId)) {
+  if (transactionTable_.find(transactionId) != transactionTable_.end()) {
     print_error("Transaction is already registered");
     return SGX_ERROR_UNEXPECTED;
   }
 
-  transactionTable_.set(
-      transactionId, std::make_shared<Transaction>(transactionId, lockBudget));
+  transactionTable_.insert({transactionId, std::make_shared<Transaction>(
+                                               transactionId, lockBudget)});
 
   return SGX_SUCCESS;
 }
@@ -1175,17 +1172,17 @@ int register_transaction(unsigned int transactionId, unsigned int lockBudget) {
 int acquire_lock(void *signature, unsigned int transactionId,
                  unsigned int rowId, bool isExclusive) {
   // Get the transaction object for the given transaction ID
-  std::shared_ptr<Transaction> transaction =
-      transactionTable_.get(transactionId);
+  std::shared_ptr<Transaction> transaction = transactionTable_[transactionId];
   if (transaction == nullptr) {
     print_error("Transaction was not registered");
     return SGX_ERROR_UNEXPECTED;
   }
+
   // Get the lock object for the given row ID
-  std::shared_ptr<Lock> lock = lockTable_.get(rowId);
+  std::shared_ptr<Lock> lock = lockTable_[rowId];
   if (lock == nullptr) {
     lock = std::make_shared<Lock>();
-    lockTable_.set(rowId, lock);
+    lockTable_.insert({rowId, lock});
   }
 
   // Check if 2PL is violated
@@ -1225,12 +1222,12 @@ abort:
 
 sign:
   unsigned int block_timeout = get_block_timeout();
-  /* Get string representation of the lock tuple:
-   * <TRANSACTION-ID>_<ROW-ID>_<MODE>_<BLOCKTIMEOUT>,
-   * where mode means, if the lock is for shared or exclusive access
-   */
+
+  // Get string representation of the lock tuple:
+  // <TRANSACTION-ID>_<ROW-ID>_<MODE>_<BLOCKTIMEOUT>,
+  // where mode means, if the lock is for shared or exclusive access
   std::string mode;
-  switch (lockTable_.get(rowId)->getMode()) {
+  switch (lock->getMode()) {
     case Lock::LockMode::kExclusive:
       mode = "X";  // exclusive
       break;
@@ -1263,8 +1260,7 @@ sign:
 
 void release_lock(unsigned int transactionId, unsigned int rowId) {
   // Get the transaction object
-  std::shared_ptr<Transaction> transaction;
-  transaction = transactionTable_.get(transactionId);
+  std::shared_ptr<Transaction> transaction = transactionTable_[transactionId];
   if (transaction == nullptr) {
     print_error("Transaction was not registered");
     return;
@@ -1272,7 +1268,7 @@ void release_lock(unsigned int transactionId, unsigned int rowId) {
 
   // Get the lock object
   std::shared_ptr<Lock> lock;
-  lock = lockTable_.get(rowId);
+  lock = lockTable_[rowId];
   if (lock == nullptr) {
     print_error("Lock does not exist");
     return;

@@ -3,8 +3,8 @@
 #include <memory>
 #include <mutex>
 #include <set>
+#include <unordered_map>
 
-#include "hashtable.h"
 #include "lock.h"
 
 /**
@@ -94,7 +94,8 @@ class Transaction {
    *
    * @param lockTable containing all the locks indexed by row ID
    */
-  void releaseAllLocks(HashTable<std::shared_ptr<Lock>>& lockTable);
+  void releaseAllLocks(
+      std::unordered_map<unsigned int, std::shared_ptr<Lock>>& lockTable);
 
  private:
   unsigned int transactionId_;

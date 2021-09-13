@@ -8,6 +8,7 @@
 #include <cstring>
 #include <queue>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "base64-encoding.h"
@@ -38,9 +39,9 @@ struct DataToSeal {
   sgx_ec256_public_t publicKey;
 };
 
-HashTable<std::shared_ptr<Transaction>> transactionTable_(
-    TRANSACTION_TABLE_SIZE);
-HashTable<std::shared_ptr<Lock>> lockTable_(LOCK_TABLE_SIZE);
+std::unordered_map<unsigned int, std::shared_ptr<Transaction>>
+    transactionTable_;
+std::unordered_map<unsigned int, std::shared_ptr<Lock>> lockTable_;
 
 /* hash table */
 extern hashtable *ht_enclave;

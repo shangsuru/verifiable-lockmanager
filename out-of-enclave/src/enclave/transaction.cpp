@@ -50,11 +50,12 @@ auto Transaction::hasLock(unsigned int rowId) -> bool {
   return lockedRows_.find(rowId) != lockedRows_.end();
 };
 
-void Transaction::releaseAllLocks(HashTable<std::shared_ptr<Lock>>& lockTable) {
+void Transaction::releaseAllLocks(
+    std::unordered_map<unsigned int, std::shared_ptr<Lock>>& lockTable) {
   const std::lock_guard<std::mutex> latch(mut_);
 
   for (auto locked_row : lockedRows_) {
-    lockTable.get(locked_row)->release(transactionId_);
+    lockTable[locked_row]->release(transactionId_);
   }
   lockedRows_.clear();
   aborted_ = true;

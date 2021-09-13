@@ -172,11 +172,8 @@ auto LockManager::lock(unsigned int transactionId, unsigned int rowId,
   return create_job(SHARED, transactionId, rowId);
 };
 
-void LockManager::unlock(unsigned int transactionId, unsigned int rowId){
-    /*
-    int res = -1;
-    release_lock(global_eid, transactionId, rowId);
-    */
+void LockManager::unlock(unsigned int transactionId, unsigned int rowId) {
+  create_job(UNLOCK, transactionId, rowId);
 };
 
 auto LockManager::initialize_enclave() -> bool {
