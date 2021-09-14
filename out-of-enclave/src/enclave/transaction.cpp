@@ -13,25 +13,30 @@ auto Transaction::getLockBudget() const -> unsigned int { return lockBudget_; };
 
 auto Transaction::getPhase() -> Phase { return phase_; };
 
-void Transaction::addLock(unsigned int rowId, Lock::LockMode requestedMode,
-                          Lock* lock) {
+auto Transaction::addLock(unsigned int rowId, Lock::LockMode requestedMode,
+                          Lock* lock) -> int {
   const std::lock_guard<std::mutex> latch(mut_);
 
   if (aborted_) {
-    return;
+    return SGX_ERROR_UNEXPECTED;
   }
 
+  int ret;
   switch (requestedMode) {
     case Lock::LockMode::kExclusive:
-      lock->getExclusiveAccess(transactionId_);
+      ret = lock->getExclusiveAccess(transactionId_);
       break;
     case Lock::LockMode::kShared:
-      lock->getSharedAccess(transactionId_);
+      ret = lock->getSharedAccess(transactionId_);
       break;
   }
 
-  lockedRows_.insert(rowId);
-  lockBudget_--;
+  if (ret == SGX_SUCCESS) {
+    lockedRows_.insert(rowId);
+    lockBudget_--;
+  }
+
+  return ret;
 };
 
 void Transaction::releaseLock(unsigned int rowId, Lock* lock) {
