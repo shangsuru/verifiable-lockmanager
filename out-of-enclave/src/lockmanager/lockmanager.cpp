@@ -165,7 +165,7 @@ void LockManager::registerTransaction(unsigned int transactionId,
 };
 
 auto LockManager::lock(unsigned int transactionId, unsigned int rowId,
-                       bool isExclusive) -> std::string {
+                       bool isExclusive) -> std::pair<std::string, bool> {
   if (isExclusive) {
     return create_job(EXCLUSIVE, transactionId, rowId);
   }
@@ -269,7 +269,8 @@ auto LockManager::read_and_unseal_keys() -> bool {
 }
 
 auto LockManager::create_job(Command command, unsigned int transaction_id,
-                             unsigned int row_id) -> std::string {
+                             unsigned int row_id)
+    -> std::pair<std::string, bool> {
   job job;
   job.command = command;
   const size_t signature_size = 89;
@@ -294,12 +295,17 @@ auto LockManager::create_job(Command command, unsigned int transaction_id,
       continue;
     }
 
+    // TODO: what if there was an error and no signature would be returned?
+    if (job.signature[0] == FAILED) {
+      return std::make_pair("Lock couldn't be acquired", false);
+    }
+
     std::string signature;
     for (int i = 0; i < signature_size; i++) {
       signature += job.signature[i];
     }
-    return signature;
+    return std::make_pair(signature, true);
   }
 
-  return NO_SIGNATURE;
+  return std::make_pair(NO_SIGNATURE, true);
 }

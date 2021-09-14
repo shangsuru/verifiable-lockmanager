@@ -22,16 +22,14 @@ auto LockingServiceImpl::LockExclusive(ServerContext* context,
   unsigned int transaction_id = request->transaction_id();
   unsigned int row_id = request->row_id();
 
-  std::string signature;
-  try {
-    signature = lockManager_.lock(transaction_id, row_id, true);
-  } catch (const std::domain_error& e) {
-    spdlog::warn(e.what());
-    return Status::CANCELLED;
-  }
+  auto [signature, ok] = lockManager_.lock(transaction_id, row_id, true);
 
-  response->set_signature(signature);
-  return Status::OK;
+  response->set_signature(
+      signature);  // If not ok, signature contains an error message instead
+  if (ok) {
+    return Status::OK;
+  }
+  return Status::CANCELLED;
 }
 
 auto LockingServiceImpl::LockShared(ServerContext* context,
@@ -40,16 +38,14 @@ auto LockingServiceImpl::LockShared(ServerContext* context,
   unsigned int transaction_id = request->transaction_id();
   unsigned int row_id = request->row_id();
 
-  std::string signature;
-  try {
-    signature = lockManager_.lock(transaction_id, row_id, false);
-  } catch (const std::domain_error& e) {
-    spdlog::warn(e.what());
-    return Status::CANCELLED;
-  }
+  auto [signature, ok] = lockManager_.lock(transaction_id, row_id, false);
 
-  response->set_signature(signature);
-  return Status::OK;
+  response->set_signature(
+      signature);  // If not ok, signature contains an error message instead
+  if (ok) {
+    return Status::OK;
+  }
+  return Status::CANCELLED;
 }
 
 auto LockingServiceImpl::Unlock(ServerContext* context,
@@ -58,12 +54,6 @@ auto LockingServiceImpl::Unlock(ServerContext* context,
   unsigned int transaction_id = request->transaction_id();
   unsigned int row_id = request->row_id();
 
-  try {
-    lockManager_.unlock(transaction_id, row_id);
-  } catch (const std::domain_error& e) {
-    spdlog::warn(e.what());
-    return Status::CANCELLED;
-  }
-
+  lockManager_.unlock(transaction_id, row_id);
   return Status::OK;
 }

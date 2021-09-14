@@ -21,6 +21,7 @@
 #define MAX_PATH FILENAME_MAX
 #define NOT_SET '-'      // to fill empty signature buffer
 #define NO_SIGNATURE ""  // for jobs that return no signature (QUIT, UNLOCK)
+#define FAILED '+'       // signaling that a lock couldn't get acquired
 
 static hashtable *ht = NULL;
 static MACbuffer *MACbuf = NULL;
@@ -74,7 +75,7 @@ class LockManager {
    * exhausted
    */
   auto lock(unsigned int transactionId, unsigned int rowId, bool isExclusive)
-      -> std::string;
+      -> std::pair<std::string, bool>;
 
   /**
    * Releases a lock for the specified row
@@ -120,7 +121,7 @@ class LockManager {
   void configuration_init();
 
   auto create_job(Command command, unsigned int transaction_id = 0,
-                  unsigned int row_id = 0) -> std::string;
+                  unsigned int row_id = 0) -> std::pair<std::string, bool>;
 
   sgx_enclave_id_t global_eid = 0;
   sgx_launch_token_t token = {0};

@@ -41,7 +41,8 @@ auto LockingServiceClient::requestSharedLock(unsigned int transactionId,
     return response.signature();
   }
 
-  throw std::domain_error("Request failed");
+  spdlog::error("Acquiring shared lock failed");
+  return "";
 }
 
 auto LockingServiceClient::requestExclusiveLock(unsigned int transactionId,
@@ -64,7 +65,8 @@ auto LockingServiceClient::requestExclusiveLock(unsigned int transactionId,
     return response.signature();
   }
 
-  throw std::domain_error("Request failed");
+  spdlog::error("Acquiring exclusive log failed");
+  return "";
 }
 
 auto LockingServiceClient::requestUnlock(unsigned int transactionId,

@@ -1039,8 +1039,9 @@ void enclave_worker_thread(hashtable *ht_, MACbuffer *MACbuf_) {
         int res = acquire_lock((void *)&sig, cur_job->transaction_id,
                                cur_job->row_id, command == EXCLUSIVE);
         if (res == SGX_ERROR_UNEXPECTED) {
-          return;  // TODO: Set signature to error code, so that thread stops
-                   // busy waiting on return value
+          volatile char *p = cur_job->signature;
+          *p = FAILED;
+          break;
         }
 
         std::string encoded_signature =
