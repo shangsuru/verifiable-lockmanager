@@ -64,5 +64,4 @@ class Lock {
   bool exclusive_;
   std::set<unsigned int>
       owners_;  // IDs of the transactions that currently hold this lock
-  std::mutex mut_;
 };

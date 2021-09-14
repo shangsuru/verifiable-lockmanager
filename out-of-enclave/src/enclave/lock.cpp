@@ -1,8 +1,6 @@
 #include "lock.h"
 
 auto Lock::getMode() -> LockMode {
-  const std::lock_guard<std::mutex> latch(mut_);
-
   if (exclusive_) {
     return LockMode::kExclusive;
   }
@@ -10,8 +8,6 @@ auto Lock::getMode() -> LockMode {
 }
 
 auto Lock::getSharedAccess(unsigned int transactionId) -> int {
-  const std::lock_guard<std::mutex> latch(mut_);
-
   if (!exclusive_) {
     owners_.insert(transactionId);
   } else {
@@ -23,8 +19,6 @@ auto Lock::getSharedAccess(unsigned int transactionId) -> int {
 };
 
 auto Lock::getExclusiveAccess(unsigned int transactionId) -> int {
-  const std::lock_guard<std::mutex> latch(mut_);
-
   if (owners_.empty()) {
     exclusive_ = true;
     owners_.insert(transactionId);
@@ -37,8 +31,6 @@ auto Lock::getExclusiveAccess(unsigned int transactionId) -> int {
 };
 
 auto Lock::upgrade(unsigned int transactionId) -> int {
-  const std::lock_guard<std::mutex> latch(mut_);
-
   if (owners_.size() == 1 && (owners_.count(transactionId) == 1)) {
     exclusive_ = true;
   } else {
@@ -50,8 +42,6 @@ auto Lock::upgrade(unsigned int transactionId) -> int {
 };
 
 void Lock::release(unsigned int transactionId) {
-  const std::lock_guard<std::mutex> latch(mut_);
-
   exclusive_ = false;
   owners_.erase(transactionId);
 }
