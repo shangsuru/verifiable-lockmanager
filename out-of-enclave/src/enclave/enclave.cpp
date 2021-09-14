@@ -1294,7 +1294,7 @@ void release_lock(unsigned int transactionId, unsigned int rowId) {
     return;
   }
 
-  transaction->releaseLock(rowId, lock);
+  transaction->releaseLock(rowId, lockTable_);
 }
 
 void abort_transaction(Transaction *transaction) {

@@ -72,7 +72,8 @@ class Transaction {
    * @param rowId row ID of the released lock
    * @param lock the lock to release
    */
-  void releaseLock(unsigned int rowId, Lock* lock);
+  void releaseLock(unsigned int rowId,
+                   std::unordered_map<unsigned int, Lock*>& lockTable);
 
   /**
    * @returns maximum number of locks the transaction is allowed to acquire over
