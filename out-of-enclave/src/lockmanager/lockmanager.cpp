@@ -274,10 +274,10 @@ auto LockManager::create_job(Command command, unsigned int transaction_id,
   job.command = command;
   const size_t signature_size = 89;
 
-  if (command == SHARED || command == EXCLUSIVE) {
-    job.transaction_id = transaction_id;
-    job.row_id = row_id;
+  job.transaction_id = transaction_id;
+  job.row_id = row_id;
 
+  if (command == SHARED || command == EXCLUSIVE) {
     // Allocate memory for signature return value
     job.signature = (char *)malloc(sizeof(char) * signature_size);
     volatile char *p = job.signature;

@@ -14,7 +14,6 @@
 #include "base64-encoding.h"
 #include "common.h"
 #include "enclave_t.h"
-#include "hashtable.h"
 #include "lock.h"
 #include "sgx_tcrypto.h"
 #include "sgx_tkey_exchange.h"
@@ -39,9 +38,8 @@ struct DataToSeal {
   sgx_ec256_public_t publicKey;
 };
 
-std::unordered_map<unsigned int, std::shared_ptr<Transaction>>
-    transactionTable_;
-std::unordered_map<unsigned int, std::shared_ptr<Lock>> lockTable_;
+std::unordered_map<unsigned int, Transaction *> transactionTable_;
+std::unordered_map<unsigned int, Lock *> lockTable_;
 
 /* hash table */
 extern hashtable *ht_enclave;
@@ -186,7 +184,7 @@ void release_lock(unsigned int transactionId, unsigned int rowId);
  *
  * @param transaction the transaction to be aborted
  */
-void abort_transaction(const std::shared_ptr<Transaction> &transaction);
+void abort_transaction(Transaction *transaction);
 
 /**
  * @returns the block timeout, which resembles a future block number of the

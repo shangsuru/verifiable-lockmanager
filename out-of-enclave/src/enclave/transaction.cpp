@@ -14,7 +14,7 @@ auto Transaction::getLockBudget() const -> unsigned int { return lockBudget_; };
 auto Transaction::getPhase() -> Phase { return phase_; };
 
 void Transaction::addLock(unsigned int rowId, Lock::LockMode requestedMode,
-                          std::shared_ptr<Lock>& lock) {
+                          Lock* lock) {
   const std::lock_guard<std::mutex> latch(mut_);
 
   if (aborted_) {
@@ -34,7 +34,7 @@ void Transaction::addLock(unsigned int rowId, Lock::LockMode requestedMode,
   lockBudget_--;
 };
 
-void Transaction::releaseLock(unsigned int rowId, std::shared_ptr<Lock>& lock) {
+void Transaction::releaseLock(unsigned int rowId, Lock* lock) {
   const std::lock_guard<std::mutex> latch(mut_);
 
   if (lockedRows_.find(rowId) != lockedRows_.end()) {
@@ -51,7 +51,7 @@ auto Transaction::hasLock(unsigned int rowId) -> bool {
 };
 
 void Transaction::releaseAllLocks(
-    std::unordered_map<unsigned int, std::shared_ptr<Lock>>& lockTable) {
+    std::unordered_map<unsigned int, Lock*>& lockTable) {
   const std::lock_guard<std::mutex> latch(mut_);
 
   for (auto locked_row : lockedRows_) {

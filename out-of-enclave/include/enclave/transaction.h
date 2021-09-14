@@ -61,8 +61,7 @@ class Transaction {
    * @param requestedMode
    * @param lock
    */
-  void addLock(unsigned int rowId, Lock::LockMode requestedMode,
-               std::shared_ptr<Lock>& lock);
+  void addLock(unsigned int rowId, Lock::LockMode requestedMode, Lock* lock);
 
   /**
    * Checks if the transaction currently holds a lock on the given row ID.
@@ -72,7 +71,7 @@ class Transaction {
    * @param rowId row ID of the released lock
    * @param lock the lock to release
    */
-  void releaseLock(unsigned int rowId, std::shared_ptr<Lock>& lock);
+  void releaseLock(unsigned int rowId, Lock* lock);
 
   /**
    * @returns maximum number of locks the transaction is allowed to acquire over
@@ -94,8 +93,7 @@ class Transaction {
    *
    * @param lockTable containing all the locks indexed by row ID
    */
-  void releaseAllLocks(
-      std::unordered_map<unsigned int, std::shared_ptr<Lock>>& lockTable);
+  void releaseAllLocks(std::unordered_map<unsigned int, Lock*>& lockTable);
 
  private:
   unsigned int transactionId_;

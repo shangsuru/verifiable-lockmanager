@@ -1024,9 +1024,15 @@ void enclave_worker_thread(hashtable *ht_, MACbuffer *MACbuf_) {
       case SHARED:
       case EXCLUSIVE: {
         if (command == EXCLUSIVE) {
-          print_info("Worker received EXCLUSIVE");
+          print_info(
+              ("(EXCLUSIVE) TXID: " + std::to_string(cur_job->transaction_id) +
+               ", RID: " + std::to_string(cur_job->row_id))
+                  .c_str());
         } else {
-          print_info("Worker received SHARED");
+          print_info(
+              ("(SHARED) TXID: " + std::to_string(cur_job->transaction_id) +
+               ", RID: " + std::to_string(cur_job->row_id))
+                  .c_str());
         }
 
         int res;
@@ -1049,7 +1055,10 @@ void enclave_worker_thread(hashtable *ht_, MACbuffer *MACbuf_) {
         break;
       }
       case UNLOCK:
-        print_info("Worker received UNLOCK");
+        print_info(
+            ("(UNLOCK) TXID: " + std::to_string(cur_job->transaction_id) +
+             ", RID: " + std::to_string(cur_job->row_id))
+                .c_str());
         release_lock(cur_job->transaction_id, cur_job->row_id);
         break;
       default:
@@ -1163,8 +1172,7 @@ int register_transaction(unsigned int transactionId, unsigned int lockBudget) {
     return SGX_ERROR_UNEXPECTED;
   }
 
-  transactionTable_.insert({transactionId, std::make_shared<Transaction>(
-                                               transactionId, lockBudget)});
+  transactionTable_[transactionId] = new Transaction(transactionId, lockBudget);
 
   return SGX_SUCCESS;
 }
@@ -1172,17 +1180,17 @@ int register_transaction(unsigned int transactionId, unsigned int lockBudget) {
 int acquire_lock(void *signature, unsigned int transactionId,
                  unsigned int rowId, bool isExclusive) {
   // Get the transaction object for the given transaction ID
-  std::shared_ptr<Transaction> transaction = transactionTable_[transactionId];
+  auto transaction = transactionTable_[transactionId];
   if (transaction == nullptr) {
     print_error("Transaction was not registered");
     return SGX_ERROR_UNEXPECTED;
   }
 
   // Get the lock object for the given row ID
-  std::shared_ptr<Lock> lock = lockTable_[rowId];
+  auto lock = lockTable_[rowId];
   if (lock == nullptr) {
-    lock = std::make_shared<Lock>();
-    lockTable_.insert({rowId, lock});
+    lock = new Lock();
+    lockTable_[rowId] = lock;
   }
 
   // Check if 2PL is violated
@@ -1260,15 +1268,14 @@ sign:
 
 void release_lock(unsigned int transactionId, unsigned int rowId) {
   // Get the transaction object
-  std::shared_ptr<Transaction> transaction = transactionTable_[transactionId];
+  auto transaction = transactionTable_[transactionId];
   if (transaction == nullptr) {
     print_error("Transaction was not registered");
     return;
   }
 
   // Get the lock object
-  std::shared_ptr<Lock> lock;
-  lock = lockTable_[rowId];
+  auto lock = lockTable_[rowId];
   if (lock == nullptr) {
     print_error("Lock does not exist");
     return;
@@ -1277,7 +1284,7 @@ void release_lock(unsigned int transactionId, unsigned int rowId) {
   transaction->releaseLock(rowId, lock);
 }
 
-void abort_transaction(const std::shared_ptr<Transaction> &transaction) {
+void abort_transaction(Transaction *transaction) {
   transactionTable_.erase(transaction->getTransactionId());
   transaction->releaseAllLocks(lockTable_);
 }
