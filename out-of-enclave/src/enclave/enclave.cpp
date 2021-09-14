@@ -1300,4 +1300,5 @@ void release_lock(unsigned int transactionId, unsigned int rowId) {
 void abort_transaction(Transaction *transaction) {
   transactionTable_.erase(transaction->getTransactionId());
   transaction->releaseAllLocks(lockTable_);
+  delete transaction;
 }
