@@ -21,9 +21,6 @@
 #define MAX_PATH FILENAME_MAX
 #define NO_SIGNATURE ""  // for jobs that return no signature (QUIT, UNLOCK)
 
-static hashtable *ht = NULL;
-static MACbuffer *MACbuf = NULL;
-
 /**
  * Process lock and unlock requests from the server. It manages a lock table,
  * where for each row ID it can store the corresponding lock object, which
@@ -107,10 +104,6 @@ class LockManager {
   auto read_and_unseal_keys() -> bool;
 
   auto load_and_initialize_enclave(sgx_enclave_id_t *eid) -> sgx_status_t;
-
-  auto macbuffer_create(int size) -> MACbuffer *;
-
-  auto ht_create(int size) -> hashtable *;
 
   void start_worker_threads();
 

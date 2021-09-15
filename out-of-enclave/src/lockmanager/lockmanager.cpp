@@ -1,8 +1,5 @@
 #include <lockmanager.h>
 
-/**
- * load and initialize the enclave
- **/
 auto LockManager::load_and_initialize_enclave(sgx_enclave_id_t *eid)
     -> sgx_status_t {
   sgx_status_t ret = SGX_SUCCESS;
@@ -29,54 +26,12 @@ auto LockManager::load_and_initialize_enclave(sgx_enclave_id_t *eid)
   return ret;
 }
 
-/**
- * For mac bucketing optimization
- * create mac buffer
- **/
-auto LockManager::macbuffer_create(int size) -> MACbuffer * {
-  MACbuffer *Mbuf = NULL;
-
-  Mbuf = (MACbuffer *)malloc(sizeof(MACbuffer));
-  Mbuf->entry = (MACentry *)malloc(sizeof(MACentry) * size);
-  for (int i = 0; i < size; i++) {
-    Mbuf->entry[i].size = 0;
-  }
-  return Mbuf;
-}
-
-/**
- * create new hashtable
- **/
-auto LockManager::ht_create(int size) -> hashtable * {
-  hashtable *ht = NULL;
-
-  if (size < 1) return NULL;
-
-  /* Allocate the table itself. */
-  if ((ht = (hashtable *)malloc(sizeof(hashtable))) == NULL) return NULL;
-
-  /* Allocate pointers to the head nodes. */
-  if ((ht->table = (entry **)malloc(sizeof(entry *) * size)) == NULL)
-    return NULL;
-
-  for (int i = 0; i < size; i++) ht->table[i] = NULL;
-
-  ht->size = size;
-
-  return ht;
-}
-
-/**
- * creating server threads working inside the enclave
- **/
 auto LockManager::load_and_initialize_threads(void *object) -> void * {
   reinterpret_cast<LockManager *>(object)->start_worker_threads();
   return 0;
 }
 
-void LockManager::start_worker_threads() {
-  enclave_worker_thread(global_eid, (hashtable *)ht, (MACbuffer *)MACbuf);
-}
+void LockManager::start_worker_threads() { enclave_worker_thread(global_eid); }
 
 //========= OCALL Functions ===========
 void print_info(const char *str) {
@@ -96,16 +51,8 @@ void print_warn(const char *str) {
  * init default configuration values
  **/
 void LockManager::configuration_init() {
-  arg.max_buf_size = 64;
   arg.num_threads = 2;
   arg.tx_thread_id = arg.num_threads - 1;
-
-  arg.bucket_size = 8 * 1024 * 1024;
-  arg.tree_root_size = 4 * 1024 * 1024;
-
-  /** Optimization **/
-  arg.key_opt = false;
-  arg.mac_opt = false;
 }
 
 LockManager::LockManager() {
@@ -118,11 +65,7 @@ LockManager::LockManager() {
     // TODO: implement error handling
   }
 
-  ht = ht_create(arg.bucket_size);
-  MACbuf = macbuffer_create(arg.bucket_size);
-
-  // Initialize hash tree
-  enclave_init_values(global_eid, ht, MACbuf, arg);
+  enclave_init_values(global_eid, arg);
 
   // Create threads for lock requests and an additional one for registering
   // transactions
@@ -272,7 +215,7 @@ auto LockManager::read_and_unseal_keys() -> bool {
 auto LockManager::create_job(Command command, unsigned int transaction_id,
                              unsigned int row_id, unsigned int lock_budget)
     -> std::pair<std::string, bool> {
-  job job;
+  Job job;
   job.command = command;
   const size_t signature_size = 89;
 

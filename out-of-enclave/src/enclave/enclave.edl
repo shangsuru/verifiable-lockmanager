@@ -15,9 +15,9 @@ enclave {
 
 		public sgx_status_t seal_keys([out, size=sealed_size] uint8_t* sealed_blob, uint32_t sealed_size);
 
-        public void enclave_init_values([in] hashtable* ht, [in] MACbuffer* MACbuf, Arg arg);
+        public void enclave_init_values(Arg arg);
 
-        public void enclave_worker_thread([in] hashtable *ht, [in] MACbuffer *MACbuf);
+        public void enclave_worker_thread();
 
         public void enclave_send_job([user_check]void* data) transition_using_threads;
 
