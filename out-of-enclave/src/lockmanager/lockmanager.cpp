@@ -97,7 +97,8 @@ void print_warn(const char *str) {
  **/
 void LockManager::configuration_init() {
   arg.max_buf_size = 64;
-  arg.num_threads = 1;
+  arg.num_threads = 2;
+  arg.tx_thread_id = arg.num_threads - 1;
 
   arg.bucket_size = 8 * 1024 * 1024;
   arg.tree_root_size = 4 * 1024 * 1024;
@@ -123,7 +124,8 @@ LockManager::LockManager() {
   // Initialize hash tree
   enclave_init_values(global_eid, ht, MACbuf, arg);
 
-  // Create worker threads
+  // Create threads for lock requests and an additional one for registering
+  // transactions
   threads = (pthread_t *)malloc(sizeof(pthread_t) * (arg.num_threads));
   spdlog::info("Initializing " + std::to_string(arg.num_threads) + " threads");
   for (int i = 0; i < arg.num_threads; i++) {
@@ -160,8 +162,7 @@ LockManager::~LockManager() {
 
 void LockManager::registerTransaction(unsigned int transactionId,
                                       unsigned int lockBudget) {
-  int res = -1;
-  register_transaction(global_eid, &res, transactionId, lockBudget);
+  create_job(REGISTER, transactionId, 0, lockBudget);
 };
 
 auto LockManager::lock(unsigned int transactionId, unsigned int rowId,
@@ -269,7 +270,7 @@ auto LockManager::read_and_unseal_keys() -> bool {
 }
 
 auto LockManager::create_job(Command command, unsigned int transaction_id,
-                             unsigned int row_id)
+                             unsigned int row_id, unsigned int lock_budget)
     -> std::pair<std::string, bool> {
   job job;
   job.command = command;
@@ -277,32 +278,36 @@ auto LockManager::create_job(Command command, unsigned int transaction_id,
 
   job.transaction_id = transaction_id;
   job.row_id = row_id;
+  job.lock_budget = lock_budget;
+
+  job.finished = new bool;
+  *job.finished = false;
+  job.error = new bool;
+  *job.error = false;
 
   if (command == SHARED || command == EXCLUSIVE) {
     // Allocate memory for signature return value
-    job.signature = (char *)malloc(sizeof(char) * signature_size);
-    volatile char *p = job.signature;
-    for (int i = 0; i < signature_size; i++) {
-      *p++ = NOT_SET;
-    }
+    job.return_value = (char *)malloc(sizeof(char) * signature_size);
   }
 
   enclave_send_job(global_eid, &job);
 
-  if (command == SHARED || command == EXCLUSIVE) {
-    // Wait for return value to be set
-    while (job.signature[0] == NOT_SET) {
+  if (command == SHARED || command == EXCLUSIVE || command == REGISTER) {
+    // Wait for job to be finished
+    while (!*job.finished) {
       continue;
     }
 
-    // TODO: what if there was an error and no signature would be returned?
-    if (job.signature[0] == FAILED) {
+    if (*job.error) {
+      if (command == REGISTER) {
+        return std::make_pair("Failed to register transaction", false);
+      }
       return std::make_pair("Lock couldn't be acquired", false);
     }
 
     std::string signature;
     for (int i = 0; i < signature_size; i++) {
-      signature += job.signature[i];
+      signature += job.return_value[i];
     }
     return std::make_pair(signature, true);
   }

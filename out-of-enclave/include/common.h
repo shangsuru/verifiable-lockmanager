@@ -35,18 +35,22 @@ struct entry {
 };
 typedef struct entry entry;
 
-enum Command { SHARED, EXCLUSIVE, UNLOCK, QUIT };
+enum Command { SHARED, EXCLUSIVE, UNLOCK, QUIT, REGISTER };
 
 struct job {
   enum Command command;
   unsigned int transaction_id;
   unsigned int row_id;
-  volatile char* signature;
+  unsigned int lock_budget;
+  volatile char* return_value;
+  volatile bool* finished;
+  volatile bool* error;
 };
 typedef struct job job;
 
 struct argument {
   int num_threads;
+  int tx_thread_id;
   int max_buf_size;
   int bucket_size;
   int tree_root_size;

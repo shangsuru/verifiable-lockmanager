@@ -724,15 +724,30 @@ void enclave_send_job(void *data) {
     case UNLOCK: {
       new_job->transaction_id = ((job *)data)->transaction_id;
       new_job->row_id = ((job *)data)->row_id;
-      new_job->signature = ((job *)data)->signature;
+      new_job->return_value = ((job *)data)->return_value;
+      new_job->finished = ((job *)data)->finished;
+      new_job->error = ((job *)data)->error;
 
       // Send the requests to specific worker thread
       thread_id = (int)(ht_hash(new_job->row_id) /
-                        (ht_enclave->size / arg_enclave.num_threads));
+                        (ht_enclave->size / (arg_enclave.num_threads - 1)));
       sgx_thread_mutex_lock(&queue_mutex[thread_id]);
       queue[thread_id].push(new_job);
       sgx_thread_cond_signal(&job_cond[thread_id]);
       sgx_thread_mutex_unlock(&queue_mutex[thread_id]);
+      break;
+    }
+    case REGISTER: {
+      new_job->transaction_id = ((job *)data)->transaction_id;
+      new_job->lock_budget = ((job *)data)->lock_budget;
+      new_job->finished = ((job *)data)->finished;
+      new_job->error = ((job *)data)->error;
+
+      // Send the requests to specific worker thread
+      sgx_thread_mutex_lock(&queue_mutex[arg_enclave.tx_thread_id]);
+      queue[arg_enclave.tx_thread_id].push(new_job);
+      sgx_thread_cond_signal(&job_cond[arg_enclave.tx_thread_id]);
+      sgx_thread_mutex_unlock(&queue_mutex[arg_enclave.tx_thread_id]);
       break;
     }
     default:
@@ -1039,29 +1054,47 @@ void enclave_worker_thread(hashtable *ht_, MACbuffer *MACbuf_) {
         int res = acquire_lock((void *)&sig, cur_job->transaction_id,
                                cur_job->row_id, command == EXCLUSIVE);
         if (res == SGX_ERROR_UNEXPECTED) {
-          volatile char *p = cur_job->signature;
-          *p = FAILED;
-          break;
+          *cur_job->error = true;
+        } else {
+          std::string encoded_signature =
+              base64_encode((unsigned char *)sig.x, sizeof(sig.x)) + "-" +
+              base64_encode((unsigned char *)sig.y, sizeof(sig.y));
+
+          volatile char *p = cur_job->return_value;
+          size_t signature_size = 89;
+          for (int i = 0; i < signature_size; i++) {
+            *p++ = encoded_signature.c_str()[i];
+          }
         }
 
-        std::string encoded_signature =
-            base64_encode((unsigned char *)sig.x, sizeof(sig.x)) + "-" +
-            base64_encode((unsigned char *)sig.y, sizeof(sig.y));
-
-        volatile char *p = cur_job->signature;
-        size_t signature_size = 89;
-        for (int i = 0; i < signature_size; i++) {
-          *p++ = encoded_signature.c_str()[i];
-        }
+        *cur_job->finished = true;
         break;
       }
-      case UNLOCK:
+      case UNLOCK: {
         print_info(
             ("(UNLOCK) TXID: " + std::to_string(cur_job->transaction_id) +
              ", RID: " + std::to_string(cur_job->row_id))
                 .c_str());
         release_lock(cur_job->transaction_id, cur_job->row_id);
         break;
+      }
+      case REGISTER: {
+        auto transactionId = cur_job->transaction_id;
+        auto lockBudget = cur_job->lock_budget;
+
+        print_info(("Registering transaction " + std::to_string(transactionId))
+                       .c_str());
+
+        if (transactionTable_.find(transactionId) != transactionTable_.end()) {
+          print_error("Transaction is already registered");
+          *cur_job->error = true;
+        } else {
+          transactionTable_[transactionId] =
+              new Transaction(transactionId, lockBudget);
+        }
+        *cur_job->finished = true;
+        break;
+      }
       default:
         print_error("Worker received unknown command");
     }
@@ -1164,19 +1197,6 @@ auto verify(const char *message, void *signature, size_t sig_len) -> int {
 auto ecdsa_close() -> int {
   if (context == NULL) sgx_ecc256_open_context(&context);
   return sgx_ecc256_close_context(context);
-}
-
-int register_transaction(unsigned int transactionId, unsigned int lockBudget) {
-  print_info(
-      ("Registering transaction " + std::to_string(transactionId)).c_str());
-  if (transactionTable_.find(transactionId) != transactionTable_.end()) {
-    print_error("Transaction is already registered");
-    return SGX_ERROR_UNEXPECTED;
-  }
-
-  transactionTable_[transactionId] = new Transaction(transactionId, lockBudget);
-
-  return SGX_SUCCESS;
 }
 
 auto acquire_lock(void *signature, unsigned int transactionId,

@@ -41,7 +41,9 @@ auto LockingServiceClient::requestSharedLock(unsigned int transactionId,
     return response.signature();
   }
 
-  spdlog::error("Acquiring shared lock failed");
+  spdlog::error(
+      "Acquiring shared lock failed (TXID: " + std::to_string(transactionId) +
+      ", RID: " + std::to_string(rowId) + ")");
   return "";
 }
 
@@ -65,7 +67,9 @@ auto LockingServiceClient::requestExclusiveLock(unsigned int transactionId,
     return response.signature();
   }
 
-  spdlog::error("Acquiring exclusive log failed");
+  spdlog::error(
+      "Acquiring exclusive log failed (TXID: " + std::to_string(transactionId) +
+      ", RID: " + std::to_string(rowId) + ")");
   return "";
 }
 

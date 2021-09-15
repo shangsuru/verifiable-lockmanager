@@ -31,7 +31,6 @@ std::string encoded_public_key;
 const size_t MAX_MESSAGE_LENGTH = 255;
 const size_t TRANSACTION_TABLE_SIZE = 300;
 const size_t LOCK_TABLE_SIZE = 10000;
-const char FAILED = '+';
 
 // Struct that gets sealed to storage to persist ECDSA keys
 struct DataToSeal {
