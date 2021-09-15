@@ -18,8 +18,11 @@
 #define TOKEN_FILENAME "enclave.token"
 #define ENCLAVE_FILENAME "enclave.signed.so"
 #define SEALED_KEY_FILE "sealed_data_blob.txt"
-#define MAX_PATH FILENAME_MAX
-#define NO_SIGNATURE ""  // for jobs that return no signature (QUIT, UNLOCK)
+#define NO_SIGNATURE ""    // for jobs that return no signature (QUIT, UNLOCK)
+#define SIGNATURE_SIZE 89  // length of the base64-encoded signature
+
+extern sgx_enclave_id_t global_eid;  // identifies the enclave
+extern sgx_launch_token_t token;
 
 /**
  * Process lock and unlock requests from the server. It manages a lock table,
@@ -103,20 +106,30 @@ class LockManager {
    */
   auto read_and_unseal_keys() -> bool;
 
+  /**
+   * Starts the enclave.
+   *
+   * @param eid specifying the enclave
+   * @returns success or failure
+   */
   auto load_and_initialize_enclave(sgx_enclave_id_t *eid) -> sgx_status_t;
 
-  void start_worker_threads();
+  /**
+   * Function that each worker thread executes. It calls inside the enclave and
+   * deals with incoming job requests.
+   */
+  static auto load_and_initialize_threads() -> void *;
 
-  static auto load_and_initialize_threads(void *object) -> void *;
-
+  /**
+   * Initializes the configuration parameters for the enclave
+   */
   void configuration_init();
 
   auto create_job(Command command, unsigned int transaction_id = 0,
                   unsigned int row_id = 0, unsigned int lock_budget = 0)
       -> std::pair<std::string, bool>;
 
-  sgx_enclave_id_t global_eid = 0;
-  sgx_launch_token_t token = {0};
-  Arg arg;
-  pthread_t *threads;
+  Arg arg;  // configuration parameters for the enclave
+  pthread_t
+      *threads;  // worker threads that execute requests inside the enclave
 };

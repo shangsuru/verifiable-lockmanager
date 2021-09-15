@@ -1,15 +1,18 @@
 #include <lockmanager.h>
 
+sgx_enclave_id_t global_eid = 0;
+sgx_launch_token_t token = {0};
+
 auto LockManager::load_and_initialize_enclave(sgx_enclave_id_t *eid)
     -> sgx_status_t {
   sgx_status_t ret = SGX_SUCCESS;
   int retval = 0;
   int updated = 0;
 
-  // Step 1: check whether the loading and initialization operations are caused
+  // Check whether the loading and initialization operations are caused
   if (*eid != 0) sgx_destroy_enclave(*eid);
 
-  // Step 2: load the enclave
+  // Load the enclave
   ret = sgx_create_enclave(ENCLAVE_FILENAME, SGX_DEBUG_FLAG, &token, &updated,
                            eid, NULL);
   if (ret != SGX_SUCCESS) return ret;
@@ -26,12 +29,10 @@ auto LockManager::load_and_initialize_enclave(sgx_enclave_id_t *eid)
   return ret;
 }
 
-auto LockManager::load_and_initialize_threads(void *object) -> void * {
-  reinterpret_cast<LockManager *>(object)->start_worker_threads();
+auto LockManager::load_and_initialize_threads() -> void * {
+  enclave_worker_thread(global_eid);
   return 0;
 }
-
-void LockManager::start_worker_threads() { enclave_worker_thread(global_eid); }
 
 //========= OCALL Functions ===========
 void print_info(const char *str) {
@@ -215,61 +216,54 @@ auto LockManager::read_and_unseal_keys() -> bool {
 auto LockManager::create_job(Command command, unsigned int transaction_id,
                              unsigned int row_id, unsigned int lock_budget)
     -> std::pair<std::string, bool> {
+  // Set job parameters
   Job job;
   job.command = command;
-  const size_t signature_size = 89;
 
   job.transaction_id = transaction_id;
   job.row_id = row_id;
   job.lock_budget = lock_budget;
 
   if (command == SHARED || command == EXCLUSIVE || command == REGISTER) {
+    // Need to track, when job is finished
     job.finished = new bool;
     *job.finished = false;
+    // Need to track, if an error occured
     job.error = new bool;
     *job.error = false;
   }
 
   if (command == SHARED || command == EXCLUSIVE) {
-    // Allocate memory for signature return value
-    job.return_value = new char[signature_size];
+    // These requests return a signature
+    job.return_value = new char[SIGNATURE_SIZE];
   }
 
   enclave_send_job(global_eid, &job);
 
-  if (command == SHARED || command == EXCLUSIVE) {
+  if (command == SHARED || command == EXCLUSIVE || command == REGISTER) {
+    // Need to wait until job is finished because we need to be registered for
+    // subsequent requests or because we need to wait for the return value
     while (!*job.finished) {
       continue;
     }
+    delete job.finished;
 
+    // Check if an error occured
     if (*job.error) {
       return std::make_pair(NO_SIGNATURE, false);
     }
-
-    std::string signature;
-    for (int i = 0; i < signature_size; i++) {
-      signature += job.return_value[i];
-    }
-
-    delete[] job.return_value;
-    delete job.finished;
     delete job.error;
-
-    return std::make_pair(signature, true);
   }
 
-  if (command == REGISTER) {
-    // Wait for job to be finished
-    while (!*job.finished) {
-      continue;
+  // Get the signature return value
+  if (command == SHARED || command == EXCLUSIVE) {
+    std::string signature;
+    for (int i = 0; i < SIGNATURE_SIZE; i++) {
+      signature += job.return_value[i];
     }
-    delete job.finished;
+    delete[] job.return_value;
 
-    if (*job.error) {
-      delete job.error;
-      return std::make_pair(NO_SIGNATURE, false);
-    }
-    delete job.error;
+    return std::make_pair(signature, true);
   }
 
   return std::make_pair(NO_SIGNATURE, true);

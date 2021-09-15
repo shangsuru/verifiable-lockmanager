@@ -1,24 +1,27 @@
 #include "enclave.h"
 
-int num = 0;
-Arg arg_enclave;
-sgx_thread_mutex_t global_mutex;
-sgx_thread_mutex_t *queue_mutex;
-sgx_thread_cond_t *job_cond;
-std::vector<std::queue<Job>> queue;
+Arg arg_enclave;  // configuration parameters for the enclave
+int num = 0;      // global variable used to give every thread a unique ID
+sgx_thread_mutex_t global_mutex;  // synchronizes access to num
+sgx_thread_mutex_t *queue_mutex;  // synchronizes access to the job queue
+sgx_thread_cond_t
+    *job_cond;  // wakes up worker threads when a new job is available
+std::vector<std::queue<Job>> queue;  // a job queue for each worker thread
 
 void enclave_init_values(Arg arg) {
+  // Get configuration parameters
   arg_enclave = arg;
   transactionTableSize_ = arg.transaction_table_size;
   lockTableSize_ = arg.lock_table_size;
 
   // Initialize mutex variables
   sgx_thread_mutex_init(&global_mutex, NULL);
-
   queue_mutex = (sgx_thread_mutex_t *)malloc(sizeof(sgx_thread_mutex_t) *
                                              arg_enclave.num_threads);
   job_cond = (sgx_thread_cond_t *)malloc(sizeof(sgx_thread_cond_t) *
                                          arg_enclave.num_threads);
+
+  // Initialize job queues
   for (int i = 0; i < arg_enclave.num_threads; i++) {
     queue.push_back(std::queue<Job>());
   }
@@ -26,7 +29,6 @@ void enclave_init_values(Arg arg) {
 
 void enclave_send_job(void *data) {
   Command command = ((Job *)data)->command;
-  int thread_id = 0;
   Job new_job;
   new_job.command = command;
 
@@ -46,6 +48,7 @@ void enclave_send_job(void *data) {
     case SHARED:
     case EXCLUSIVE:
     case UNLOCK: {
+      // Copy job parameters
       new_job.transaction_id = ((Job *)data)->transaction_id;
       new_job.row_id = ((Job *)data)->row_id;
       new_job.return_value = ((Job *)data)->return_value;
@@ -53,8 +56,8 @@ void enclave_send_job(void *data) {
       new_job.error = ((Job *)data)->error;
 
       // Send the requests to specific worker thread
-      thread_id = (int)((new_job.row_id % lockTableSize_) /
-                        (lockTableSize_ / (arg_enclave.num_threads - 1)));
+      int thread_id = (int)((new_job.row_id % lockTableSize_) /
+                            (lockTableSize_ / (arg_enclave.num_threads - 1)));
       sgx_thread_mutex_lock(&queue_mutex[thread_id]);
       queue[thread_id].push(new_job);
       sgx_thread_cond_signal(&job_cond[thread_id]);
@@ -62,12 +65,13 @@ void enclave_send_job(void *data) {
       break;
     }
     case REGISTER: {
+      // Copy job parameters
       new_job.transaction_id = ((Job *)data)->transaction_id;
       new_job.lock_budget = ((Job *)data)->lock_budget;
       new_job.finished = ((Job *)data)->finished;
       new_job.error = ((Job *)data)->error;
 
-      // Send the requests to specific worker thread
+      // Send the requests to thread responsible for registering transactions
       sgx_thread_mutex_lock(&queue_mutex[arg_enclave.tx_thread_id]);
       queue[arg_enclave.tx_thread_id].push(new_job);
       sgx_thread_cond_signal(&job_cond[arg_enclave.tx_thread_id]);
@@ -81,12 +85,9 @@ void enclave_send_job(void *data) {
 }
 
 void enclave_worker_thread() {
-  int thread_id;
-  Job cur_job;
-
   sgx_thread_mutex_lock(&global_mutex);
 
-  thread_id = num;
+  int thread_id = num;
   num += 1;
 
   sgx_thread_mutex_init(&queue_mutex[thread_id], NULL);
@@ -104,7 +105,7 @@ void enclave_worker_thread() {
     }
 
     print_info("Worker got a job");
-    cur_job = queue[thread_id].front();
+    Job cur_job = queue[thread_id].front();
     Command command = cur_job.command;
 
     sgx_thread_mutex_unlock(&queue_mutex[thread_id]);
@@ -132,12 +133,16 @@ void enclave_worker_thread() {
                   .c_str());
         }
 
+        // Acquire lock and receive signature
         sgx_ec256_signature_t sig;
         int res = acquire_lock((void *)&sig, cur_job.transaction_id,
                                cur_job.row_id, command == EXCLUSIVE);
+
         if (res == SGX_ERROR_UNEXPECTED) {
           *cur_job.error = true;
         } else {
+          // Write base64 encoded signature into the return value of the job
+          // struct
           std::string encoded_signature =
               base64_encode((unsigned char *)sig.x, sizeof(sig.x)) + "-" +
               base64_encode((unsigned char *)sig.y, sizeof(sig.y));
@@ -267,9 +272,9 @@ auto verify(const char *message, void *signature, size_t sig_len) -> int {
   sgx_ecc256_open_context(&context);
   uint8_t res;
   sgx_ec256_signature_t *sig = (sgx_ec256_signature_t *)signature;
-  sgx_status_t ret =
-      sgx_ecdsa_verify((uint8_t *)message, strnlen(message, MAX_MESSAGE_LENGTH),
-                       &ec256_public_key, sig, &res, context);
+  sgx_status_t ret = sgx_ecdsa_verify((uint8_t *)message,
+                                      strnlen(message, MAX_SIGNATURE_LENGTH),
+                                      &ec256_public_key, sig, &res, context);
   return res;
 }
 
@@ -364,7 +369,7 @@ sign:
   sgx_ecc_state_handle_t context = NULL;
   sgx_ecc256_open_context(&context);
   sgx_ecdsa_sign((uint8_t *)string_to_sign.c_str(),
-                 strnlen(string_to_sign.c_str(), MAX_MESSAGE_LENGTH),
+                 strnlen(string_to_sign.c_str(), MAX_SIGNATURE_LENGTH),
                  &ec256_private_key, (sgx_ec256_signature_t *)signature,
                  context);
 
