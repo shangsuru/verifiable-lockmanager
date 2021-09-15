@@ -223,36 +223,53 @@ auto LockManager::create_job(Command command, unsigned int transaction_id,
   job.row_id = row_id;
   job.lock_budget = lock_budget;
 
-  job.finished = new bool;
-  *job.finished = false;
-  job.error = new bool;
-  *job.error = false;
+  if (command == SHARED || command == EXCLUSIVE || command == REGISTER) {
+    job.finished = new bool;
+    *job.finished = false;
+    job.error = new bool;
+    *job.error = false;
+  }
 
   if (command == SHARED || command == EXCLUSIVE) {
     // Allocate memory for signature return value
-    job.return_value = (char *)malloc(sizeof(char) * signature_size);
+    job.return_value = new char[signature_size];
   }
 
   enclave_send_job(global_eid, &job);
 
-  if (command == SHARED || command == EXCLUSIVE || command == REGISTER) {
-    // Wait for job to be finished
+  if (command == SHARED || command == EXCLUSIVE) {
     while (!*job.finished) {
       continue;
     }
 
     if (*job.error) {
-      if (command == REGISTER) {
-        return std::make_pair("Failed to register transaction", false);
-      }
-      return std::make_pair("Lock couldn't be acquired", false);
+      return std::make_pair(NO_SIGNATURE, false);
     }
 
     std::string signature;
     for (int i = 0; i < signature_size; i++) {
       signature += job.return_value[i];
     }
+
+    delete[] job.return_value;
+    delete job.finished;
+    delete job.error;
+
     return std::make_pair(signature, true);
+  }
+
+  if (command == REGISTER) {
+    // Wait for job to be finished
+    while (!*job.finished) {
+      continue;
+    }
+    delete job.finished;
+
+    if (*job.error) {
+      delete job.error;
+      return std::make_pair(NO_SIGNATURE, false);
+    }
+    delete job.error;
   }
 
   return std::make_pair(NO_SIGNATURE, true);

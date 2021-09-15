@@ -5,7 +5,7 @@ Arg arg_enclave;
 sgx_thread_mutex_t global_mutex;
 sgx_thread_mutex_t *queue_mutex;
 sgx_thread_cond_t *job_cond;
-std::vector<std::queue<Job *>> queue;
+std::vector<std::queue<Job>> queue;
 
 void enclave_init_values(Arg arg) {
   arg_enclave = arg;
@@ -20,17 +20,15 @@ void enclave_init_values(Arg arg) {
   job_cond = (sgx_thread_cond_t *)malloc(sizeof(sgx_thread_cond_t) *
                                          arg_enclave.num_threads);
   for (int i = 0; i < arg_enclave.num_threads; i++) {
-    queue.push_back(std::queue<Job *>());
+    queue.push_back(std::queue<Job>());
   }
 }
 
 void enclave_send_job(void *data) {
   Command command = ((Job *)data)->command;
   int thread_id = 0;
-  Job *new_job = NULL;
-
-  new_job = (Job *)malloc(sizeof(Job));
-  new_job->command = command;
+  Job new_job;
+  new_job.command = command;
 
   switch (command) {
     case QUIT:
@@ -48,14 +46,14 @@ void enclave_send_job(void *data) {
     case SHARED:
     case EXCLUSIVE:
     case UNLOCK: {
-      new_job->transaction_id = ((Job *)data)->transaction_id;
-      new_job->row_id = ((Job *)data)->row_id;
-      new_job->return_value = ((Job *)data)->return_value;
-      new_job->finished = ((Job *)data)->finished;
-      new_job->error = ((Job *)data)->error;
+      new_job.transaction_id = ((Job *)data)->transaction_id;
+      new_job.row_id = ((Job *)data)->row_id;
+      new_job.return_value = ((Job *)data)->return_value;
+      new_job.finished = ((Job *)data)->finished;
+      new_job.error = ((Job *)data)->error;
 
       // Send the requests to specific worker thread
-      thread_id = (int)((new_job->row_id % lockTableSize_) /
+      thread_id = (int)((new_job.row_id % lockTableSize_) /
                         (lockTableSize_ / (arg_enclave.num_threads - 1)));
       sgx_thread_mutex_lock(&queue_mutex[thread_id]);
       queue[thread_id].push(new_job);
@@ -64,10 +62,10 @@ void enclave_send_job(void *data) {
       break;
     }
     case REGISTER: {
-      new_job->transaction_id = ((Job *)data)->transaction_id;
-      new_job->lock_budget = ((Job *)data)->lock_budget;
-      new_job->finished = ((Job *)data)->finished;
-      new_job->error = ((Job *)data)->error;
+      new_job.transaction_id = ((Job *)data)->transaction_id;
+      new_job.lock_budget = ((Job *)data)->lock_budget;
+      new_job.finished = ((Job *)data)->finished;
+      new_job.error = ((Job *)data)->error;
 
       // Send the requests to specific worker thread
       sgx_thread_mutex_lock(&queue_mutex[arg_enclave.tx_thread_id]);
@@ -84,7 +82,7 @@ void enclave_send_job(void *data) {
 
 void enclave_worker_thread() {
   int thread_id;
-  Job *cur_job = NULL;
+  Job cur_job;
 
   sgx_thread_mutex_lock(&global_mutex);
 
@@ -107,7 +105,7 @@ void enclave_worker_thread() {
 
     print_info("Worker got a job");
     cur_job = queue[thread_id].front();
-    Command command = cur_job->command;
+    Command command = cur_job.command;
 
     sgx_thread_mutex_unlock(&queue_mutex[thread_id]);
 
@@ -115,7 +113,6 @@ void enclave_worker_thread() {
       case QUIT:
         sgx_thread_mutex_lock(&queue_mutex[thread_id]);
         queue[thread_id].pop();
-        free(cur_job);
         sgx_thread_mutex_unlock(&queue_mutex[thread_id]);
         sgx_thread_mutex_destroy(&queue_mutex[thread_id]);
         sgx_thread_cond_destroy(&job_cond[thread_id]);
@@ -125,59 +122,58 @@ void enclave_worker_thread() {
       case EXCLUSIVE: {
         if (command == EXCLUSIVE) {
           print_info(
-              ("(EXCLUSIVE) TXID: " + std::to_string(cur_job->transaction_id) +
-               ", RID: " + std::to_string(cur_job->row_id))
+              ("(EXCLUSIVE) TXID: " + std::to_string(cur_job.transaction_id) +
+               ", RID: " + std::to_string(cur_job.row_id))
                   .c_str());
         } else {
           print_info(
-              ("(SHARED) TXID: " + std::to_string(cur_job->transaction_id) +
-               ", RID: " + std::to_string(cur_job->row_id))
+              ("(SHARED) TXID: " + std::to_string(cur_job.transaction_id) +
+               ", RID: " + std::to_string(cur_job.row_id))
                   .c_str());
         }
 
         sgx_ec256_signature_t sig;
-        int res = acquire_lock((void *)&sig, cur_job->transaction_id,
-                               cur_job->row_id, command == EXCLUSIVE);
+        int res = acquire_lock((void *)&sig, cur_job.transaction_id,
+                               cur_job.row_id, command == EXCLUSIVE);
         if (res == SGX_ERROR_UNEXPECTED) {
-          *cur_job->error = true;
+          *cur_job.error = true;
         } else {
           std::string encoded_signature =
               base64_encode((unsigned char *)sig.x, sizeof(sig.x)) + "-" +
               base64_encode((unsigned char *)sig.y, sizeof(sig.y));
 
-          volatile char *p = cur_job->return_value;
+          volatile char *p = cur_job.return_value;
           size_t signature_size = 89;
           for (int i = 0; i < signature_size; i++) {
             *p++ = encoded_signature.c_str()[i];
           }
         }
 
-        *cur_job->finished = true;
+        *cur_job.finished = true;
         break;
       }
       case UNLOCK: {
-        print_info(
-            ("(UNLOCK) TXID: " + std::to_string(cur_job->transaction_id) +
-             ", RID: " + std::to_string(cur_job->row_id))
-                .c_str());
-        release_lock(cur_job->transaction_id, cur_job->row_id);
+        print_info(("(UNLOCK) TXID: " + std::to_string(cur_job.transaction_id) +
+                    ", RID: " + std::to_string(cur_job.row_id))
+                       .c_str());
+        release_lock(cur_job.transaction_id, cur_job.row_id);
         break;
       }
       case REGISTER: {
-        auto transactionId = cur_job->transaction_id;
-        auto lockBudget = cur_job->lock_budget;
+        auto transactionId = cur_job.transaction_id;
+        auto lockBudget = cur_job.lock_budget;
 
         print_info(("Registering transaction " + std::to_string(transactionId))
                        .c_str());
 
         if (transactionTable_.find(transactionId) != transactionTable_.end()) {
           print_error("Transaction is already registered");
-          *cur_job->error = true;
+          *cur_job.error = true;
         } else {
           transactionTable_[transactionId] =
               new Transaction(transactionId, lockBudget);
         }
-        *cur_job->finished = true;
+        *cur_job.finished = true;
         break;
       }
       default:
@@ -186,7 +182,6 @@ void enclave_worker_thread() {
 
     sgx_thread_mutex_lock(&queue_mutex[thread_id]);
     queue[thread_id].pop();
-    free(cur_job);
   }
 
   return;
