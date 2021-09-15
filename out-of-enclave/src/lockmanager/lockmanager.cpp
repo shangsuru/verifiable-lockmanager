@@ -29,28 +29,11 @@ auto LockManager::load_and_initialize_enclave(sgx_enclave_id_t *eid)
   return ret;
 }
 
-auto LockManager::load_and_initialize_threads() -> void * {
+auto LockManager::load_and_initialize_threads(void *tmp) -> void * {
   enclave_worker_thread(global_eid);
   return 0;
 }
 
-//========= OCALL Functions ===========
-void print_info(const char *str) {
-  spdlog::info("Enclave: " + std::string{str});
-}
-
-void print_error(const char *str) {
-  spdlog::error("Enclave: " + std::string{str});
-}
-
-void print_warn(const char *str) {
-  spdlog::warn("Enclave: " + std::string{str});
-}
-//=====================================
-
-/**
- * init default configuration values
- **/
 void LockManager::configuration_init() {
   arg.num_threads = 2;
   arg.tx_thread_id = arg.num_threads - 1;
