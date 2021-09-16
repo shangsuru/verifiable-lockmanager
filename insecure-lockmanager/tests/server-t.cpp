@@ -5,10 +5,8 @@
 
 class ServerTest : public ::testing::Test {
  protected:
-  auto registerTransaction(LockingServiceImpl &server,
-                           unsigned int lockBudget = 10) -> bool {
+  auto registerTransaction(LockingServiceImpl &server) -> bool {
     registration_.set_transaction_id(transactionId_);
-    registration_.set_lock_budget(lockBudget);
 
     Status status =
         server.RegisterTransaction(&context_, &registration_, &acceptance_);
@@ -72,15 +70,6 @@ TEST_F(ServerTest, sharedAccess) {
     EXPECT_TRUE(getSharedLock(server));
     transactionId_++;
   }
-};
-
-// Lock budget runs out
-TEST_F(ServerTest, lockBudget) {
-  LockingServiceImpl server;
-  registerTransaction(server, 1);
-  EXPECT_TRUE(getSharedLock(server));
-  rowId_++;
-  EXPECT_FALSE(getSharedLock(server));
 };
 
 // Simple request for exclusive access
