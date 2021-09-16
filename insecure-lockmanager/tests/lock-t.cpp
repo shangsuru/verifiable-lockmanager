@@ -4,11 +4,16 @@
 
 #include "lock.h"
 
-const unsigned int kTransactionIdA = 0;
-const unsigned int kTransactionIdB = 1;
+class LockTest : public ::testing::Test {
+ protected:
+  void SetUp() override { spdlog::set_level(spdlog::level::off); };
+
+  const unsigned int kTransactionIdA_ = 0;
+  const unsigned int kTransactionIdB_ = 1;
+};
 
 // Shared access works
-TEST(LockTest, sharedAccess) {
+TEST_F(LockTest, sharedAccess) {
   Lock lock = Lock();
   std::thread t1{&Lock::getSharedAccess, &lock, 1};
   std::thread t2{&Lock::getSharedAccess, &lock, 2};
@@ -25,87 +30,43 @@ TEST(LockTest, sharedAccess) {
 };
 
 // Exclusive access works
-TEST(LockTest, exclusiveAccess) {
+TEST_F(LockTest, exclusiveAccess) {
   Lock lock = Lock();
-  lock.getExclusiveAccess(kTransactionIdA);
+  lock.getExclusiveAccess(kTransactionIdA_);
   EXPECT_EQ(lock.getMode(), Lock::LockMode::kExclusive);
   auto owners = lock.getOwners();
-  EXPECT_EQ(owners.count(kTransactionIdA), 1);
+  EXPECT_EQ(owners.count(kTransactionIdA_), 1);
   EXPECT_EQ(owners.size(), 1);
 }
 
 // Cannot acquire shared access on an exclusive lock
-TEST(LockTest, noSharedOnExclusive) {
+TEST_F(LockTest, noSharedOnExclusive) {
   Lock lock = Lock();
-  lock.getExclusiveAccess(kTransactionIdA);
-  try {
-    lock.getSharedAccess(kTransactionIdB);
-    FAIL() << "Expected std::domain_error";
-  } catch (std::domain_error& e) {
-    EXPECT_EQ(e.what(), std::string("Couldn't acquire lock"));
-  } catch (...) {
-    FAIL() << "Expected std::domain_error";
-  }
+  EXPECT_TRUE(lock.getExclusiveAccess(kTransactionIdA_));
+  EXPECT_FALSE(lock.getSharedAccess(kTransactionIdB_));
 };
 
 // Cannot get exclusive access on an exclusive lock
-TEST(LockTest, noExclusiveOnExclusive) {
+TEST_F(LockTest, noExclusiveOnExclusive) {
   Lock lock = Lock();
-  lock.getExclusiveAccess(kTransactionIdA);
-  try {
-    lock.getExclusiveAccess(kTransactionIdB);
-    FAIL() << "Expected std::domain_error";
-  } catch (std::domain_error& e) {
-    EXPECT_EQ(e.what(), std::string("Couldn't acquire lock"));
-  } catch (...) {
-    FAIL() << "Expected std::domain_error";
-  }
+  EXPECT_TRUE(lock.getExclusiveAccess(kTransactionIdA_));
+  EXPECT_FALSE(lock.getExclusiveAccess(kTransactionIdB_));
 };
 
 // Cannot acquire exclusive access on a shared lock
-TEST(LockTest, noExclusiveOnShared) {
+TEST_F(LockTest, noExclusiveOnShared) {
   Lock lock = Lock();
-  lock.getSharedAccess(kTransactionIdA);
-  try {
-    lock.getExclusiveAccess(kTransactionIdB);
-    FAIL() << "Expected std::domain_error";
-  } catch (std::domain_error& e) {
-    EXPECT_EQ(e.what(), std::string("Couldn't acquire lock"));
-  } catch (...) {
-    FAIL() << "Expected std::domain_error";
-  }
+  EXPECT_TRUE(lock.getSharedAccess(kTransactionIdA_));
+  EXPECT_FALSE(lock.getExclusiveAccess(kTransactionIdB_));
 };
 
 // Upgrade
-TEST(LockTest, upgrade) {
+TEST_F(LockTest, upgrade) {
   Lock lock = Lock();
-  lock.getSharedAccess(kTransactionIdA);
-  lock.upgrade(kTransactionIdA);
+  lock.getSharedAccess(kTransactionIdA_);
+  lock.upgrade(kTransactionIdA_);
   auto owners = lock.getOwners();
   EXPECT_EQ(lock.getMode(), Lock::LockMode::kExclusive);
-  EXPECT_EQ(owners.count(kTransactionIdA), 1);
+  EXPECT_EQ(owners.count(kTransactionIdA_), 1);
   EXPECT_EQ(owners.size(), 1);
-}
-
-// Concurrently adding and releasing locks
-TEST(LockTest, concurrentlyAddingAndReleasingLocks) {
-  Lock lock = Lock();
-  lock.getSharedAccess(1);
-  lock.getSharedAccess(2);
-  lock.getSharedAccess(3);
-  lock.getSharedAccess(4);
-
-  std::thread t1{&Lock::release, &lock, 1};
-  std::thread t2{&Lock::getSharedAccess, &lock, 0};
-  std::thread t3{&Lock::release, &lock, 3};
-
-  t1.join();
-  t2.join();
-  t3.join();
-
-  auto owners = lock.getOwners();
-  EXPECT_EQ(owners.size(), 3);
-  EXPECT_EQ(owners.count(2), 1);
-  EXPECT_EQ(owners.count(4), 1);
-  EXPECT_EQ(owners.count(0), 1);
 }
