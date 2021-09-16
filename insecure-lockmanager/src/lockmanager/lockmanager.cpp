@@ -1,24 +1,7 @@
 #include <lockmanager.h>
 
-sgx_enclave_id_t global_eid = 0;
-sgx_launch_token_t token = {0};
-
-auto LockManager::load_and_initialize_enclave(sgx_enclave_id_t *eid)
-    -> sgx_status_t {
-  sgx_status_t ret = SGX_SUCCESS;
-  int retval = 0;
-  int updated = 0;
-
-  // Check whether the loading and initialization operations are caused
-  if (*eid != 0) sgx_destroy_enclave(*eid);
-
-  // Load the enclave
-  return sgx_create_enclave(ENCLAVE_FILENAME, SGX_DEBUG_FLAG, &token, &updated,
-                            eid, NULL);
-}
-
 auto LockManager::load_and_initialize_threads(void *tmp) -> void * {
-  worker_thread(global_eid);
+  worker_thread();
   return 0;
 }
 
@@ -30,13 +13,7 @@ void LockManager::configuration_init() {
 LockManager::LockManager() {
   configuration_init();
 
-  // Load and initialize the signed enclave
-  sgx_status_t ret = load_and_initialize_enclave(&global_eid);
-  if (ret != SGX_SUCCESS) {
-    // TODO: implement error handling
-  }
-
-  init_values(global_eid, arg);
+  init_values(arg);
 
   // Create threads for lock requests and an additional one for registering
   // transactions
@@ -60,9 +37,6 @@ LockManager::~LockManager() {
 
   spdlog::info("Freing threads");
   free(threads);
-
-  spdlog::info("Destroying enclave");
-  sgx_destroy_enclave(global_eid);
 }
 
 void LockManager::registerTransaction(unsigned int transactionId) {
@@ -80,16 +54,6 @@ auto LockManager::lock(unsigned int transactionId, unsigned int rowId,
 void LockManager::unlock(unsigned int transactionId, unsigned int rowId) {
   create_job(UNLOCK, transactionId, rowId);
 };
-
-auto LockManager::initialize_enclave() -> bool {
-  sgx_status_t ret = SGX_ERROR_UNEXPECTED;
-  ret = sgx_create_enclave(ENCLAVE_FILENAME, SGX_DEBUG_FLAG, NULL, NULL,
-                           &global_eid, NULL);
-  if (ret != SGX_SUCCESS) {
-    return false;
-  }
-  return true;
-}
 
 auto LockManager::create_job(Command command, unsigned int transaction_id,
                              unsigned int row_id) -> bool {
@@ -109,7 +73,7 @@ auto LockManager::create_job(Command command, unsigned int transaction_id,
     *job.error = false;
   }
 
-  send_job(global_eid, &job);
+  send_job(&job);
 
   if (command == SHARED || command == EXCLUSIVE || command == REGISTER) {
     // Need to wait until job is finished because we need to be registered for

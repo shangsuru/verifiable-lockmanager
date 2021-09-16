@@ -1,31 +1,22 @@
-# Intel SGX
-find_package(SGX REQUIRED)
-
 set(E_SRCS enclave/enclave.cpp enclave/transaction.cpp enclave/lock.cpp)
-set(T_SCRS "")
-set(EDL_SEARCH_PATHS enclave)
-
-include_directories(${SGX_INCLUDE_DIR} ../include)
-
-add_trusted_library(trusted_lib SRCS ${T_SRCS} EDL enclave/enclave.edl EDL_SEARCH_PATHS ${EDL_SEARCH_PATHS})
-add_enclave_library(enclave SRCS ${E_SRCS} TRUSTED_LIBS trusted_lib EDL enclave/enclave.edl EDL_SEARCH_PATHS ${EDL_SEARCH_PATHS} LDSCRIPT ${LDS})
-enclave_sign(enclave KEY enclave/Enclave_private_test.pem CONFIG enclave/enclave.config.xml)
-target_include_directories(enclave PUBLIC ../include/enclave ../include/)
+add_library(enclave ${E_SRCS})
+target_include_directories(enclave PUBLIC ../include/enclave ../include/ ${FETCHCONTENT_BASE_DIR}/spdlog-src/include/)
 
 set(LOCK_MANAGER_INCLUDE_PATH "${LockManager_SOURCE_DIR}/include/lockmanager")
 set(HEADER_LIST 
     ${LOCK_MANAGER_INCLUDE_PATH}/lockmanager.h
     ${LockManager_SOURCE_DIR}/include/common.h
+    ${LockManager_SOURCE_DIR}/include/enclave/enclave.h
   )
 
-set(SRCS lockmanager/lockmanager.cpp lockmanager/ocalls.cpp ${HEADER_LIST})
-add_untrusted_library(lckMgr SHARED SRCS ${SRCS} EDL enclave/enclave.edl EDL_SEARCH_PATHS ${EDL_SEARCH_PATHS})
+set(SRCS lockmanager/lockmanager.cpp enclave/enclave.cpp enclave/transaction.cpp enclave/lock.cpp ${HEADER_LIST})
+add_library(lckMgr SHARED ${SRCS})
 
 # Add an alias so that library can be used inside the build tree, e.g. when testing
 add_library(TrustDBle::lckMgr ALIAS lckMgr)
 
 # We need this directory, and users of our library will need it too
-target_include_directories(lckMgr PUBLIC ../include ../include/lockmanager ${FETCHCONTENT_BASE_DIR}/spdlog-src/include/ ../build/src ${SGX_INCLUDE_DIR})
+target_include_directories(lckMgr PUBLIC ../include ../include/lockmanager ../include/enclave ${FETCHCONTENT_BASE_DIR}/spdlog-src/include/ ../build/src ${SGX_INCLUDE_DIR})
 
 # add_dependencies(lckMgr enclave-sign)
 

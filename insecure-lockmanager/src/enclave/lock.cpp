@@ -7,38 +7,38 @@ auto Lock::getMode() -> LockMode {
   return LockMode::kShared;
 }
 
-auto Lock::getSharedAccess(unsigned int transactionId) -> int {
+auto Lock::getSharedAccess(unsigned int transactionId) -> bool {
   if (!exclusive_) {
     owners_.insert(transactionId);
   } else {
-    print_error("Couldn't acquire shared lock");
-    return SGX_ERROR_UNEXPECTED;
+    spdlog::error("Couldn't acquire shared lock");
+    return false;
   }
 
-  return SGX_SUCCESS;
+  return true;
 };
 
-auto Lock::getExclusiveAccess(unsigned int transactionId) -> int {
+auto Lock::getExclusiveAccess(unsigned int transactionId) -> bool {
   if (owners_.empty()) {
     exclusive_ = true;
     owners_.insert(transactionId);
   } else {
-    print_error("Couldn't acquire exclusive lock");
-    return SGX_ERROR_UNEXPECTED;
+    spdlog::error("Couldn't acquire exclusive lock");
+    return false;
   }
 
-  return SGX_SUCCESS;
+  return true;
 };
 
-auto Lock::upgrade(unsigned int transactionId) -> int {
+auto Lock::upgrade(unsigned int transactionId) -> bool {
   if (owners_.size() == 1 && (owners_.count(transactionId) == 1)) {
     exclusive_ = true;
   } else {
-    print_error("Couldn't upgrade lock");
-    return SGX_ERROR_UNEXPECTED;
+    spdlog::error("Couldn't upgrade lock");
+    return false;
   }
 
-  return SGX_SUCCESS;
+  return true;
 };
 
 void Lock::release(unsigned int transactionId) {

@@ -6,40 +6,11 @@
 #include <string>
 
 #include "common.h"
-#include "enclave_u.h"
+#include "enclave.h"
 #include "sgx_eid.h"
 #include "sgx_tcrypto.h"
 #include "sgx_urts.h"
 #include "spdlog/spdlog.h"
-
-#define TOKEN_FILENAME "enclave.token"
-#define ENCLAVE_FILENAME "enclave.signed.so"
-
-extern sgx_enclave_id_t global_eid;  // identifies the enclave
-extern sgx_launch_token_t token;
-
-//=========================== OCALLS ============================
-/**
- * Logs an info message from inside the enclave to the terminal
- *
- * @param str characters to be printed
- */
-void print_info(const char *str);
-
-/**
- * Logs an error message from inside the enclave to the terminal
- *
- * @param str characters to be printed
- */
-void print_error(const char *str);
-
-/**
- * Logs a warning message from inside the enclave to the terminal
- *
- * @param str characters to be printed
- */
-void print_warn(const char *str);
-//================================================================
 
 /**
  * Process lock and unlock requests from the server. It manages a lock table,
@@ -97,21 +68,6 @@ class LockManager {
   void unlock(unsigned int transactionId, unsigned int rowId);
 
  private:
-  /**
-   * Initializes the enclave (in DEBUG mode).
-   *
-   * @returns true if successful, else false
-   */
-  auto initialize_enclave() -> bool;
-
-  /**
-   * Starts the enclave.
-   *
-   * @param eid specifying the enclave
-   * @returns success or failure
-   */
-  auto load_and_initialize_enclave(sgx_enclave_id_t *eid) -> sgx_status_t;
-
   /**
    * Function that each worker thread executes. It calls inside the enclave and
    * deals with incoming job requests.
