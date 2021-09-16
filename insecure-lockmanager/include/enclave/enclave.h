@@ -38,7 +38,7 @@ extern Arg arg_enclave;
  *
  * @param Arg configuration parameters
  */
-void enclave_init_values(Arg arg);
+void init_values(Arg arg);
 
 /**
  * Function that receives a job from the untrusted application.
@@ -49,7 +49,7 @@ void enclave_init_values(Arg arg);
  * @param data struct that contains all arguments for the enclave to execute
  * the job, will be casted to (Job*) struct
  */
-void enclave_send_job(void *data);
+void send_job(void *data);
 
 /**
  * Function that is run by the worker threads inside the enclave. It pulls a job
@@ -59,7 +59,7 @@ void enclave_send_job(void *data);
  * table. The transaction table is accessed by only one single thread for all
  * requests to register a transaction.
  */
-void enclave_worker_thread();
+void worker_thread();
 
 /**
  * Registers the transaction at the enclave prior to being able to

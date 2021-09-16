@@ -5,11 +5,11 @@ enclave {
     include "common.h"
 
     trusted {
-        public void enclave_init_values(Arg arg);
+        public void init_values(Arg arg);
 
-        public void enclave_worker_thread();
+        public void worker_thread();
 
-        public void enclave_send_job([user_check]void* data) transition_using_threads;
+        public void send_job([user_check]void* data) transition_using_threads;
 
     };
 

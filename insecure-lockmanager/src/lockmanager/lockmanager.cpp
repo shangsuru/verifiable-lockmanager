@@ -18,7 +18,7 @@ auto LockManager::load_and_initialize_enclave(sgx_enclave_id_t *eid)
 }
 
 auto LockManager::load_and_initialize_threads(void *tmp) -> void * {
-  enclave_worker_thread(global_eid);
+  worker_thread(global_eid);
   return 0;
 }
 
@@ -36,7 +36,7 @@ LockManager::LockManager() {
     // TODO: implement error handling
   }
 
-  enclave_init_values(global_eid, arg);
+  init_values(global_eid, arg);
 
   // Create threads for lock requests and an additional one for registering
   // transactions
@@ -109,7 +109,7 @@ auto LockManager::create_job(Command command, unsigned int transaction_id,
     *job.error = false;
   }
 
-  enclave_send_job(global_eid, &job);
+  send_job(global_eid, &job);
 
   if (command == SHARED || command == EXCLUSIVE || command == REGISTER) {
     // Need to wait until job is finished because we need to be registered for
