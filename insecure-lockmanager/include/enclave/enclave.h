@@ -11,7 +11,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include "base64-encoding.h"
 #include "common.h"
 #include "enclave_t.h"
 #include "lock.h"

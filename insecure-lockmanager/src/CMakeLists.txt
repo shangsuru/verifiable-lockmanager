@@ -1,7 +1,7 @@
 # Intel SGX
 find_package(SGX REQUIRED)
 
-set(E_SRCS enclave/enclave.cpp base64-encoding.cpp enclave/transaction.cpp enclave/lock.cpp)
+set(E_SRCS enclave/enclave.cpp enclave/transaction.cpp enclave/lock.cpp)
 set(T_SCRS "")
 set(EDL_SEARCH_PATHS enclave)
 
@@ -15,13 +15,10 @@ target_include_directories(enclave PUBLIC ../include/enclave ../include/)
 set(LOCK_MANAGER_INCLUDE_PATH "${LockManager_SOURCE_DIR}/include/lockmanager")
 set(HEADER_LIST 
     ${LOCK_MANAGER_INCLUDE_PATH}/lockmanager.h
-    ${LOCK_MANAGER_INCLUDE_PATH}/errors.h
-    ${LOCK_MANAGER_INCLUDE_PATH}/files.h
-    ${LockManager_SOURCE_DIR}/include/base64-encoding.h
     ${LockManager_SOURCE_DIR}/include/common.h
   )
 
-set(SRCS lockmanager/lockmanager.cpp lockmanager/errors.cpp lockmanager/files.cpp lockmanager/ocalls.cpp base64-encoding.cpp ${HEADER_LIST})
+set(SRCS lockmanager/lockmanager.cpp lockmanager/ocalls.cpp ${HEADER_LIST})
 add_untrusted_library(lckMgr SHARED SRCS ${SRCS} EDL enclave/enclave.edl EDL_SEARCH_PATHS ${EDL_SEARCH_PATHS})
 
 # Add an alias so that library can be used inside the build tree, e.g. when testing

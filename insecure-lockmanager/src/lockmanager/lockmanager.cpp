@@ -13,20 +13,8 @@ auto LockManager::load_and_initialize_enclave(sgx_enclave_id_t *eid)
   if (*eid != 0) sgx_destroy_enclave(*eid);
 
   // Load the enclave
-  ret = sgx_create_enclave(ENCLAVE_FILENAME, SGX_DEBUG_FLAG, &token, &updated,
-                           eid, NULL);
-  if (ret != SGX_SUCCESS) return ret;
-
-  // Save the launch token if updated
-  if (updated == 1) {
-    std::ofstream ofs(TOKEN_FILENAME, std::ios::binary | std::ios::out);
-    if (!ofs.good())
-      std::cout << "Warning: Failed to save the launch token to \""
-                << TOKEN_FILENAME << "\"" << std::endl;
-    else
-      ofs << token;
-  }
-  return ret;
+  return sgx_create_enclave(ENCLAVE_FILENAME, SGX_DEBUG_FLAG, &token, &updated,
+                            eid, NULL);
 }
 
 auto LockManager::load_and_initialize_threads(void *tmp) -> void * {
@@ -45,7 +33,6 @@ LockManager::LockManager() {
   // Load and initialize the signed enclave
   sgx_status_t ret = load_and_initialize_enclave(&global_eid);
   if (ret != SGX_SUCCESS) {
-    ret_error_support(ret);
     // TODO: implement error handling
   }
 
@@ -99,7 +86,6 @@ auto LockManager::initialize_enclave() -> bool {
   ret = sgx_create_enclave(ENCLAVE_FILENAME, SGX_DEBUG_FLAG, NULL, NULL,
                            &global_eid, NULL);
   if (ret != SGX_SUCCESS) {
-    ret_error_support(ret);
     return false;
   }
   return true;

@@ -5,11 +5,8 @@
 #include <stdexcept>
 #include <string>
 
-#include "base64-encoding.h"
 #include "common.h"
 #include "enclave_u.h"
-#include "errors.h"
-#include "files.h"
 #include "sgx_eid.h"
 #include "sgx_tcrypto.h"
 #include "sgx_urts.h"
