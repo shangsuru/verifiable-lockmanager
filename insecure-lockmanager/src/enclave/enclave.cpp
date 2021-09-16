@@ -192,12 +192,6 @@ void enclave_worker_thread() {
   return;
 }
 
-auto get_block_timeout() -> unsigned int {
-  print_warn("Lock timeout not yet implemented");
-  // TODO: Implement getting the lock timeout
-  return 0;
-};
-
 auto get_sealed_data_size() -> uint32_t {
   return sgx_calc_sealed_data_size((uint32_t)encoded_public_key.length(),
                                    sizeof(DataToSeal{}));
@@ -347,7 +341,6 @@ abort:
   return SGX_ERROR_UNEXPECTED;
 
 sign:
-  unsigned int block_timeout = get_block_timeout();
 
   // Get string representation of the lock tuple:
   // <TRANSACTION-ID>_<ROW-ID>_<MODE>_<BLOCKTIMEOUT>,
@@ -363,8 +356,7 @@ sign:
   };
 
   std::string string_to_sign = std::to_string(transactionId) + "_" +
-                               std::to_string(rowId) + "_" + mode + "_" +
-                               std::to_string(block_timeout);
+                               std::to_string(rowId) + "_" + mode + "_";
 
   sgx_ecc_state_handle_t context = NULL;
   sgx_ecc256_open_context(&context);
