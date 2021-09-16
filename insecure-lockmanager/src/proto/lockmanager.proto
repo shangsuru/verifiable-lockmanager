@@ -21,8 +21,6 @@ message LockResponse {
 message Registration {
     // Identifies the transaction, that wants to register
     uint32 transaction_id = 1;
-    // The maximum number of locks, the transaction can acquire during its lifetime
-    uint32 lock_budget = 2;
 }
 
 message Acceptance {

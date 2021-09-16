@@ -5,12 +5,10 @@ LockingServiceClient::LockingServiceClient(
   stub_ = LockingService::NewStub(channel);
 }
 
-auto LockingServiceClient::registerTransaction(unsigned int transactionId,
-                                               unsigned int lockBudget)
+auto LockingServiceClient::registerTransaction(unsigned int transactionId)
     -> bool {
   Registration registration;
   registration.set_transaction_id(transactionId);
-  registration.set_lock_budget(lockBudget);
 
   Acceptance acceptance;
   ClientContext context;

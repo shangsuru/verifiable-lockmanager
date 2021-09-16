@@ -1,13 +1,11 @@
 #include "transaction.h"
 
-Transaction::Transaction(unsigned int transactionId, unsigned int lockBudget)
-    : transactionId_(transactionId), lockBudget_(lockBudget){};
+Transaction::Transaction(unsigned int transactionId)
+    : transactionId_(transactionId){};
 
 auto Transaction::getLockedRows() -> std::set<unsigned int> {
   return lockedRows_;
 };
-
-auto Transaction::getLockBudget() const -> unsigned int { return lockBudget_; };
 
 auto Transaction::getPhase() -> Phase { return phase_; };
 
@@ -29,7 +27,6 @@ auto Transaction::addLock(unsigned int rowId, Lock::LockMode requestedMode,
 
   if (ret == SGX_SUCCESS) {
     lockedRows_.insert(rowId);
-    lockBudget_--;
   }
 
   return ret;

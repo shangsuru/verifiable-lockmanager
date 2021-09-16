@@ -53,7 +53,7 @@ void print_warn(const char *str);
  * contains information like type of lock and number of owners. It also manages
  * a transaction table, which maps from a transaction Id to the corresponding
  * transaction object, which holds information like the row IDs the transaction
- * has a lock on or the transaction's lock budget.
+ * has a lock on.
  *
  * It makes use of Intel SGX to have a secure enclave for signing the locks and
  * protecting its internal data structures.
@@ -72,14 +72,11 @@ class LockManager {
 
   /**
    * Registers the transaction at the lock manager prior to being able to
-   * acquire any locks, so that the lock manager can now the transaction's lock
-   * budget.
+   * acquire any locks.
    *
    * @param transactionId identifies the transaction
-   * @param lockBudget maximum number of locks the transaction is allowed to
-   * acquire
    */
-  void registerTransaction(unsigned int transactionId, unsigned int lockBudget);
+  void registerTransaction(unsigned int transactionId);
 
   /**
    * Acquires a lock for the specified row
@@ -91,9 +88,8 @@ class LockManager {
    * @returns the signature for the acquired lock
    * @throws std::domain_error, when transaction did not call
    * RegisterTransaction before or the given lock mode is unknown or when the
-   * transaction makes a request for a look, that it already owns, makes a
-   * request for a lock while in the shrinking phase, or when the lock budget is
-   * exhausted
+   * transaction makes a request for a look, that it already owns or makes a
+   * request for a lock while in the shrinking phase.
    */
   auto lock(unsigned int transactionId, unsigned int rowId, bool isExclusive)
       -> std::pair<std::string, bool>;
@@ -151,8 +147,7 @@ class LockManager {
   void configuration_init();
 
   auto create_job(Command command, unsigned int transaction_id = 0,
-                  unsigned int row_id = 0, unsigned int lock_budget = 0)
-      -> std::pair<std::string, bool>;
+                  unsigned int row_id = 0) -> std::pair<std::string, bool>;
 
   Arg arg;  // configuration parameters for the enclave
   pthread_t

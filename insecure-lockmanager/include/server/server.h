@@ -5,12 +5,12 @@
 #include <grpcpp/server.h>
 #include <grpcpp/server_builder.h>
 #include <grpcpp/server_context.h>
-#include "spdlog/spdlog.h"
 
 #include <iostream>
 
 #include "lockmanager.grpc.pb.h"
 #include "lockmanager.h"
+#include "spdlog/spdlog.h"
 
 using grpc::Server;
 using grpc::ServerBuilder;
@@ -26,11 +26,10 @@ class LockingServiceImpl final : public LockingService::Service {
  public:
   /**
    * Registers the transaction at the lock manager prior to being able to
-   * acquire any locks, so that the lock manager can now the transaction's lock
-   * budget.
+   * acquire any locks.
    *
    * @param context contains metadata about the request
-   * @param request containing transaction ID and lock budget
+   * @param request containing transaction ID
    * @param response contains if the registration was successful
    * @return the status code of the RPC call (OK or a specific error code)
    */

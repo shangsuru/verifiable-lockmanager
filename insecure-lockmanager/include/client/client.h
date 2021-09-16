@@ -1,12 +1,12 @@
 #pragma once
 
 #include <grpcpp/grpcpp.h>
-#include "spdlog/spdlog.h"
 
 #include <iostream>
 #include <string_view>
 
 #include "lockmanager.grpc.pb.h"
+#include "spdlog/spdlog.h"
 
 using grpc::Channel;
 using grpc::ClientContext;
@@ -27,14 +27,12 @@ class LockingServiceClient {
   LockingServiceClient(const std::shared_ptr<Channel> &channel);
 
   /**
-   * Registers the transaction at the lock manager by setting the lock budget.
+   * Registers the transaction at the lock manager.
    *
    * @param transactionId identifies the transaction
-   * @param lockBudget the maximum number of locks the transaction can acquire
    * @returns if the registration was successful
    */
-  auto registerTransaction(unsigned int transactionId, unsigned int lockBudget)
-      -> bool;
+  auto registerTransaction(unsigned int transactionId) -> bool;
 
   /**
    * Requests a shared lock for read-only access to a row.

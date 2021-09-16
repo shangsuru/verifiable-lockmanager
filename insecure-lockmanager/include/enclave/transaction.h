@@ -9,20 +9,15 @@
 
 /**
  * The internal representation of a transaction for the lock manager.
- * It keeps track of the lock budget, i.e. the maximum number of locks
- * the transaction is allowed to acquire, the set of acquired locks of
+ * It keeps track of the set of acquired locks of
  * that transaction as well as its phase according to 2PL.
  */
 class Transaction {
  public:
   /**
-   * Assigns the transaction its lock budget when it is created.
-   *
    * @param transactionId identifying the transaction
-   * @param lockBudget the assigned lockBudget, as determined when registering
-   *                   the transaction at the lock manager
    */
-  Transaction(unsigned int transactionId, unsigned int lockBudget);
+  Transaction(unsigned int transactionId);
 
   /**
    * According to 2PL, a transaction has two subsequent phases:
@@ -53,7 +48,7 @@ class Transaction {
 
   /**
    * When the transaction acquires a new lock, the row ID that lock refers to is
-   * added to the set of locked rows and it decrements the lock budget by 1.
+   * added to the set of locked rows.
    * Then it tries to acquire the requested mode (shared or exclusive) for the
    * given lock.
    *
@@ -76,12 +71,6 @@ class Transaction {
                    std::unordered_map<unsigned int, Lock*>& lockTable);
 
   /**
-   * @returns maximum number of locks the transaction is allowed to acquire over
-   *          its lifetime
-   */
-  [[nodiscard]] auto getLockBudget() const -> unsigned int;
-
-  /**
    * Checks if the transaction has a lock on the specified row.
    *
    * @param rowId
@@ -102,5 +91,4 @@ class Transaction {
   bool aborted_ = false;
   std::set<unsigned int> lockedRows_;
   Phase phase_ = Phase::kGrowing;
-  unsigned int lockBudget_;
 };

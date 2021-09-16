@@ -8,7 +8,6 @@ struct Job {
   enum Command command;
   unsigned int transaction_id;
   unsigned int row_id;
-  unsigned int lock_budget;
   volatile char* return_value;
   volatile bool* finished;
   volatile bool* error;

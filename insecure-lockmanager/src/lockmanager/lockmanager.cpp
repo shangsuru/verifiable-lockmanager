@@ -87,9 +87,8 @@ LockManager::~LockManager() {
   sgx_destroy_enclave(global_eid);
 }
 
-void LockManager::registerTransaction(unsigned int transactionId,
-                                      unsigned int lockBudget) {
-  create_job(REGISTER, transactionId, 0, lockBudget);
+void LockManager::registerTransaction(unsigned int transactionId) {
+  create_job(REGISTER, transactionId, 0);
 };
 
 auto LockManager::lock(unsigned int transactionId, unsigned int rowId,
@@ -197,7 +196,7 @@ auto LockManager::read_and_unseal_keys() -> bool {
 }
 
 auto LockManager::create_job(Command command, unsigned int transaction_id,
-                             unsigned int row_id, unsigned int lock_budget)
+                             unsigned int row_id)
     -> std::pair<std::string, bool> {
   // Set job parameters
   Job job;
@@ -205,7 +204,6 @@ auto LockManager::create_job(Command command, unsigned int transaction_id,
 
   job.transaction_id = transaction_id;
   job.row_id = row_id;
-  job.lock_budget = lock_budget;
 
   if (command == SHARED || command == EXCLUSIVE || command == REGISTER) {
     // Need to track, when job is finished

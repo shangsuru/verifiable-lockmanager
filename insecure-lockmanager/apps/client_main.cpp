@@ -10,9 +10,8 @@ void RunClient() {
       grpc::CreateChannel(target_address, grpc::InsecureChannelCredentials()));
 
   unsigned int transaction_id = 1;
-  const unsigned int default_lock_budget = 10;
 
-  client.registerTransaction(transaction_id, default_lock_budget);
+  client.registerTransaction(transaction_id);
 
   unsigned int i = 0;
   std::thread t1(requestLocks, std::ref(client), i++);
