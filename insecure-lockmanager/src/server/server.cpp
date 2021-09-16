@@ -21,11 +21,7 @@ auto LockingServiceImpl::LockExclusive(ServerContext* context,
   unsigned int transaction_id = request->transaction_id();
   unsigned int row_id = request->row_id();
 
-  auto [signature, ok] = lockManager_.lock(transaction_id, row_id, true);
-
-  response->set_signature(
-      signature);  // If not ok, signature contains an error message instead
-  if (ok) {
+  if (lockManager_.lock(transaction_id, row_id, true)) {
     return Status::OK;
   }
   return Status::CANCELLED;
@@ -37,11 +33,7 @@ auto LockingServiceImpl::LockShared(ServerContext* context,
   unsigned int transaction_id = request->transaction_id();
   unsigned int row_id = request->row_id();
 
-  auto [signature, ok] = lockManager_.lock(transaction_id, row_id, false);
-
-  response->set_signature(
-      signature);  // If not ok, signature contains an error message instead
-  if (ok) {
+  if (lockManager_.lock(transaction_id, row_id, false)) {
     return Status::OK;
   }
   return Status::CANCELLED;

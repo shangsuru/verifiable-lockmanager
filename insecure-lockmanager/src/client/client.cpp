@@ -20,8 +20,7 @@ auto LockingServiceClient::registerTransaction(unsigned int transactionId)
 };
 
 auto LockingServiceClient::requestSharedLock(unsigned int transactionId,
-                                             unsigned int rowId)
-    -> std::string {
+                                             unsigned int rowId) -> bool {
   spdlog::info(
       "Requesting shared lock (TXID: " + std::to_string(transactionId) +
       ", RID: " + std::to_string(rowId) + ")");
@@ -34,20 +33,11 @@ auto LockingServiceClient::requestSharedLock(unsigned int transactionId,
 
   Status status = stub_->LockShared(&context, request, &response);
 
-  if (status.ok()) {
-    spdlog::info("Received signature: " + response.signature());
-    return response.signature();
-  }
-
-  spdlog::error(
-      "Acquiring shared lock failed (TXID: " + std::to_string(transactionId) +
-      ", RID: " + std::to_string(rowId) + ")");
-  return "";
+  return status.ok();
 }
 
 auto LockingServiceClient::requestExclusiveLock(unsigned int transactionId,
-                                                unsigned int rowId)
-    -> std::string {
+                                                unsigned int rowId) -> bool {
   spdlog::info(
       "Requesting exclusive lock (TXID: " + std::to_string(transactionId) +
       ", RID: " + std::to_string(rowId) + ")");
@@ -60,15 +50,7 @@ auto LockingServiceClient::requestExclusiveLock(unsigned int transactionId,
 
   Status status = stub_->LockExclusive(&context, request, &response);
 
-  if (status.ok()) {
-    spdlog::info("Received signature: " + response.signature());
-    return response.signature();
-  }
-
-  spdlog::error(
-      "Acquiring exclusive log failed (TXID: " + std::to_string(transactionId) +
-      ", RID: " + std::to_string(rowId) + ")");
-  return "";
+  return status.ok();
 }
 
 auto LockingServiceClient::requestUnlock(unsigned int transactionId,

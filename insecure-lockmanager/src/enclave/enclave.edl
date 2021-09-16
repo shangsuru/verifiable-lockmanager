@@ -5,16 +5,6 @@ enclave {
     include "common.h"
 
     trusted {
-        public int generate_key_pair();
-
-		public int ecdsa_close();
-
-        public sgx_status_t unseal_keys([in, size=sealed_size] const uint8_t *sealed_blob, size_t sealed_size);
-
-        public uint32_t get_sealed_data_size();
-
-		public sgx_status_t seal_keys([out, size=sealed_size] uint8_t* sealed_blob, uint32_t sealed_size);
-
         public void enclave_init_values(Arg arg);
 
         public void enclave_worker_thread();

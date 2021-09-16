@@ -39,22 +39,22 @@ class LockingServiceClient {
    *
    * @param transactionId identifies the transaction that makes the request
    * @param rowId identifies the row, the transaction wants to access
-   * @returns the signature of the lock
+   * @returns if the operation was successful
    * @throws std::domain_error, if the lock couldn't get acquired
    */
   auto requestSharedLock(unsigned int transactionId, unsigned int rowId)
-      -> std::string;
+      -> bool;
 
   /**
    * Requests an exclusive lock for sole write access to a row.
    *
    * @param transactionId identifies the transaction that makes the request
    * @param rowId identifies the row, the transaction wants to access
-   * @returns the signature of the lock
+   * @returns if the operation was successful
    * @throws std::domain_error, if the lock couldn't get acquired
    */
   auto requestExclusiveLock(unsigned int transactionId, unsigned int rowId)
-      -> std::string;
+      -> bool;
 
   /**
    * Requests to release a lock acquired by the transaction.
