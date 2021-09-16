@@ -1,12 +1,11 @@
 #pragma once
 
-#include <libcuckoo/cuckoohash_map.hh>
+#include <memory>
 #include <mutex>
 #include <set>
+#include <unordered_map>
 
 #include "lock.h"
-
-using libcuckoo::cuckoohash_map;
 
 /**
  * The internal representation of a transaction for the lock manager.
@@ -17,11 +16,13 @@ using libcuckoo::cuckoohash_map;
 class Transaction {
  public:
   /**
-   * Constructing a new transaction object.
+   * Assigns the transaction its lock budget when it is created.
    *
    * @param transactionId identifying the transaction
+   * @param lockBudget the assigned lockBudget, as determined when registering
+   *                   the transaction at the lock manager
    */
-  Transaction(unsigned int transactionId);
+  Transaction(unsigned int transactionId, unsigned int lockBudget);
 
   /**
    * According to 2PL, a transaction has two subsequent phases:
@@ -60,8 +61,8 @@ class Transaction {
    * @param requestedMode
    * @param lock
    */
-  void addLock(unsigned int rowId, Lock::LockMode requestedMode,
-               std::shared_ptr<Lock>& lock);
+  auto addLock(unsigned int rowId, Lock::LockMode requestedMode, Lock* lock)
+      -> int;
 
   /**
    * Checks if the transaction currently holds a lock on the given row ID.
@@ -71,7 +72,14 @@ class Transaction {
    * @param rowId row ID of the released lock
    * @param lock the lock to release
    */
-  void releaseLock(unsigned int rowId, std::shared_ptr<Lock>& lock);
+  void releaseLock(unsigned int rowId,
+                   std::unordered_map<unsigned int, Lock*>& lockTable);
+
+  /**
+   * @returns maximum number of locks the transaction is allowed to acquire over
+   *          its lifetime
+   */
+  [[nodiscard]] auto getLockBudget() const -> unsigned int;
 
   /**
    * Checks if the transaction has a lock on the specified row.
@@ -87,13 +95,12 @@ class Transaction {
    *
    * @param lockTable containing all the locks indexed by row ID
    */
-  void releaseAllLocks(
-      cuckoohash_map<unsigned int, std::shared_ptr<Lock>>& lockTable);
+  void releaseAllLocks(std::unordered_map<unsigned int, Lock*>& lockTable);
 
  private:
   unsigned int transactionId_;
   bool aborted_ = false;
   std::set<unsigned int> lockedRows_;
   Phase phase_ = Phase::kGrowing;
-  std::mutex mut_;
+  unsigned int lockBudget_;
 };

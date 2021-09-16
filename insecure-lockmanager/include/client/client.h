@@ -1,12 +1,12 @@
 #pragma once
 
 #include <grpcpp/grpcpp.h>
+#include "spdlog/spdlog.h"
 
 #include <iostream>
 #include <string_view>
 
 #include "lockmanager.grpc.pb.h"
-#include "spdlog/spdlog.h"
 
 using grpc::Channel;
 using grpc::ClientContext;
@@ -27,22 +27,36 @@ class LockingServiceClient {
   LockingServiceClient(const std::shared_ptr<Channel> &channel);
 
   /**
+   * Registers the transaction at the lock manager by setting the lock budget.
+   *
+   * @param transactionId identifies the transaction
+   * @param lockBudget the maximum number of locks the transaction can acquire
+   * @returns if the registration was successful
+   */
+  auto registerTransaction(unsigned int transactionId, unsigned int lockBudget)
+      -> bool;
+
+  /**
    * Requests a shared lock for read-only access to a row.
    *
    * @param transactionId identifies the transaction that makes the request
    * @param rowId identifies the row, the transaction wants to access
+   * @returns the signature of the lock
    * @throws std::domain_error, if the lock couldn't get acquired
    */
-  void requestSharedLock(unsigned int transactionId, unsigned int rowId);
+  auto requestSharedLock(unsigned int transactionId, unsigned int rowId)
+      -> std::string;
 
   /**
    * Requests an exclusive lock for sole write access to a row.
    *
    * @param transactionId identifies the transaction that makes the request
    * @param rowId identifies the row, the transaction wants to access
+   * @returns the signature of the lock
    * @throws std::domain_error, if the lock couldn't get acquired
    */
-  void requestExclusiveLock(unsigned int transactionId, unsigned int rowId);
+  auto requestExclusiveLock(unsigned int transactionId, unsigned int rowId)
+      -> std::string;
 
   /**
    * Requests to release a lock acquired by the transaction.

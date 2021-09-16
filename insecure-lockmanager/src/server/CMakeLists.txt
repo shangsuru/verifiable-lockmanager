@@ -4,7 +4,7 @@
 # Optionally glob, but only for CMake 3.12 or later:
 #file(GLOB HEADER_LIST CONFIGURE_DEPENDS "${TrustdbleStubAdapter_SOURCE_DIR}/include/adapter_stub/*.h")
 set(HEADER_LIST 
-  "${InsecureLockManager_SOURCE_DIR}/include/server/server.h"
+  "${LockManager_SOURCE_DIR}/include/server/server.h"
   )
 
 # Make an automatic library - will be static or dynamic based on user setting
