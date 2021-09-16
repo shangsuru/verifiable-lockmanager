@@ -20,19 +20,16 @@
  * a transaction table, which maps from a transaction Id to the corresponding
  * transaction object, which holds information like the row IDs the transaction
  * has a lock on.
- *
- * It makes use of Intel SGX to have a secure enclave for signing the locks and
- * protecting its internal data structures.
  */
 class LockManager {
  public:
   /**
-   * Initializes the enclave and seals the public and private key for signing.
+   * Initializes the job queue, mutexes and the configuration parameters.
    */
   LockManager();
 
   /**
-   * Destroys the enclave.
+   * Shuts down the worker threads.
    */
   virtual ~LockManager();
 
@@ -51,11 +48,10 @@ class LockManager {
    * @param rowId identifies the row to be locked
    * @param requestedMode either shared for concurrent read access or exclusive
    * for sole write access
-   * @returns the signature for the acquired lock
-   * @throws std::domain_error, when transaction did not call
+   * @returns if successful or not. E.g., when the transaction did not call
    * RegisterTransaction before or the given lock mode is unknown or when the
    * transaction makes a request for a look, that it already owns or makes a
-   * request for a lock while in the shrinking phase.
+   * request for a lock while in the shrinking phase, the request will fail.
    */
   auto lock(unsigned int transactionId, unsigned int rowId, bool isExclusive)
       -> bool;
@@ -79,7 +75,7 @@ class LockManager {
   static auto load_and_initialize_threads(void *tmp) -> void *;
 
   /**
-   * Initializes the configuration parameters for the enclave
+   * Initializes configuration parameters.
    */
   void configuration_init();
 
@@ -106,10 +102,9 @@ class LockManager {
   void worker_thread();
 
   /**
-   * Function that receives a job from the untrusted application.
-   * The job can be for example a lock request or a request to register a
-   * transaction. The job is then put into a job queue for the responsible
-   * worker thread.
+   * Function that receives a job, which can be a lock request or a request to
+   * register a transaction. The job is then put into a job queue for the
+   * responsible worker thread.
    *
    * @param data struct that contains all arguments for the enclave to execute
    * the job, will be casted to (Job*) struct
@@ -117,7 +112,7 @@ class LockManager {
   void send_job(void *data);
 
   /**
-   * Registers the transaction at the enclave prior to being able to
+   * Registers the transaction prior to being able to
    * acquire any locks.
    *
    * @param transactionId identifies the transaction
@@ -130,12 +125,12 @@ class LockManager {
    * @param sig_len length of the buffer
    * @param transactionId identifies the transaction making the request
    * @param rowId identifies the row to be locked
-   * @param requestedMode either shared for concurrent read access or exclusive
+   * @param isExclusive either shared for concurrent read access or exclusive
    * for sole write access
-   * @returns SGX_ERROR_UNEXPCTED, when transaction did not call
+   * @returns false, when transaction did not call
    * RegisterTransaction before or the given lock mode is unknown or when the
    * transaction makes a request for a look, that it already owns, makes a
-   * request for a lock while in the shrinking phase.
+   * request for a lock while in the shrinking phase, else true
    */
   auto acquire_lock(unsigned int transactionId, unsigned int rowId,
                     bool isExclusive) -> bool;
@@ -158,4 +153,16 @@ class LockManager {
   Arg arg;  // configuration parameters for the enclave
   pthread_t
       *threads;  // worker threads that execute requests inside the enclave
+
+  pthread_mutex_t global_mutex;  // synchronizes access to num
+  pthread_mutex_t *queue_mutex;  // synchronizes access to the job queue
+  pthread_cond_t
+      *job_cond;  // wakes up worker threads when a new job is available
+  std::vector<std::queue<Job>> queue;  // a job queue for each worker thread
+
+  // Holds the transaction objects of the currently active transactions
+  std::unordered_map<unsigned int, Transaction *> transactionTable_;
+
+  // Keeps track of a lock object for each row ID
+  std::unordered_map<unsigned int, Lock *> lockTable_;
 };

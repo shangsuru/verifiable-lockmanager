@@ -1,19 +1,7 @@
 #include <lockmanager.h>
 
-Arg arg_enclave;  // configuration parameters for the enclave
-int num = 0;      // global variable used to give every thread a unique ID
-pthread_mutex_t global_mutex;  // synchronizes access to num
-pthread_mutex_t *queue_mutex;  // synchronizes access to the job queue
-pthread_cond_t
-    *job_cond;  // wakes up worker threads when a new job is available
-std::vector<std::queue<Job>> queue;  // a job queue for each worker thread
-
-// Holds the transaction objects of the currently active transactions
-std::unordered_map<unsigned int, Transaction *> transactionTable_;
+int num = 0;  // global variable used to give every thread a unique ID
 size_t transactionTableSize_;
-
-// Keeps track of a lock object for each row ID
-std::unordered_map<unsigned int, Lock *> lockTable_;
 size_t lockTableSize_;
 
 auto LockManager::load_and_initialize_threads(void *object) -> void * {
@@ -30,19 +18,17 @@ LockManager::LockManager() {
   configuration_init();
 
   // Get configuration parameters
-  arg_enclave = arg;
   transactionTableSize_ = arg.transaction_table_size;
   lockTableSize_ = arg.lock_table_size;
 
   // Initialize mutex variables
   pthread_mutex_init(&global_mutex, NULL);
-  queue_mutex = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t) *
-                                          arg_enclave.num_threads);
-  job_cond = (pthread_cond_t *)malloc(sizeof(pthread_cond_t) *
-                                      arg_enclave.num_threads);
+  queue_mutex =
+      (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t) * arg.num_threads);
+  job_cond = (pthread_cond_t *)malloc(sizeof(pthread_cond_t) * arg.num_threads);
 
   // Initialize job queues
-  for (int i = 0; i < arg_enclave.num_threads; i++) {
+  for (int i = 0; i < arg.num_threads; i++) {
     queue.push_back(std::queue<Job>());
   }
 
@@ -132,7 +118,7 @@ void LockManager::send_job(void *data) {
   switch (command) {
     case QUIT:
       // Send exit message to all of the worker threads
-      for (int i = 0; i < arg_enclave.num_threads; i++) {
+      for (int i = 0; i < arg.num_threads; i++) {
         spdlog::info("Sending QUIT to all threads");
 
         pthread_mutex_lock(&queue_mutex[i]);
@@ -153,7 +139,7 @@ void LockManager::send_job(void *data) {
 
       // Send the requests to specific worker thread
       int thread_id = (int)((new_job.row_id % lockTableSize_) /
-                            (lockTableSize_ / (arg_enclave.num_threads - 1)));
+                            (lockTableSize_ / (arg.num_threads - 1)));
       pthread_mutex_lock(&queue_mutex[thread_id]);
       queue[thread_id].push(new_job);
       pthread_cond_signal(&job_cond[thread_id]);
@@ -167,10 +153,10 @@ void LockManager::send_job(void *data) {
       new_job.error = ((Job *)data)->error;
 
       // Send the requests to thread responsible for registering transactions
-      pthread_mutex_lock(&queue_mutex[arg_enclave.tx_thread_id]);
-      queue[arg_enclave.tx_thread_id].push(new_job);
-      pthread_cond_signal(&job_cond[arg_enclave.tx_thread_id]);
-      pthread_mutex_unlock(&queue_mutex[arg_enclave.tx_thread_id]);
+      pthread_mutex_lock(&queue_mutex[arg.tx_thread_id]);
+      queue[arg.tx_thread_id].push(new_job);
+      pthread_cond_signal(&job_cond[arg.tx_thread_id]);
+      pthread_mutex_unlock(&queue_mutex[arg.tx_thread_id]);
       break;
     }
     default:
