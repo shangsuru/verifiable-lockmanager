@@ -1,20 +1,19 @@
 set(LOCK_MANAGER_INCLUDE_PATH "${LockManager_SOURCE_DIR}/include/lockmanager")
 set(HEADER_LIST 
     ${LOCK_MANAGER_INCLUDE_PATH}/lockmanager.h
-    ${LOCK_MANAGER_INCLUDE_PATH}/enclave.h
     ${LOCK_MANAGER_INCLUDE_PATH}/lock.h
     ${LOCK_MANAGER_INCLUDE_PATH}/transaction.h
     ${LockManager_SOURCE_DIR}/include/common.h
   )
 
-set(SRCS lockmanager/lockmanager.cpp lockmanager/enclave.cpp lockmanager/transaction.cpp lockmanager/lock.cpp ${HEADER_LIST})
+set(SRCS lockmanager/lockmanager.cpp lockmanager/transaction.cpp lockmanager/lock.cpp ${HEADER_LIST})
 add_library(lckMgr SHARED ${SRCS})
 
 # Add an alias so that library can be used inside the build tree, e.g. when testing
 add_library(TrustDBle::lckMgr ALIAS lckMgr)
 
 # We need this directory, and users of our library will need it too
-target_include_directories(lckMgr PUBLIC ../include ../include/lockmanager ../include/enclave ${FETCHCONTENT_BASE_DIR}/spdlog-src/include/ ../build/src ${SGX_INCLUDE_DIR})
+target_include_directories(lckMgr PUBLIC ../include ../include/lockmanager ${FETCHCONTENT_BASE_DIR}/spdlog-src/include/ ../build/src ${SGX_INCLUDE_DIR})
 
 # add_dependencies(lckMgr enclave-sign)
 
