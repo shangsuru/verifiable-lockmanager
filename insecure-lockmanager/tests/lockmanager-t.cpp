@@ -1,12 +1,9 @@
 #include <gtest/gtest.h>
 
-#include <chrono>
 #include <thread>
 
 #include "lock.h"
 #include "lockmanager.h"
-
-using namespace std::chrono_literals;
 
 class LockManagerTest : public ::testing::Test {
  protected:
@@ -38,104 +35,119 @@ TEST_F(LockManagerTest, cannotRegisterTwice) {
 
 // Acquiring non-conflicting shared and exclusive locks works
 TEST_F(LockManagerTest, acquiringLocks) {
-  LockManager lock_manager = LockManager();
-  EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA));
-  EXPECT_TRUE(lock_manager.lock(kTransactionIdA, kRowId, false));
-  EXPECT_TRUE(lock_manager.lock(kTransactionIdA, kRowId + 1, true));
+  EXPECT_TRUE(lockManager_->registerTransaction(kTransactionIdA));
+  EXPECT_TRUE(lockManager_->lock(kTransactionIdA, kRowId, false));
+  EXPECT_TRUE(lockManager_->lock(kTransactionIdA, kRowId + 1, true));
 };
 
 // Cannot get exclusive access when someone already has shared access
 TEST_F(LockManagerTest, wantExclusiveButAlreadyShared) {
-  LockManager lock_manager = LockManager();
-  lock_manager.registerTransaction(kTransactionIdA);
-  lock_manager.registerTransaction(kTransactionIdB);
+  lockManager_->registerTransaction(kTransactionIdA);
+  lockManager_->registerTransaction(kTransactionIdB);
 
-  EXPECT_TRUE(lock_manager.lock(kTransactionIdA, kRowId, false));
-  EXPECT_FALSE(lock_manager.lock(kTransactionIdB, kRowId, true));
+  EXPECT_TRUE(lockManager_->lock(kTransactionIdA, kRowId, false));
+  EXPECT_FALSE(lockManager_->lock(kTransactionIdB, kRowId, true));
 };
 
 // Cannot get shared access, when someone has exclusive access
 TEST_F(LockManagerTest, wantSharedButAlreadyExclusive) {
-  LockManager lock_manager = LockManager();
-  lock_manager.registerTransaction(kTransactionIdA);
-  lock_manager.registerTransaction(kTransactionIdB);
+  lockManager_->registerTransaction(kTransactionIdA);
+  lockManager_->registerTransaction(kTransactionIdB);
 
-  EXPECT_TRUE(lock_manager.lock(kTransactionIdA, kRowId, true));
-  EXPECT_FALSE(lock_manager.lock(kTransactionIdB, kRowId, false));
+  EXPECT_TRUE(lockManager_->lock(kTransactionIdA, kRowId, true));
+  EXPECT_FALSE(lockManager_->lock(kTransactionIdB, kRowId, false));
 };
 
 // Several transactions can acquire a shared lock on the same row
 TEST_F(LockManagerTest, multipleTransactionsSharedLock) {
-  LockManager lock_manager = LockManager();
   for (unsigned int transaction_id = 0; transaction_id < kLockBudget;
        transaction_id++) {
-    EXPECT_TRUE(lock_manager.registerTransaction(transaction_id));
-    EXPECT_TRUE(lock_manager.lock(transaction_id, kRowId, false));
+    EXPECT_TRUE(lockManager_->registerTransaction(transaction_id));
+    EXPECT_TRUE(lockManager_->lock(transaction_id, kRowId, false));
   }
 };
 
 // Cannot get the same lock twice
 TEST_F(LockManagerTest, sameLockTwice) {
-  LockManager lock_manager = LockManager();
-  EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA));
-  EXPECT_TRUE(lock_manager.lock(kTransactionIdA, kRowId, false));
-  EXPECT_FALSE(lock_manager.lock(kTransactionIdA, kRowId, false));
+  EXPECT_TRUE(lockManager_->registerTransaction(kTransactionIdA));
+  EXPECT_TRUE(lockManager_->lock(kTransactionIdA, kRowId, false));
+  EXPECT_FALSE(lockManager_->lock(kTransactionIdA, kRowId, false));
 };
 
 // Can upgrade a lock
 TEST_F(LockManagerTest, upgradeLock) {
-  LockManager lock_manager = LockManager();
-  EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA));
-  EXPECT_TRUE(lock_manager.lock(kTransactionIdA, kRowId, false));
-  EXPECT_TRUE(lock_manager.lock(kTransactionIdA, kRowId, true));
+  EXPECT_TRUE(lockManager_->registerTransaction(kTransactionIdA));
+  EXPECT_TRUE(lockManager_->lock(kTransactionIdA, kRowId, false));
+  EXPECT_TRUE(lockManager_->lock(kTransactionIdA, kRowId, true));
 };
 
 // Can unlock and acquire again
 TEST_F(LockManagerTest, unlock) {
-  LockManager lock_manager = LockManager();
-  EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA));
-  EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdB));
-  EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdC));
+  EXPECT_TRUE(lockManager_->registerTransaction(kTransactionIdA));
+  EXPECT_TRUE(lockManager_->registerTransaction(kTransactionIdB));
+  EXPECT_TRUE(lockManager_->registerTransaction(kTransactionIdC));
 
-  EXPECT_TRUE(lock_manager.lock(kTransactionIdA, kRowId, false));
-  EXPECT_TRUE(lock_manager.lock(kTransactionIdB, kRowId, false));
+  EXPECT_TRUE(lockManager_->lock(kTransactionIdA, kRowId, false));
+  EXPECT_TRUE(lockManager_->lock(kTransactionIdB, kRowId, false));
 
-  lock_manager.unlock(kTransactionIdA, kRowId);
-  lock_manager.unlock(kTransactionIdB, kRowId);
+  lockManager_->unlock(kTransactionIdA, kRowId);
+  lockManager_->unlock(kTransactionIdB, kRowId);
 
-  EXPECT_TRUE(lock_manager.lock(kTransactionIdC, kRowId, true));
+  EXPECT_TRUE(lockManager_->lock(kTransactionIdC, kRowId, true));
 };
 
 // Cannot request more locks after transaction aborted
 TEST_F(LockManagerTest, noMoreLocksAfterAbort) {
-  LockManager lock_manager = LockManager();
-  EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA));
-  EXPECT_TRUE(lock_manager.lock(kTransactionIdA, kRowId, false));
-  EXPECT_TRUE(lock_manager.lock(kTransactionIdA, kRowId + 1, false));
+  EXPECT_TRUE(lockManager_->registerTransaction(kTransactionIdA));
+  EXPECT_TRUE(lockManager_->lock(kTransactionIdA, kRowId, false));
+  EXPECT_TRUE(lockManager_->lock(kTransactionIdA, kRowId + 1, false));
 
   // Make transaction abort by acquiring the same lock again
-  EXPECT_FALSE(lock_manager.lock(kTransactionIdA, kRowId + 1, false));
+  EXPECT_FALSE(lockManager_->lock(kTransactionIdA, kRowId + 1, false));
 
   // Make a new lock request, which should fail, because the transaction aborted
-  EXPECT_FALSE(lock_manager.lock(kTransactionIdA, kRowId + 2, false));
+  EXPECT_FALSE(lockManager_->lock(kTransactionIdA, kRowId + 2, false));
 };
 
 // Releasing a lock twice for the same transaction has no effect
 TEST_F(LockManagerTest, releaseLockTwice) {
-  LockManager lock_manager = LockManager();
-  EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA));
-  EXPECT_TRUE(lock_manager.lock(kTransactionIdA, kRowId, true));
-  lock_manager.unlock(kTransactionIdA, kRowId);
-  lock_manager.unlock(kTransactionIdA, kRowId);
+  EXPECT_TRUE(lockManager_->registerTransaction(kTransactionIdA));
+  EXPECT_TRUE(lockManager_->lock(kTransactionIdA, kRowId, true));
+  lockManager_->unlock(kTransactionIdA, kRowId);
+  lockManager_->unlock(kTransactionIdA, kRowId);
 };
 
 // Cannot acquire more locks in shrinking phase
 TEST_F(LockManagerTest, noMoreLocksInShrinkingPhase) {
-  LockManager lock_manager = LockManager();
-  EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA));
-  EXPECT_TRUE(lock_manager.lock(kTransactionIdA, kRowId, true));
+  EXPECT_TRUE(lockManager_->registerTransaction(kTransactionIdA));
+  EXPECT_TRUE(lockManager_->lock(kTransactionIdA, kRowId, true));
   // Entering shrinking phase when first releasing a lock
-  lock_manager.unlock(kTransactionIdA, kRowId);
+  lockManager_->unlock(kTransactionIdA, kRowId);
   // Cannot acquire locks in shrinking phase
-  EXPECT_FALSE(lock_manager.lock(kTransactionIdA, kRowId, true));
+  EXPECT_FALSE(lockManager_->lock(kTransactionIdA, kRowId, true));
 };
+
+TEST_F(LockManagerTest, concurrentLockRequests) {
+  EXPECT_TRUE(lockManager_->registerTransaction(kTransactionIdA));
+  EXPECT_TRUE(lockManager_->registerTransaction(kTransactionIdB));
+
+  std::thread t1{&LockManager::lock, lockManager_, kTransactionIdA, 0, false};
+  std::thread t2{&LockManager::lock, lockManager_, kTransactionIdB, 0, false};
+  std::thread t3{&LockManager::lock, lockManager_, kTransactionIdA, 1, false};
+  std::thread t4{&LockManager::lock, lockManager_, kTransactionIdB, 1, false};
+  std::thread t5{&LockManager::lock, lockManager_, kTransactionIdA, 2, false};
+  std::thread t6{&LockManager::lock, lockManager_, kTransactionIdB, 2, false};
+  std::thread t7{&LockManager::lock, lockManager_, kTransactionIdA, 3, false};
+  std::thread t8{&LockManager::lock, lockManager_, kTransactionIdB, 3, false};
+  std::thread t9{&LockManager::lock, lockManager_, kTransactionIdB, 4, true};
+
+  t1.join();
+  t2.join();
+  t3.join();
+  t4.join();
+  t5.join();
+  t6.join();
+  t7.join();
+  t8.join();
+  t9.join();
+}
