@@ -78,8 +78,10 @@ class LockManager {
    * @param transactionId identifies the transaction
    * @param lockBudget maximum number of locks the transaction is allowed to
    * acquire
+   * @returns false, if the transaction was already registered, else true
    */
-  void registerTransaction(unsigned int transactionId, unsigned int lockBudget);
+  auto registerTransaction(unsigned int transactionId, unsigned int lockBudget)
+      -> bool;
 
   /**
    * Acquires a lock for the specified row

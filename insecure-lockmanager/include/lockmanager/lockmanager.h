@@ -38,8 +38,9 @@ class LockManager {
    * acquire any locks.
    *
    * @param transactionId identifies the transaction
+   * @returns false, if the transaction was already registered, else true
    */
-  void registerTransaction(unsigned int transactionId);
+  auto registerTransaction(unsigned int transactionId) -> bool;
 
   /**
    * Acquires a lock for the specified row
@@ -112,14 +113,6 @@ class LockManager {
   void send_job(void *data);
 
   /**
-   * Registers the transaction prior to being able to
-   * acquire any locks.
-   *
-   * @param transactionId identifies the transaction
-   */
-  int register_transaction(unsigned int transactionId);
-
-  /**
    * Acquires a lock for the specified row.
    *
    * @param sig_len length of the buffer
@@ -165,4 +158,5 @@ class LockManager {
 
   // Keeps track of a lock object for each row ID
   std::unordered_map<unsigned int, Lock *> lockTable_;
+  int num = 0;  // global variable used to give every thread a unique ID
 };

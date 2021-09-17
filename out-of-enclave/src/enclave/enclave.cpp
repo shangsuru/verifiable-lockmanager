@@ -55,6 +55,14 @@ void enclave_send_job(void *data) {
       new_job.finished = ((Job *)data)->finished;
       new_job.error = ((Job *)data)->error;
 
+      // If transaction is not registered, abort the request
+      if (transactionTable_[new_job.transaction_id] == nullptr) {
+        spdlog::error("Need to register transaction before lock requests");
+        *new_job.error = true;
+        *new_job.finished = true;
+        return;
+      }
+
       // Send the requests to specific worker thread
       int thread_id = (int)((new_job.row_id % lockTableSize_) /
                             (lockTableSize_ / (arg_enclave.num_threads - 1)));

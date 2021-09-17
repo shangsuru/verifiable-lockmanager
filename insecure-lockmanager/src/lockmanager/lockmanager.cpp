@@ -1,9 +1,7 @@
 #include <lockmanager.h>
 
-int num = 0;  // global variable used to give every thread a unique ID
 size_t transactionTableSize_;
 size_t lockTableSize_;
-
 auto LockManager::load_and_initialize_threads(void *object) -> void * {
   reinterpret_cast<LockManager *>(object)->worker_thread();
   return 0;
@@ -12,6 +10,8 @@ auto LockManager::load_and_initialize_threads(void *object) -> void * {
 void LockManager::configuration_init() {
   arg.num_threads = 2;
   arg.tx_thread_id = arg.num_threads - 1;
+  arg.transaction_table_size = 200;
+  arg.lock_table_size = 10000;
 }
 
 LockManager::LockManager() {
@@ -37,27 +37,31 @@ LockManager::LockManager() {
   threads = (pthread_t *)malloc(sizeof(pthread_t) * (arg.num_threads));
   spdlog::info("Initializing " + std::to_string(arg.num_threads) + " threads");
   for (int i = 0; i < arg.num_threads; i++) {
+    pthread_mutex_init(&queue_mutex[i], NULL);
+    pthread_cond_init(&job_cond[i], NULL);
     pthread_create(&threads[i], NULL, &LockManager::load_and_initialize_threads,
                    this);
   }
 }
 
+// TODO: Destructor never called (esp. on CTRL+C shutdown)!
 LockManager::~LockManager() {
-  // TODO: Destructor never called (esp. on CTRL+C shutdown)!
   // Send QUIT to worker threads
   create_job(QUIT);
 
   spdlog::info("Waiting for thread to stop");
   for (int i = 0; i < arg.num_threads; i++) {
     pthread_join(threads[i], NULL);
+    pthread_mutex_destroy(&queue_mutex[i]);
+    pthread_cond_destroy(&job_cond[i]);
   }
 
   spdlog::info("Freing threads");
   free(threads);
 }
 
-void LockManager::registerTransaction(unsigned int transactionId) {
-  create_job(REGISTER, transactionId, 0);
+auto LockManager::registerTransaction(unsigned int transactionId) -> bool {
+  return create_job(REGISTER, transactionId, 0);
 };
 
 auto LockManager::lock(unsigned int transactionId, unsigned int rowId,
@@ -91,7 +95,6 @@ auto LockManager::create_job(Command command, unsigned int transaction_id,
   }
 
   send_job(&job);
-
   if (command == SHARED || command == EXCLUSIVE || command == REGISTER) {
     // Need to wait until job is finished because we need to be registered for
     // subsequent requests or because we need to wait for the return value
@@ -126,7 +129,7 @@ void LockManager::send_job(void *data) {
         pthread_cond_signal(&job_cond[i]);
         pthread_mutex_unlock(&queue_mutex[i]);
       }
-      break;
+      return;
 
     case SHARED:
     case EXCLUSIVE:
@@ -136,6 +139,14 @@ void LockManager::send_job(void *data) {
       new_job.row_id = ((Job *)data)->row_id;
       new_job.finished = ((Job *)data)->finished;
       new_job.error = ((Job *)data)->error;
+
+      // If transaction is not registered, abort the request
+      if (transactionTable_[new_job.transaction_id] == nullptr) {
+        spdlog::error("Need to register transaction before lock requests");
+        *new_job.error = true;
+        *new_job.finished = true;
+        return;
+      }
 
       // Send the requests to specific worker thread
       int thread_id = (int)((new_job.row_id % lockTableSize_) /
@@ -152,7 +163,8 @@ void LockManager::send_job(void *data) {
       new_job.finished = ((Job *)data)->finished;
       new_job.error = ((Job *)data)->error;
 
-      // Send the requests to thread responsible for registering transactions
+      // Send the requests to thread responsible for registering
+      // transactions
       pthread_mutex_lock(&queue_mutex[arg.tx_thread_id]);
       queue[arg.tx_thread_id].push(new_job);
       pthread_cond_signal(&job_cond[arg.tx_thread_id]);
@@ -171,13 +183,9 @@ void LockManager::worker_thread() {
   int thread_id = num;
   num += 1;
 
-  pthread_mutex_init(&queue_mutex[thread_id], NULL);
-  pthread_cond_init(&job_cond[thread_id], NULL);
-
   pthread_mutex_unlock(&global_mutex);
 
   pthread_mutex_lock(&queue_mutex[thread_id]);
-
   while (1) {
     spdlog::info("Worker waiting for jobs");
     if (queue[thread_id].size() == 0) {
@@ -196,8 +204,6 @@ void LockManager::worker_thread() {
         pthread_mutex_lock(&queue_mutex[thread_id]);
         queue[thread_id].pop();
         pthread_mutex_unlock(&queue_mutex[thread_id]);
-        pthread_mutex_destroy(&queue_mutex[thread_id]);
-        pthread_cond_destroy(&job_cond[thread_id]);
         spdlog::info("Enclave worker quitting");
         return;
       case SHARED:

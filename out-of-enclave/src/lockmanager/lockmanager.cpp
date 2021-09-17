@@ -87,9 +87,9 @@ LockManager::~LockManager() {
   sgx_destroy_enclave(global_eid);
 }
 
-void LockManager::registerTransaction(unsigned int transactionId,
-                                      unsigned int lockBudget) {
-  create_job(REGISTER, transactionId, 0, lockBudget);
+auto LockManager::registerTransaction(unsigned int transactionId,
+                                      unsigned int lockBudget) -> bool {
+  return create_job(REGISTER, transactionId, 0, lockBudget);
 };
 
 auto LockManager::lock(unsigned int transactionId, unsigned int rowId,
