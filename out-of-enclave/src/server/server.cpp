@@ -6,7 +6,7 @@ auto LockingServiceImpl::RegisterTransaction(ServerContext* context,
   unsigned int transaction_id = request->transaction_id();
   unsigned int lock_budget = request->lock_budget();
 
-  if (lockManager_.registerTransaction(transaction_id)) {
+  if (lockManager_.registerTransaction(transaction_id, lock_budget)) {
     return Status::OK;
   }
 

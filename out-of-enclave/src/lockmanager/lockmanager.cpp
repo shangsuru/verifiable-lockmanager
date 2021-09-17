@@ -89,7 +89,7 @@ LockManager::~LockManager() {
 
 auto LockManager::registerTransaction(unsigned int transactionId,
                                       unsigned int lockBudget) -> bool {
-  return create_job(REGISTER, transactionId, 0, lockBudget);
+  return create_job(REGISTER, transactionId, 0, lockBudget).second;
 };
 
 auto LockManager::lock(unsigned int transactionId, unsigned int rowId,
