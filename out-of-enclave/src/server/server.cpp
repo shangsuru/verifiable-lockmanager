@@ -6,14 +6,11 @@ auto LockingServiceImpl::RegisterTransaction(ServerContext* context,
   unsigned int transaction_id = request->transaction_id();
   unsigned int lock_budget = request->lock_budget();
 
-  try {
-    lockManager_.registerTransaction(transaction_id, lock_budget);
-  } catch (const std::domain_error& e) {
-    spdlog::warn(e.what());
-    return Status::CANCELLED;
+  if (lockManager_.registerTransaction(transaction_id)) {
+    return Status::OK;
   }
 
-  return Status::OK;
+  return Status::CANCELLED;
 };
 
 auto LockingServiceImpl::LockExclusive(ServerContext* context,

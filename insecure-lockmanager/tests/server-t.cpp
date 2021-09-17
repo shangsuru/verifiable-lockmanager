@@ -5,6 +5,8 @@
 
 class ServerTest : public ::testing::Test {
  protected:
+  void SetUp() override { spdlog::set_level(spdlog::level::off); };
+
   auto registerTransaction(LockingServiceImpl &server) -> bool {
     registration_.set_transaction_id(transactionId_);
 
