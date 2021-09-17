@@ -15,15 +15,10 @@ class LockTest : public ::testing::Test {
 // Shared access works
 TEST_F(LockTest, sharedAccess) {
   Lock lock = Lock();
-  std::thread t1{&Lock::getSharedAccess, &lock, 1};
-  std::thread t2{&Lock::getSharedAccess, &lock, 2};
-  std::thread t3{&Lock::getSharedAccess, &lock, 3};
-  std::thread t4{&Lock::getSharedAccess, &lock, 4};
-
-  t1.join();
-  t2.join();
-  t3.join();
-  t4.join();
+  lock.getSharedAccess(1);
+  lock.getSharedAccess(2);
+  lock.getSharedAccess(3);
+  lock.getSharedAccess(4);
 
   EXPECT_EQ(lock.getMode(), Lock::LockMode::kShared);
   EXPECT_EQ(lock.getOwners().size(), 4);
