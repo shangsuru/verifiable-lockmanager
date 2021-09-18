@@ -6,6 +6,7 @@
 #include <string>
 
 #include "base64-encoding.h"
+#include "common.h"
 #include "enclave_u.h"
 #include "errors.h"
 #include "files.h"
@@ -17,7 +18,34 @@
 #define TOKEN_FILENAME "enclave.token"
 #define ENCLAVE_FILENAME "enclave.signed.so"
 #define SEALED_KEY_FILE "sealed_data_blob.txt"
-#define MAX_PATH FILENAME_MAX
+#define NO_SIGNATURE ""    // for jobs that return no signature (QUIT, UNLOCK)
+#define SIGNATURE_SIZE 89  // length of the base64-encoded signature
+
+extern sgx_enclave_id_t global_eid;  // identifies the enclave
+extern sgx_launch_token_t token;
+
+//=========================== OCALLS ============================
+/**
+ * Logs an info message from inside the enclave to the terminal
+ *
+ * @param str characters to be printed
+ */
+void print_info(const char *str);
+
+/**
+ * Logs an error message from inside the enclave to the terminal
+ *
+ * @param str characters to be printed
+ */
+void print_error(const char *str);
+
+/**
+ * Logs a warning message from inside the enclave to the terminal
+ *
+ * @param str characters to be printed
+ */
+void print_warn(const char *str);
+//================================================================
 
 /**
  * Process lock and unlock requests from the server. It manages a lock table,
@@ -50,8 +78,10 @@ class LockManager {
    * @param transactionId identifies the transaction
    * @param lockBudget maximum number of locks the transaction is allowed to
    * acquire
+   * @returns false, if the transaction was already registered, else true
    */
-  void registerTransaction(unsigned int transactionId, unsigned int lockBudget);
+  auto registerTransaction(unsigned int transactionId, unsigned int lockBudget)
+      -> bool;
 
   /**
    * Acquires a lock for the specified row
@@ -68,7 +98,7 @@ class LockManager {
    * exhausted
    */
   auto lock(unsigned int transactionId, unsigned int rowId, bool isExclusive)
-      -> std::string;
+      -> std::pair<std::string, bool>;
 
   /**
    * Releases a lock for the specified row
@@ -101,5 +131,32 @@ class LockManager {
    */
   auto read_and_unseal_keys() -> bool;
 
-  sgx_enclave_id_t global_eid = 0;
+  /**
+   * Starts the enclave.
+   *
+   * @param eid specifying the enclave
+   * @returns success or failure
+   */
+  auto load_and_initialize_enclave(sgx_enclave_id_t *eid) -> sgx_status_t;
+
+  /**
+   * Function that each worker thread executes. It calls inside the enclave and
+   * deals with incoming job requests.
+   *
+   * @param tmp not used
+   */
+  static auto load_and_initialize_threads(void *tmp) -> void *;
+
+  /**
+   * Initializes the configuration parameters for the enclave
+   */
+  void configuration_init();
+
+  auto create_job(Command command, unsigned int transaction_id = 0,
+                  unsigned int row_id = 0, unsigned int lock_budget = 0)
+      -> std::pair<std::string, bool>;
+
+  Arg arg;  // configuration parameters for the enclave
+  pthread_t
+      *threads;  // worker threads that execute requests inside the enclave
 };

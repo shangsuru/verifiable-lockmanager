@@ -1,23 +1,64 @@
 #include <lockmanager.h>
 
-//========= OCALL Functions ===========
-void print_info(const char* str) {
-  spdlog::info("Enclave: " + std::string{str});
+sgx_enclave_id_t global_eid = 0;
+sgx_launch_token_t token = {0};
+
+auto LockManager::load_and_initialize_enclave(sgx_enclave_id_t *eid)
+    -> sgx_status_t {
+  sgx_status_t ret = SGX_SUCCESS;
+  int retval = 0;
+  int updated = 0;
+
+  // Check whether the loading and initialization operations are caused
+  if (*eid != 0) sgx_destroy_enclave(*eid);
+
+  // Load the enclave
+  ret = sgx_create_enclave(ENCLAVE_FILENAME, SGX_DEBUG_FLAG, &token, &updated,
+                           eid, NULL);
+  if (ret != SGX_SUCCESS) return ret;
+
+  // Save the launch token if updated
+  if (updated == 1) {
+    std::ofstream ofs(TOKEN_FILENAME, std::ios::binary | std::ios::out);
+    if (!ofs.good())
+      std::cout << "Warning: Failed to save the launch token to \""
+                << TOKEN_FILENAME << "\"" << std::endl;
+    else
+      ofs << token;
+  }
+  return ret;
 }
 
-void print_error(const char* str) {
-  spdlog::error("Enclave: " + std::string{str});
+auto LockManager::load_and_initialize_threads(void *tmp) -> void * {
+  enclave_worker_thread(global_eid);
+  return 0;
 }
 
-void print_warn(const char* str) {
-  spdlog::warn("Enclave: " + std::string{str});
+void LockManager::configuration_init() {
+  arg.num_threads = 2;
+  arg.tx_thread_id = arg.num_threads - 1;
 }
-//=====================================
 
 LockManager::LockManager() {
-  if (!initialize_enclave()) {
-    spdlog::error("Error at initializing enclave");
-  };
+  configuration_init();
+
+  // Load and initialize the signed enclave
+  sgx_status_t ret = load_and_initialize_enclave(&global_eid);
+  if (ret != SGX_SUCCESS) {
+    ret_error_support(ret);
+    // TODO: implement error handling
+  }
+
+  enclave_init_values(global_eid, arg);
+
+  // Create threads for lock requests and an additional one for registering
+  // transactions
+  threads = (pthread_t *)malloc(sizeof(pthread_t) * (arg.num_threads));
+  spdlog::info("Initializing " + std::to_string(arg.num_threads) + " threads");
+  for (int i = 0; i < arg.num_threads; i++) {
+    pthread_create(&threads[i], NULL, &LockManager::load_and_initialize_threads,
+                   this);
+  }
 
   // Generate new keys if keys from sealed storage cannot be found
   int res = -1;
@@ -29,31 +70,38 @@ LockManager::LockManager() {
   }
 }
 
-LockManager::~LockManager() { sgx_destroy_enclave(global_eid); }
+LockManager::~LockManager() {
+  // TODO: Destructor never called (esp. on CTRL+C shutdown)!
+  // Send QUIT to worker threads
+  create_job(QUIT);
 
-void LockManager::registerTransaction(unsigned int transactionId,
-                                      unsigned int lockBudget) {
-  int res = -1;
-  register_transaction(global_eid, &res, transactionId, lockBudget);
+  spdlog::info("Waiting for thread to stop");
+  for (int i = 0; i < arg.num_threads; i++) {
+    pthread_join(threads[i], NULL);
+  }
+
+  spdlog::info("Freing threads");
+  free(threads);
+
+  spdlog::info("Destroying enclave");
+  sgx_destroy_enclave(global_eid);
+}
+
+auto LockManager::registerTransaction(unsigned int transactionId,
+                                      unsigned int lockBudget) -> bool {
+  return create_job(REGISTER, transactionId, 0, lockBudget).second;
 };
 
 auto LockManager::lock(unsigned int transactionId, unsigned int rowId,
-                       bool isExclusive) -> std::string {
-  int res;
-  sgx_ec256_signature_t sig;
-  acquire_lock(global_eid, &res, (void*)&sig, sizeof(sgx_ec256_signature_t),
-               transactionId, rowId, isExclusive);
-  if (res == SGX_ERROR_UNEXPECTED) {
-    throw std::domain_error("Acquiring lock failed");
+                       bool isExclusive) -> std::pair<std::string, bool> {
+  if (isExclusive) {
+    return create_job(EXCLUSIVE, transactionId, rowId);
   }
-
-  return base64_encode((unsigned char*)sig.x, sizeof(sig.x)) + "-" +
-         base64_encode((unsigned char*)sig.y, sizeof(sig.y));
+  return create_job(SHARED, transactionId, rowId);
 };
 
 void LockManager::unlock(unsigned int transactionId, unsigned int rowId) {
-  int res = -1;
-  release_lock(global_eid, transactionId, rowId);
+  create_job(UNLOCK, transactionId, rowId);
 };
 
 auto LockManager::initialize_enclave() -> bool {
@@ -80,7 +128,7 @@ auto LockManager::seal_and_save_keys() -> bool {
     return false;
   }
 
-  uint8_t* temp_sealed_buf = (uint8_t*)malloc(sealed_data_size);
+  uint8_t *temp_sealed_buf = (uint8_t *)malloc(sealed_data_size);
   if (temp_sealed_buf == NULL) {
     spdlog::error("Out of memory");
     return false;
@@ -119,7 +167,7 @@ auto LockManager::read_and_unseal_keys() -> bool {
   if (fsize == (size_t)-1) {
     return false;
   }
-  uint8_t* temp_buf = (uint8_t*)malloc(fsize);
+  uint8_t *temp_buf = (uint8_t *)malloc(fsize);
   if (temp_buf == NULL) {
     spdlog::error("Out of memory");
     return false;
@@ -146,4 +194,60 @@ auto LockManager::read_and_unseal_keys() -> bool {
 
   free(temp_buf);
   return true;
+}
+
+auto LockManager::create_job(Command command, unsigned int transaction_id,
+                             unsigned int row_id, unsigned int lock_budget)
+    -> std::pair<std::string, bool> {
+  // Set job parameters
+  Job job;
+  job.command = command;
+
+  job.transaction_id = transaction_id;
+  job.row_id = row_id;
+  job.lock_budget = lock_budget;
+
+  if (command == SHARED || command == EXCLUSIVE || command == REGISTER) {
+    // Need to track, when job is finished
+    job.finished = new bool;
+    *job.finished = false;
+    // Need to track, if an error occured
+    job.error = new bool;
+    *job.error = false;
+  }
+
+  if (command == SHARED || command == EXCLUSIVE) {
+    // These requests return a signature
+    job.return_value = new char[SIGNATURE_SIZE];
+  }
+
+  enclave_send_job(global_eid, &job);
+
+  if (command == SHARED || command == EXCLUSIVE || command == REGISTER) {
+    // Need to wait until job is finished because we need to be registered for
+    // subsequent requests or because we need to wait for the return value
+    while (!*job.finished) {
+      continue;
+    }
+    delete job.finished;
+
+    // Check if an error occured
+    if (*job.error) {
+      return std::make_pair(NO_SIGNATURE, false);
+    }
+    delete job.error;
+  }
+
+  // Get the signature return value
+  if (command == SHARED || command == EXCLUSIVE) {
+    std::string signature;
+    for (int i = 0; i < SIGNATURE_SIZE; i++) {
+      signature += job.return_value[i];
+    }
+    delete[] job.return_value;
+
+    return std::make_pair(signature, true);
+  }
+
+  return std::make_pair(NO_SIGNATURE, true);
 }

@@ -3,8 +3,8 @@
 #include <memory>
 #include <mutex>
 #include <set>
+#include <unordered_map>
 
-#include "hashtable.h"
 #include "lock.h"
 
 /**
@@ -61,8 +61,8 @@ class Transaction {
    * @param requestedMode
    * @param lock
    */
-  void addLock(unsigned int rowId, Lock::LockMode requestedMode,
-               std::shared_ptr<Lock>& lock);
+  auto addLock(unsigned int rowId, Lock::LockMode requestedMode, Lock* lock)
+      -> int;
 
   /**
    * Checks if the transaction currently holds a lock on the given row ID.
@@ -72,7 +72,8 @@ class Transaction {
    * @param rowId row ID of the released lock
    * @param lock the lock to release
    */
-  void releaseLock(unsigned int rowId, std::shared_ptr<Lock>& lock);
+  void releaseLock(unsigned int rowId,
+                   std::unordered_map<unsigned int, Lock*>& lockTable);
 
   /**
    * @returns maximum number of locks the transaction is allowed to acquire over
@@ -94,7 +95,7 @@ class Transaction {
    *
    * @param lockTable containing all the locks indexed by row ID
    */
-  void releaseAllLocks(HashTable<std::shared_ptr<Lock>>& lockTable);
+  void releaseAllLocks(std::unordered_map<unsigned int, Lock*>& lockTable);
 
  private:
   unsigned int transactionId_;
@@ -102,5 +103,4 @@ class Transaction {
   std::set<unsigned int> lockedRows_;
   Phase phase_ = Phase::kGrowing;
   unsigned int lockBudget_;
-  std::mutex mut_;
 };

@@ -4,6 +4,8 @@
 #include <set>
 #include <stdexcept>
 
+#include "enclave_t.h"
+
 /**
  * The internal representation of a lock for the lock manager.
  */
@@ -26,7 +28,7 @@ class Lock {
    * @param transactionId ID of the transaction, that wants to acquire the lock
    * @throws std::domain_error, when the lock is exclusive
    */
-  void getSharedAccess(unsigned int transactionId);
+  auto getSharedAccess(unsigned int transactionId) -> int;
 
   /**
    * Attempts to acquire exclusive access for a transaction.
@@ -34,7 +36,7 @@ class Lock {
    * @param transactionId ID of the transaction, that wants to acquire the lock
    * @throws std::domain_error, if someone already has that lock
    */
-  void getExclusiveAccess(unsigned int transactionId);
+  auto getExclusiveAccess(unsigned int transactionId) -> int;
 
   /**
    * Releases the lock for the calling transaction.
@@ -51,7 +53,7 @@ class Lock {
    * @throws std::domain_error, if some other transaction currently still has
    * shared access to the lock
    */
-  void upgrade(unsigned int transactionId);
+  auto upgrade(unsigned int transactionId) -> int;
 
   /**
    * @returns the set of transaction IDs that hold this lock
@@ -62,5 +64,4 @@ class Lock {
   bool exclusive_;
   std::set<unsigned int>
       owners_;  // IDs of the transactions that currently hold this lock
-  std::mutex mut_;
 };

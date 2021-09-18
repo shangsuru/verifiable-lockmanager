@@ -4,8 +4,6 @@ Transaction::Transaction(unsigned int transactionId, unsigned int lockBudget)
     : transactionId_(transactionId), lockBudget_(lockBudget){};
 
 auto Transaction::getLockedRows() -> std::set<unsigned int> {
-  const std::lock_guard<std::mutex> latch(mut_);
-
   return lockedRows_;
 };
 
@@ -13,48 +11,57 @@ auto Transaction::getLockBudget() const -> unsigned int { return lockBudget_; };
 
 auto Transaction::getPhase() -> Phase { return phase_; };
 
-void Transaction::addLock(unsigned int rowId, Lock::LockMode requestedMode,
-                          std::shared_ptr<Lock>& lock) {
-  const std::lock_guard<std::mutex> latch(mut_);
-
+auto Transaction::addLock(unsigned int rowId, Lock::LockMode requestedMode,
+                          Lock* lock) -> int {
   if (aborted_) {
-    return;
+    return SGX_ERROR_UNEXPECTED;
   }
 
+  int ret;
   switch (requestedMode) {
     case Lock::LockMode::kExclusive:
-      lock->getExclusiveAccess(transactionId_);
+      ret = lock->getExclusiveAccess(transactionId_);
       break;
     case Lock::LockMode::kShared:
-      lock->getSharedAccess(transactionId_);
+      ret = lock->getSharedAccess(transactionId_);
       break;
   }
 
-  lockedRows_.insert(rowId);
-  lockBudget_--;
+  if (ret == SGX_SUCCESS) {
+    lockedRows_.insert(rowId);
+    lockBudget_--;
+  }
+
+  return ret;
 };
 
-void Transaction::releaseLock(unsigned int rowId, std::shared_ptr<Lock>& lock) {
-  const std::lock_guard<std::mutex> latch(mut_);
-
+void Transaction::releaseLock(
+    unsigned int rowId, std::unordered_map<unsigned int, Lock*>& lockTable) {
   if (lockedRows_.find(rowId) != lockedRows_.end()) {
     phase_ = Phase::kShrinking;
     lockedRows_.erase(rowId);
+    auto lock = lockTable[rowId];
     lock->release(transactionId_);
+    if (lock->getOwners().size() == 0) {
+      delete lock;
+      lockTable.erase(rowId);
+    }
   }
 };
 
 auto Transaction::hasLock(unsigned int rowId) -> bool {
-  const std::lock_guard<std::mutex> latch(mut_);
-
   return lockedRows_.find(rowId) != lockedRows_.end();
 };
 
-void Transaction::releaseAllLocks(HashTable<std::shared_ptr<Lock>>& lockTable) {
-  const std::lock_guard<std::mutex> latch(mut_);
-
+void Transaction::releaseAllLocks(
+    std::unordered_map<unsigned int, Lock*>& lockTable) {
   for (auto locked_row : lockedRows_) {
-    lockTable.get(locked_row)->release(transactionId_);
+    auto lock = lockTable[locked_row];
+    lock->release(transactionId_);
+    if (lock->getOwners().size() == 0) {
+      delete lock;
+      lockTable.erase(locked_row);
+    }
   }
   lockedRows_.clear();
   aborted_ = true;

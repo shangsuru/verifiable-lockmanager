@@ -10,8 +10,7 @@ void RunClient() {
       grpc::CreateChannel(target_address, grpc::InsecureChannelCredentials()));
 
   unsigned int transaction_id = 1;
-  const unsigned int default_lock_budget = 100;
-  unsigned int row_id = 2;
+  const unsigned int default_lock_budget = 10;
 
   client.registerTransaction(transaction_id, default_lock_budget);
 

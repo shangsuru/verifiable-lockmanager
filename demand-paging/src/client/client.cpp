@@ -8,8 +8,6 @@ LockingServiceClient::LockingServiceClient(
 auto LockingServiceClient::registerTransaction(unsigned int transactionId,
                                                unsigned int lockBudget)
     -> bool {
-  spdlog::info("Registering transaction with TXID " +
-               std::to_string(transactionId));
   Registration registration;
   registration.set_transaction_id(transactionId);
   registration.set_lock_budget(lockBudget);
@@ -43,7 +41,10 @@ auto LockingServiceClient::requestSharedLock(unsigned int transactionId,
     return response.signature();
   }
 
-  throw std::domain_error("Request failed");
+  spdlog::error(
+      "Acquiring shared lock failed (TXID: " + std::to_string(transactionId) +
+      ", RID: " + std::to_string(rowId) + ")");
+  return "";
 }
 
 auto LockingServiceClient::requestExclusiveLock(unsigned int transactionId,
@@ -62,10 +63,14 @@ auto LockingServiceClient::requestExclusiveLock(unsigned int transactionId,
   Status status = stub_->LockExclusive(&context, request, &response);
 
   if (status.ok()) {
+    spdlog::info("Received signature: " + response.signature());
     return response.signature();
   }
 
-  throw std::domain_error("Request failed");
+  spdlog::error(
+      "Acquiring exclusive log failed (TXID: " + std::to_string(transactionId) +
+      ", RID: " + std::to_string(rowId) + ")");
+  return "";
 }
 
 auto LockingServiceClient::requestUnlock(unsigned int transactionId,

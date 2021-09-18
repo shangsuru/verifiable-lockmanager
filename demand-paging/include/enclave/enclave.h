@@ -6,26 +6,30 @@
 #include <stdlib.h>
 
 #include <cstring>
+#include <queue>
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 #include "base64-encoding.h"
+#include "common.h"
 #include "enclave_t.h"
-#include "hashtable.h"
 #include "lock.h"
 #include "sgx_tcrypto.h"
+#include "sgx_tkey_exchange.h"
+#include "sgx_trts.h"
 #include "sgx_tseal.h"
 #include "transaction.h"
 
+// Context and public private key pair for signing lock requests
 sgx_ecc_state_handle_t context = NULL;
 sgx_ec256_private_t ec256_private_key;
 sgx_ec256_public_t ec256_public_key;
-/* Base64 encoded ec256_public_key with char count appended at the end
- * for easy extraction from sealed data file for third parties that want
- * to verify lock signatures */
+
+const size_t MAX_SIGNATURE_LENGTH = 255;
+
+// Base64 encoded public key
 std::string encoded_public_key;
-const size_t MAX_MESSAGE_LENGTH = 255;
-const size_t TRANSACTION_TABLE_SIZE = 300;
-const size_t LOCK_TABLE_SIZE = 10000;
 
 // Struct that gets sealed to storage to persist ECDSA keys
 struct DataToSeal {
@@ -33,9 +37,46 @@ struct DataToSeal {
   sgx_ec256_public_t publicKey;
 };
 
-HashTable<std::shared_ptr<Transaction>> transactionTable_(
-    TRANSACTION_TABLE_SIZE);
-HashTable<std::shared_ptr<Lock>> lockTable_(LOCK_TABLE_SIZE);
+// Holds the transaction objects of the currently active transactions
+std::unordered_map<unsigned int, Transaction *> transactionTable_;
+size_t transactionTableSize_;
+
+// Keeps track of a lock object for each row ID
+std::unordered_map<unsigned int, Lock *> lockTable_;
+size_t lockTableSize_;
+
+// Contains configuration parameters
+extern Arg arg_enclave;
+
+/**
+ * Transfers the configuration parameters from the untrusted application into
+ * the enclave. Also initializes the job queue and associated mutexes and
+ * condition variables.
+ *
+ * @param Arg configuration parameters
+ */
+void enclave_init_values(Arg arg);
+
+/**
+ * Function that receives a job from the untrusted application.
+ * The job can be for example a lock request or a request to register a
+ * transaction. The job is then put into a job queue for the responsible worker
+ * thread.
+ *
+ * @param data struct that contains all arguments for the enclave to execute
+ * the job, will be casted to (Job*) struct
+ */
+void enclave_send_job(void *data);
+
+/**
+ * Function that is run by the worker threads inside the enclave. It pulls a job
+ * from its associated job queue in a loop and executes it, e.g. acquiring a
+ * shared lock for a specific row. Each row gets assigned a specific thread
+ * evenly, so no synchronization is necessary when accessing the underlying lock
+ * table. The transaction table is accessed by only one single thread for all
+ * requests to register a transaction.
+ */
+void enclave_worker_thread();
 
 /**
  * @returns the size of the encrypted DataToSeal struct
@@ -117,8 +158,8 @@ int register_transaction(unsigned int transactionId, unsigned int lockBudget);
  * request for a lock while in the shrinking phase, or when the lock budget is
  * exhausted
  */
-int acquire_lock(void *signature, size_t sig_len, unsigned int transactionId,
-                 unsigned int rowId, int isExclusive);
+int acquire_lock(void *signature, unsigned int transactionId,
+                 unsigned int rowId, bool isExclusive);
 
 /**
  * Releases a lock for the specified row.
@@ -133,7 +174,7 @@ void release_lock(unsigned int transactionId, unsigned int rowId);
  *
  * @param transaction the transaction to be aborted
  */
-void abort_transaction(const std::shared_ptr<Transaction> &transaction);
+void abort_transaction(Transaction *transaction);
 
 /**
  * @returns the block timeout, which resembles a future block number of the
