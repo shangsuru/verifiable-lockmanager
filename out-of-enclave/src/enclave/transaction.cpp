@@ -36,15 +36,15 @@ auto Transaction::addLock(unsigned int rowId, Lock::LockMode requestedMode,
 };
 
 void Transaction::releaseLock(
-    unsigned int rowId, std::unordered_map<unsigned int, Lock*>& lockTable) {
+    unsigned int rowId, std::unordered_map<unsigned int, Lock*>* lockTable) {
   if (lockedRows_.find(rowId) != lockedRows_.end()) {
     phase_ = Phase::kShrinking;
     lockedRows_.erase(rowId);
-    auto lock = lockTable[rowId];
+    auto lock = (*lockTable)[rowId];
     lock->release(transactionId_);
     if (lock->getOwners().size() == 0) {
       delete lock;
-      lockTable.erase(rowId);
+      lockTable->erase(rowId);
     }
   }
 };
@@ -54,13 +54,13 @@ auto Transaction::hasLock(unsigned int rowId) -> bool {
 };
 
 void Transaction::releaseAllLocks(
-    std::unordered_map<unsigned int, Lock*>& lockTable) {
+    std::unordered_map<unsigned int, Lock*>* lockTable) {
   for (auto locked_row : lockedRows_) {
-    auto lock = lockTable[locked_row];
+    auto lock = (*lockTable)[locked_row];
     lock->release(transactionId_);
     if (lock->getOwners().size() == 0) {
       delete lock;
-      lockTable.erase(locked_row);
+      lockTable->erase(locked_row);
     }
   }
   lockedRows_.clear();

@@ -38,11 +38,11 @@ struct DataToSeal {
 };
 
 // Holds the transaction objects of the currently active transactions
-std::unordered_map<unsigned int, Transaction *> transactionTable_;
+std::unordered_map<unsigned int, Transaction *> *transactionTable_;
 size_t transactionTableSize_;
 
 // Keeps track of a lock object for each row ID
-std::unordered_map<unsigned int, Lock *> lockTable_;
+std::unordered_map<unsigned int, Lock *> *lockTable_;
 size_t lockTableSize_;
 
 // Contains configuration parameters

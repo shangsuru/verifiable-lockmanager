@@ -14,6 +14,9 @@ void enclave_init_values(Arg arg) {
   transactionTableSize_ = arg.transaction_table_size;
   lockTableSize_ = arg.lock_table_size;
 
+  transactionTable_ = new std::unordered_map<unsigned int, Transaction *>();
+  lockTable_ = new std::unordered_map<unsigned int, Lock *>();
+
   // Initialize mutex variables
   sgx_thread_mutex_init(&global_mutex, NULL);
   queue_mutex = (sgx_thread_mutex_t *)malloc(sizeof(sgx_thread_mutex_t) *
@@ -56,7 +59,7 @@ void enclave_send_job(void *data) {
       new_job.error = ((Job *)data)->error;
 
       // If transaction is not registered, abort the request
-      if (transactionTable_[new_job.transaction_id] == nullptr) {
+      if ((*transactionTable_)[new_job.transaction_id] == nullptr) {
         print_error("Need to register transaction before lock requests");
         *new_job.error = true;
         *new_job.finished = true;
@@ -179,11 +182,12 @@ void enclave_worker_thread() {
         print_info(("Registering transaction " + std::to_string(transactionId))
                        .c_str());
 
-        if (transactionTable_.find(transactionId) != transactionTable_.end()) {
+        if (transactionTable_->find(transactionId) !=
+            transactionTable_->end()) {
           print_error("Transaction is already registered");
           *cur_job.error = true;
         } else {
-          transactionTable_[transactionId] =
+          (*transactionTable_)[transactionId] =
               new Transaction(transactionId, lockBudget);
         }
         *cur_job.finished = true;
@@ -297,17 +301,17 @@ auto acquire_lock(void *signature, unsigned int transactionId,
   int ret;
 
   // Get the transaction object for the given transaction ID
-  auto transaction = transactionTable_[transactionId];
+  auto transaction = (*transactionTable_)[transactionId];
   if (transaction == nullptr) {
     print_error("Transaction was not registered");
     return SGX_ERROR_UNEXPECTED;
   }
 
   // Get the lock object for the given row ID
-  auto lock = lockTable_[rowId];
+  auto lock = (*lockTable_)[rowId];
   if (lock == nullptr) {
     lock = new Lock();
-    lockTable_[rowId] = lock;
+    (*lockTable_)[rowId] = lock;
   }
 
   // Check if 2PL is violated
@@ -394,14 +398,14 @@ sign:
 
 void release_lock(unsigned int transactionId, unsigned int rowId) {
   // Get the transaction object
-  auto transaction = transactionTable_[transactionId];
+  auto transaction = (*transactionTable_)[transactionId];
   if (transaction == nullptr) {
     print_error("Transaction was not registered");
     return;
   }
 
   // Get the lock object
-  auto lock = lockTable_[rowId];
+  auto lock = (*lockTable_)[rowId];
   if (lock == nullptr) {
     print_error("Lock does not exist");
     return;
@@ -411,7 +415,7 @@ void release_lock(unsigned int transactionId, unsigned int rowId) {
 }
 
 void abort_transaction(Transaction *transaction) {
-  transactionTable_.erase(transaction->getTransactionId());
+  transactionTable_->erase(transaction->getTransactionId());
   transaction->releaseAllLocks(lockTable_);
   delete transaction;
 }
