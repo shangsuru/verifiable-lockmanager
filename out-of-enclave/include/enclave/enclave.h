@@ -38,11 +38,11 @@ struct DataToSeal {
 };
 
 // Holds the transaction objects of the currently active transactions
-std::unordered_map<unsigned int, Transaction *> *transactionTable_;
+std::unordered_map<int, Transaction *> *transactionTable_;
 size_t transactionTableSize_;
 
 // Keeps track of a lock object for each row ID
-std::unordered_map<unsigned int, Lock *> *lockTable_;
+std::unordered_map<int, Lock *> *lockTable_;
 size_t lockTableSize_;
 
 // Contains configuration parameters
@@ -158,8 +158,8 @@ int register_transaction(unsigned int transactionId, unsigned int lockBudget);
  * request for a lock while in the shrinking phase, or when the lock budget is
  * exhausted
  */
-int acquire_lock(void *signature, unsigned int transactionId,
-                 unsigned int rowId, bool isExclusive);
+auto acquire_lock(void *signature, int transactionId, int rowId,
+                  bool isExclusive) -> bool;
 
 /**
  * Releases a lock for the specified row.
@@ -167,7 +167,7 @@ int acquire_lock(void *signature, unsigned int transactionId,
  * @param transactionId identifies the transaction making the request
  * @param rowId identifies the row to be released
  */
-void release_lock(unsigned int transactionId, unsigned int rowId);
+void release_lock(int transactionId, int rowId);
 
 /**
  * Releases all locks the given transaction currently has.
@@ -182,4 +182,4 @@ void abort_transaction(Transaction *transaction);
  *          any requests with a signature that has a block timeout number
  *          smaller than the current block number
  */
-auto get_block_timeout() -> unsigned int;
+auto get_block_timeout() -> int;

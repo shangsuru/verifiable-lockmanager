@@ -14,8 +14,8 @@ void enclave_init_values(Arg arg) {
   transactionTableSize_ = arg.transaction_table_size;
   lockTableSize_ = arg.lock_table_size;
 
-  transactionTable_ = new std::unordered_map<unsigned int, Transaction *>();
-  lockTable_ = new std::unordered_map<unsigned int, Lock *>();
+  transactionTable_ = new std::unordered_map<int, Transaction *>();
+  lockTable_ = new std::unordered_map<int, Lock *>();
 
   // Initialize mutex variables
   sgx_thread_mutex_init(&global_mutex, NULL);
@@ -146,10 +146,10 @@ void enclave_worker_thread() {
 
         // Acquire lock and receive signature
         sgx_ec256_signature_t sig;
-        int res = acquire_lock((void *)&sig, cur_job.transaction_id,
+        bool ok = acquire_lock((void *)&sig, cur_job.transaction_id,
                                cur_job.row_id, command == EXCLUSIVE);
 
-        if (res == SGX_ERROR_UNEXPECTED) {
+        if (!ok) {
           *cur_job.error = true;
         } else {
           // Write base64 encoded signature into the return value of the job
@@ -188,7 +188,7 @@ void enclave_worker_thread() {
           *cur_job.error = true;
         } else {
           (*transactionTable_)[transactionId] =
-              new Transaction(transactionId, lockBudget);
+              newTransaction(transactionId, lockBudget);
         }
         *cur_job.finished = true;
         break;
@@ -204,7 +204,7 @@ void enclave_worker_thread() {
   return;
 }
 
-auto get_block_timeout() -> unsigned int {
+auto get_block_timeout() -> int {
   print_warn("Lock timeout not yet implemented");
   // TODO: Implement getting the lock timeout
   return 0;
@@ -296,15 +296,15 @@ auto ecdsa_close() -> int {
   return sgx_ecc256_close_context(context);
 }
 
-auto acquire_lock(void *signature, unsigned int transactionId,
-                  unsigned int rowId, bool isExclusive) -> int {
-  int ret;
+auto acquire_lock(void *signature, int transactionId, int rowId,
+                  bool isExclusive) -> bool {
+  bool ok;
 
   // Get the transaction object for the given transaction ID
   auto transaction = (*transactionTable_)[transactionId];
   if (transaction == nullptr) {
     print_error("Transaction was not registered");
-    return SGX_ERROR_UNEXPECTED;
+    return false;
   }
 
   // Get the lock object for the given row ID
@@ -315,37 +315,37 @@ auto acquire_lock(void *signature, unsigned int transactionId,
   }
 
   // Check if 2PL is violated
-  if (transaction->getPhase() == Transaction::Phase::kShrinking) {
+  if (!transaction->growing_phase) {
     print_error("Cannot acquire more locks according to 2PL");
     goto abort;
   }
 
   // Check if lock budget is enough
-  if (transaction->getLockBudget() < 1) {
+  if (transaction->lock_budget < 1) {
     print_error("Lock budget exhausted");
     goto abort;
   }
 
   // Check for upgrade request
-  if (transaction->hasLock(rowId) && isExclusive &&
+  if (hasLock(transaction, rowId) && isExclusive &&
       lock->getMode() == Lock::LockMode::kShared) {
-    ret = lock->upgrade(transactionId);
+    ok = lock->upgrade(transactionId);
 
-    if (ret != SGX_SUCCESS) {
+    if (!ok) {
       goto abort;
     }
     goto sign;
   }
 
   // Acquire lock in requested mode (shared, exclusive)
-  if (!transaction->hasLock(rowId)) {
+  if (!hasLock(transaction, rowId)) {
     if (isExclusive) {
-      ret = transaction->addLock(rowId, Lock::LockMode::kExclusive, lock);
+      ok = addLock(transaction, rowId, Lock::LockMode::kExclusive, lock);
     } else {
-      ret = transaction->addLock(rowId, Lock::LockMode::kShared, lock);
+      ok = addLock(transaction, rowId, Lock::LockMode::kShared, lock);
     }
 
-    if (ret != SGX_SUCCESS) {
+    if (!ok) {
       goto abort;
     }
 
@@ -356,10 +356,10 @@ auto acquire_lock(void *signature, unsigned int transactionId,
 
 abort:
   abort_transaction(transaction);
-  return SGX_ERROR_UNEXPECTED;
+  return false;
 
 sign:
-  unsigned int block_timeout = get_block_timeout();
+  int block_timeout = get_block_timeout();
 
   // Get string representation of the lock tuple:
   // <TRANSACTION-ID>_<ROW-ID>_<MODE>_<BLOCKTIMEOUT>,
@@ -385,18 +385,18 @@ sign:
                  &ec256_private_key, (sgx_ec256_signature_t *)signature,
                  context);
 
-  ret = verify(string_to_sign.c_str(), (void *)signature,
-               sizeof(sgx_ec256_signature_t));
+  int ret = verify(string_to_sign.c_str(), (void *)signature,
+                   sizeof(sgx_ec256_signature_t));
   if (ret != SGX_SUCCESS) {
     print_error("Failed to verify signature");
   } else {
     print_info("Signature successfully verified");
   }
 
-  return ret;
+  return true;
 }
 
-void release_lock(unsigned int transactionId, unsigned int rowId) {
+void release_lock(int transactionId, int rowId) {
   // Get the transaction object
   auto transaction = (*transactionTable_)[transactionId];
   if (transaction == nullptr) {
@@ -411,11 +411,12 @@ void release_lock(unsigned int transactionId, unsigned int rowId) {
     return;
   }
 
-  transaction->releaseLock(rowId, lockTable_);
+  releaseLock(transaction, rowId, lockTable_);
 }
 
 void abort_transaction(Transaction *transaction) {
-  transactionTable_->erase(transaction->getTransactionId());
-  transaction->releaseAllLocks(lockTable_);
+  transactionTable_->erase(transaction->transaction_id);
+  releaseAllLocks(transaction, lockTable_);
+  delete[] transaction->locked_rows;
   delete transaction;
 }
