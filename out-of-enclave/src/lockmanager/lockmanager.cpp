@@ -88,20 +88,20 @@ LockManager::~LockManager() {
   sgx_destroy_enclave(global_eid);
 }
 
-auto LockManager::registerTransaction(unsigned int transactionId,
-                                      unsigned int lockBudget) -> bool {
+auto LockManager::registerTransaction(int transactionId, int lockBudget)
+    -> bool {
   return create_job(REGISTER, transactionId, 0, lockBudget).second;
 };
 
-auto LockManager::lock(unsigned int transactionId, unsigned int rowId,
-                       bool isExclusive) -> std::pair<std::string, bool> {
+auto LockManager::lock(int transactionId, int rowId, bool isExclusive)
+    -> std::pair<std::string, bool> {
   if (isExclusive) {
     return create_job(EXCLUSIVE, transactionId, rowId);
   }
   return create_job(SHARED, transactionId, rowId);
 };
 
-void LockManager::unlock(unsigned int transactionId, unsigned int rowId) {
+void LockManager::unlock(int transactionId, int rowId) {
   create_job(UNLOCK, transactionId, rowId);
 };
 
@@ -197,9 +197,8 @@ auto LockManager::read_and_unseal_keys() -> bool {
   return true;
 }
 
-auto LockManager::create_job(Command command, unsigned int transaction_id,
-                             unsigned int row_id, unsigned int lock_budget)
-    -> std::pair<std::string, bool> {
+auto LockManager::create_job(Command command, int transaction_id, int row_id,
+                             int lock_budget) -> std::pair<std::string, bool> {
   // Set job parameters
   Job job;
   job.command = command;

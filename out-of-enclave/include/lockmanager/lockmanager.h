@@ -83,8 +83,7 @@ class LockManager {
    * acquire
    * @returns false, if the transaction was already registered, else true
    */
-  auto registerTransaction(unsigned int transactionId, unsigned int lockBudget)
-      -> bool;
+  auto registerTransaction(int transactionId, int lockBudget) -> bool;
 
   /**
    * Acquires a lock for the specified row
@@ -100,7 +99,7 @@ class LockManager {
    * request for a lock while in the shrinking phase, or when the lock budget is
    * exhausted
    */
-  auto lock(unsigned int transactionId, unsigned int rowId, bool isExclusive)
+  auto lock(int transactionId, int rowId, bool isExclusive)
       -> std::pair<std::string, bool>;
 
   /**
@@ -109,7 +108,7 @@ class LockManager {
    * @param transactionId identifies the transaction making the request
    * @param rowId identifies the row to be released
    */
-  void unlock(unsigned int transactionId, unsigned int rowId);
+  void unlock(int transactionId, int rowId);
 
  private:
   /**
@@ -155,9 +154,8 @@ class LockManager {
    */
   void configuration_init();
 
-  auto create_job(Command command, unsigned int transaction_id = 0,
-                  unsigned int row_id = 0, unsigned int lock_budget = 0)
-      -> std::pair<std::string, bool>;
+  auto create_job(Command command, int transaction_id = 0, int row_id = 0,
+                  int lock_budget = 0) -> std::pair<std::string, bool>;
 
   Arg arg;  // configuration parameters for the enclave
   pthread_t
