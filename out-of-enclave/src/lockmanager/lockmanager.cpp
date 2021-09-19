@@ -37,6 +37,8 @@ auto LockManager::load_and_initialize_threads(void *tmp) -> void * {
 void LockManager::configuration_init() {
   arg.num_threads = 2;
   arg.tx_thread_id = arg.num_threads - 1;
+  arg.lock_table_size = 10000;
+  arg.transaction_table_size = 200;
 }
 
 LockManager::LockManager() {
@@ -51,8 +53,7 @@ LockManager::LockManager() {
 
   enclave_init_values(global_eid, arg);
 
-  // Create threads for lock requests and an additional one for registering
-  // transactions
+  // Create threads for lock requests and for registering transactions
   threads = (pthread_t *)malloc(sizeof(pthread_t) * (arg.num_threads));
   spdlog::info("Initializing " + std::to_string(arg.num_threads) + " threads");
   for (int i = 0; i < arg.num_threads; i++) {

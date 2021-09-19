@@ -12,12 +12,12 @@ auto Transaction::getLockBudget() const -> unsigned int { return lockBudget_; };
 auto Transaction::getPhase() -> Phase { return phase_; };
 
 auto Transaction::addLock(unsigned int rowId, Lock::LockMode requestedMode,
-                          Lock* lock) -> int {
+                          Lock* lock) -> bool {
   if (aborted_) {
-    return SGX_ERROR_UNEXPECTED;
+    return false;
   }
 
-  int ret;
+  bool ret;
   switch (requestedMode) {
     case Lock::LockMode::kExclusive:
       ret = lock->getExclusiveAccess(transactionId_);
@@ -27,7 +27,7 @@ auto Transaction::addLock(unsigned int rowId, Lock::LockMode requestedMode,
       break;
   }
 
-  if (ret == SGX_SUCCESS) {
+  if (ret) {
     lockedRows_.insert(rowId);
     lockBudget_--;
   }

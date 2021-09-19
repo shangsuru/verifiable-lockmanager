@@ -19,16 +19,26 @@ set(HEADER_LIST
     ${LOCK_MANAGER_INCLUDE_PATH}/files.h
     ${LockManager_SOURCE_DIR}/include/base64-encoding.h
     ${LockManager_SOURCE_DIR}/include/common.h
+    ${LockManager_SOURCE_DIR}/include/enclave/lock.h
+    ${LockManager_SOURCE_DIR}/include/enclave/transaction.h
   )
-
-set(SRCS lockmanager/lockmanager.cpp lockmanager/errors.cpp lockmanager/files.cpp lockmanager/ocalls.cpp base64-encoding.cpp ${HEADER_LIST})
+set(LCKMGR_SRCS
+  lockmanager/lockmanager.cpp 
+  lockmanager/errors.cpp 
+  lockmanager/files.cpp 
+  lockmanager/ocalls.cpp 
+  base64-encoding.cpp
+  enclave/lock.cpp
+  enclave/transaction.cpp
+)
+set(SRCS ${LCKMGR_SRCS} ${HEADER_LIST})
 add_untrusted_library(lckMgr SHARED SRCS ${SRCS} EDL enclave/enclave.edl EDL_SEARCH_PATHS ${EDL_SEARCH_PATHS})
 
 # Add an alias so that library can be used inside the build tree, e.g. when testing
 add_library(TrustDBle::lckMgr ALIAS lckMgr)
 
 # We need this directory, and users of our library will need it too
-target_include_directories(lckMgr PUBLIC ../include ../include/lockmanager ${FETCHCONTENT_BASE_DIR}/spdlog-src/include/ ../build/src ${SGX_INCLUDE_DIR})
+target_include_directories(lckMgr PUBLIC ../include ../include/lockmanager ../include/enclave ${FETCHCONTENT_BASE_DIR}/spdlog-src/include/ ../build/src ${SGX_INCLUDE_DIR})
 
 # add_dependencies(lckMgr enclave-sign)
 

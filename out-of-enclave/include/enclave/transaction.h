@@ -62,7 +62,7 @@ class Transaction {
    * @param lock
    */
   auto addLock(unsigned int rowId, Lock::LockMode requestedMode, Lock* lock)
-      -> int;
+      -> bool;
 
   /**
    * Checks if the transaction currently holds a lock on the given row ID.

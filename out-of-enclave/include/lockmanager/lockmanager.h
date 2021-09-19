@@ -4,16 +4,19 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 
 #include "base64-encoding.h"
 #include "common.h"
 #include "enclave_u.h"
 #include "errors.h"
 #include "files.h"
+#include "lock.h"
 #include "sgx_eid.h"
 #include "sgx_tcrypto.h"
 #include "sgx_urts.h"
 #include "spdlog/spdlog.h"
+#include "transaction.h"
 
 #define TOKEN_FILENAME "enclave.token"
 #define ENCLAVE_FILENAME "enclave.signed.so"
