@@ -8,10 +8,10 @@ auto LockManager::load_and_initialize_threads(void *object) -> void * {
 }
 
 void LockManager::configuration_init() {
-  arg.num_threads = 2;
+  arg.num_threads = 8;
   arg.tx_thread_id = arg.num_threads - 1;
   arg.transaction_table_size = 200;
-  arg.lock_table_size = 10000;
+  arg.lock_table_size = 8;
 }
 
 LockManager::LockManager() {
@@ -187,13 +187,13 @@ void LockManager::worker_thread() {
 
   pthread_mutex_lock(&queue_mutex[thread_id]);
   while (1) {
-    spdlog::info("Worker waiting for jobs");
+    spdlog::info("Worker " + std::to_string(thread_id) + " waiting for jobs");
     if (queue[thread_id].size() == 0) {
       pthread_cond_wait(&job_cond[thread_id], &queue_mutex[thread_id]);
       continue;
     }
 
-    spdlog::info("Worker got a job");
+    spdlog::info("Worker " + std::to_string(thread_id) + " got a job");
     Job cur_job = queue[thread_id].front();
     Command command = cur_job.command;
 
