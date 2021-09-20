@@ -12,20 +12,17 @@ Transaction* newTransaction(int transactionId, int lockBudget) {
   return transaction;
 }
 
-auto addLock(Transaction* transaction, int rowId, Lock::LockMode requestedMode,
-             Lock* lock) -> bool {
+auto addLock(Transaction* transaction, int rowId, bool isExclusive, Lock* lock)
+    -> bool {
   if (transaction->aborted) {
     return false;
   }
 
   bool ret;
-  switch (requestedMode) {
-    case Lock::LockMode::kExclusive:
-      ret = lock->getExclusiveAccess(transaction->transaction_id);
-      break;
-    case Lock::LockMode::kShared:
-      ret = lock->getSharedAccess(transaction->transaction_id);
-      break;
+  if (isExclusive) {
+    ret = getExclusiveAccess(lock, transaction->transaction_id);
+  } else {
+    ret = getSharedAccess(lock, transaction->transaction_id);
   }
 
   if (ret) {
@@ -41,17 +38,17 @@ void releaseLock(Transaction* transaction, int rowId,
                  std::unordered_map<int, Lock*>* lockTable) {
   for (int i = 0; i < transaction->num_locked; i++) {
     if (transaction->locked_rows[i] == rowId) {
-      memcpy((void*)transaction->locked_rows[i],
-             (void*)transaction->locked_rows[i + 1],
+      memcpy((void*)&transaction->locked_rows[i],
+             (void*)&transaction->locked_rows[i + 1],
              sizeof(int) * (transaction->num_locked - 1 - i));
     }
     break;
   }
   transaction->growing_phase = false;
   auto lock = (*lockTable)[rowId];
-  lock->release(transaction->transaction_id);
+  release(lock, transaction->transaction_id);
 
-  if (lock->getOwners().size() == 0) {
+  if (lock->num_owners == 0) {
     delete lock;
     lockTable->erase(rowId);
   }
@@ -71,8 +68,8 @@ void releaseAllLocks(Transaction* transaction,
   for (int i = 0; i < transaction->num_locked; i++) {
     int locked_row = transaction->locked_rows[i];
     auto lock = (*lockTable)[locked_row];
-    lock->release(transaction->transaction_id);
-    if (lock->getOwners().size() == 0) {
+    release(lock, transaction->transaction_id);
+    if (lock->num_owners == 0) {
       delete lock;
       lockTable->erase(locked_row);
     }

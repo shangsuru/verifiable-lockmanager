@@ -51,8 +51,8 @@ Transaction* newTransaction(int transactionId, int lockBudget);
  * @param requestedMode
  * @param lock
  */
-auto addLock(Transaction* transaction, int rowId, Lock::LockMode requestedMode,
-             Lock* lock) -> bool;
+auto addLock(Transaction* transaction, int rowId, bool isExclusive, Lock* lock)
+    -> bool;
 
 /**
  * Checks if the transaction currently holds a lock on the given row ID.

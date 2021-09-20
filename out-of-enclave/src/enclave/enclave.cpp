@@ -2,11 +2,12 @@
 
 Arg arg_enclave;  // configuration parameters for the enclave
 int num = 0;      // global variable used to give every thread a unique ID
+int transaction_count = 0;        // counts the number of active transactions
 sgx_thread_mutex_t global_mutex;  // synchronizes access to num
 sgx_thread_mutex_t *queue_mutex;  // synchronizes access to the job queue
 sgx_thread_cond_t
     *job_cond;  // wakes up worker threads when a new job is available
-std::vector<std::queue<Job>> queue;  // a job queue for each worker thread
+std::vector<std::queue<Job>> queue;  // a job queue for each worker threads
 
 void enclave_init_values(Arg arg) {
   // Get configuration parameters
@@ -148,7 +149,6 @@ void enclave_worker_thread() {
         sgx_ec256_signature_t sig;
         bool ok = acquire_lock((void *)&sig, cur_job.transaction_id,
                                cur_job.row_id, command == EXCLUSIVE);
-
         if (!ok) {
           *cur_job.error = true;
         } else {
@@ -191,6 +191,7 @@ void enclave_worker_thread() {
               newTransaction(transactionId, lockBudget);
         }
         *cur_job.finished = true;
+        transaction_count++;
         break;
       }
       default:
@@ -310,7 +311,7 @@ auto acquire_lock(void *signature, int transactionId, int rowId,
   // Get the lock object for the given row ID
   auto lock = (*lockTable_)[rowId];
   if (lock == nullptr) {
-    lock = new Lock();
+    lock = newLock();
     (*lockTable_)[rowId] = lock;
   }
 
@@ -327,9 +328,8 @@ auto acquire_lock(void *signature, int transactionId, int rowId,
   }
 
   // Check for upgrade request
-  if (hasLock(transaction, rowId) && isExclusive &&
-      lock->getMode() == Lock::LockMode::kShared) {
-    ok = lock->upgrade(transactionId);
+  if (hasLock(transaction, rowId) && isExclusive && !lock->exclusive) {
+    ok = upgrade(lock, transactionId);
 
     if (!ok) {
       goto abort;
@@ -339,17 +339,10 @@ auto acquire_lock(void *signature, int transactionId, int rowId,
 
   // Acquire lock in requested mode (shared, exclusive)
   if (!hasLock(transaction, rowId)) {
-    if (isExclusive) {
-      ok = addLock(transaction, rowId, Lock::LockMode::kExclusive, lock);
-    } else {
-      ok = addLock(transaction, rowId, Lock::LockMode::kShared, lock);
+    if (addLock(transaction, rowId, isExclusive, lock)) {
+      goto sign;
     }
-
-    if (!ok) {
-      goto abort;
-    }
-
-    goto sign;
+    goto abort;
   }
 
   print_error("Request for already acquired lock");
@@ -364,15 +357,7 @@ sign:
   // Get string representation of the lock tuple:
   // <TRANSACTION-ID>_<ROW-ID>_<MODE>_<BLOCKTIMEOUT>,
   // where mode means, if the lock is for shared or exclusive access
-  std::string mode;
-  switch (lock->getMode()) {
-    case Lock::LockMode::kExclusive:
-      mode = "X";  // exclusive
-      break;
-    case Lock::LockMode::kShared:
-      mode = "S";  // shared
-      break;
-  };
+  std::string mode = lock->exclusive ? "X" : "S";
 
   std::string string_to_sign = std::to_string(transactionId) + "_" +
                                std::to_string(rowId) + "_" + mode + "_" +
@@ -415,6 +400,7 @@ void release_lock(int transactionId, int rowId) {
 }
 
 void abort_transaction(Transaction *transaction) {
+  transaction_count--;
   transactionTable_->erase(transaction->transaction_id);
   releaseAllLocks(transaction, lockTable_);
   delete[] transaction->locked_rows;

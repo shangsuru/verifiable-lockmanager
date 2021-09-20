@@ -48,6 +48,8 @@ size_t lockTableSize_;
 // Contains configuration parameters
 extern Arg arg_enclave;
 
+extern int transactionCount;
+
 /**
  * Transfers the configuration parameters from the untrusted application into
  * the enclave. Also initializes the job queue and associated mutexes and
