@@ -16,6 +16,11 @@ auto LockingServiceClient::registerTransaction(unsigned int transactionId)
   Status status =
       stub_->RegisterTransaction(&context, registration, &acceptance);
 
+  if (status.ok()) {
+    spdlog::info(
+        "Registered transaction (TXID: " + std::to_string(transactionId) + ")");
+  }
+
   return status.ok();
 };
 
@@ -33,6 +38,12 @@ auto LockingServiceClient::requestSharedLock(unsigned int transactionId,
 
   Status status = stub_->LockShared(&context, request, &response);
 
+  if (status.ok()) {
+    spdlog::info(
+        "Acquired exclusive lock (TXID: " + std::to_string(transactionId) +
+        ", RID: " + std::to_string(rowId) + ")");
+  }
+
   return status.ok();
 }
 
@@ -49,6 +60,12 @@ auto LockingServiceClient::requestExclusiveLock(unsigned int transactionId,
   ClientContext context;
 
   Status status = stub_->LockExclusive(&context, request, &response);
+
+  if (status.ok()) {
+    spdlog::info(
+        "Acquired exclusive lock (TXID: " + std::to_string(transactionId) +
+        ", RID: " + std::to_string(rowId) + ")");
+  }
 
   return status.ok();
 }

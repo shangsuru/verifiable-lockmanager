@@ -12,8 +12,7 @@ void RunClient() {
   unsigned int transaction_id = 1;
 
   client.registerTransaction(transaction_id);
-  client.registerTransaction(transaction_id);
-  /*
+
   unsigned int i = 0;
   std::thread t1(requestLocks, std::ref(client), i++);
   std::thread t2(requestLocks, std::ref(client), i++);
@@ -29,8 +28,6 @@ void RunClient() {
   t5.join();
   t6.join();
   t7.join();
-  */
-  // client.requestSharedLock(0, 1);
 }
 
 auto main() -> int {
