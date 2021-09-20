@@ -17,13 +17,6 @@ include(FetchContent)
 
 find_package(Threads REQUIRED)
 
-# Concurrent Hashmap
-FetchContent_Declare(
-    libcuckoo
-    GIT_REPOSITORY https://github.com/efficient/libcuckoo.git
-    GIT_TAG        v0.3)
-FetchContent_MakeAvailable(libcuckoo)
-
 FetchContent_Declare(
   spdlog
   GIT_REPOSITORY https://github.com/gabime/spdlog.git

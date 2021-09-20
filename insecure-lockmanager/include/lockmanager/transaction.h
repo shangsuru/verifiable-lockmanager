@@ -91,4 +91,5 @@ class Transaction {
   bool aborted_ = false;
   std::set<unsigned int> lockedRows_;
   Phase phase_ = Phase::kGrowing;
+  std::mutex mut_;
 };

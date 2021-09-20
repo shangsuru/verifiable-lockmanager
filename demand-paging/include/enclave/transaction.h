@@ -103,4 +103,5 @@ class Transaction {
   std::set<unsigned int> lockedRows_;
   Phase phase_ = Phase::kGrowing;
   unsigned int lockBudget_;
+  std::mutex mut_;
 };

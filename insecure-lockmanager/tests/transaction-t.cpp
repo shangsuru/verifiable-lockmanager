@@ -38,8 +38,8 @@ class TransactionTest : public ::testing::Test {
 
 // Several transactions can hold a shared lock together
 TEST_F(TransactionTest, multipleSharedOwners) {
-  transactionA_->addLock(rowId_, Lock::LockMode::kShared, lock_);
-  transaction_b_->addLock(rowId_, Lock::LockMode::kShared, lock_);
+  EXPECT_TRUE(transactionA_->addLock(rowId_, Lock::LockMode::kShared, lock_));
+  EXPECT_TRUE(transaction_b_->addLock(rowId_, Lock::LockMode::kShared, lock_));
 
   EXPECT_TRUE(transactionA_->hasLock(rowId_));
   EXPECT_TRUE(transaction_b_->hasLock(rowId_));

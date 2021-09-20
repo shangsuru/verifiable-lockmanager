@@ -11,6 +11,7 @@ auto Transaction::getPhase() -> Phase { return phase_; };
 
 auto Transaction::addLock(unsigned int rowId, Lock::LockMode requestedMode,
                           Lock* lock) -> bool {
+  const std::lock_guard<std::mutex> latch(mut_);
   if (aborted_) {
     return false;
   }
@@ -34,6 +35,7 @@ auto Transaction::addLock(unsigned int rowId, Lock::LockMode requestedMode,
 
 void Transaction::releaseLock(
     unsigned int rowId, std::unordered_map<unsigned int, Lock*>& lockTable) {
+  const std::lock_guard<std::mutex> latch(mut_);
   if (lockedRows_.find(rowId) != lockedRows_.end()) {
     phase_ = Phase::kShrinking;
     lockedRows_.erase(rowId);
@@ -47,11 +49,13 @@ void Transaction::releaseLock(
 };
 
 auto Transaction::hasLock(unsigned int rowId) -> bool {
+  const std::lock_guard<std::mutex> latch(mut_);
   return lockedRows_.find(rowId) != lockedRows_.end();
 };
 
 void Transaction::releaseAllLocks(
     std::unordered_map<unsigned int, Lock*>& lockTable) {
+  const std::lock_guard<std::mutex> latch(mut_);
   for (auto locked_row : lockedRows_) {
     auto lock = lockTable[locked_row];
     lock->release(transactionId_);
