@@ -3,14 +3,19 @@
 #include "lock.h"
 #include "lockmanager.h"
 
-const unsigned int kTransactionIdA = 0;
-const unsigned int kTransactionIdB = 1;
-const unsigned int kTransactionIdC = 2;
-const unsigned int kLockBudget = 10;
-const unsigned int kRowId = 0;
+class LockManagerTest : public ::testing::Test {
+ protected:
+  void SetUp() override { spdlog::set_level(spdlog::level::off); };
+
+  const unsigned int kTransactionIdA = 0;
+  const unsigned int kTransactionIdB = 1;
+  const unsigned int kTransactionIdC = 2;
+  const unsigned int kLockBudget = 10;
+  const unsigned int kRowId = 0;
+};
 
 // Lock request aborts, when transaction is not registered
-TEST(LockManagerTest, lockRequestAbortsWhenTransactionNotRegistered) {
+TEST_F(LockManagerTest, lockRequestAbortsWhenTransactionNotRegistered) {
   LockManager lock_manager = LockManager();
   EXPECT_FALSE(
       lock_manager.lock(kTransactionIdA, kRowId, Lock::LockMode::kShared)
@@ -18,14 +23,14 @@ TEST(LockManagerTest, lockRequestAbortsWhenTransactionNotRegistered) {
 };
 
 // Registering an already registered transaction
-TEST(LockManagerTest, cannotRegisterTwice) {
+TEST_F(LockManagerTest, cannotRegisterTwice) {
   LockManager lock_manager = LockManager();
   EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
   EXPECT_FALSE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
 };
 
 // Acquiring non-conflicting shared and exclusive locks works
-TEST(LockManagerTest, acquiringLocks) {
+TEST_F(LockManagerTest, acquiringLocks) {
   LockManager lock_manager = LockManager();
   EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
   EXPECT_TRUE(
@@ -37,7 +42,7 @@ TEST(LockManagerTest, acquiringLocks) {
 };
 
 // Cannot get exclusive access when someone already has shared access
-TEST(LockManagerTest, wantExclusiveButAlreadyShared) {
+TEST_F(LockManagerTest, wantExclusiveButAlreadyShared) {
   LockManager lock_manager = LockManager();
   EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
   EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdB, kLockBudget));
@@ -51,7 +56,7 @@ TEST(LockManagerTest, wantExclusiveButAlreadyShared) {
 };
 
 // Cannot get shared access, when someone has exclusive access
-TEST(LockManagerTest, wantSharedButAlreadyExclusive) {
+TEST_F(LockManagerTest, wantSharedButAlreadyExclusive) {
   LockManager lock_manager = LockManager();
   EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
   EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdB, kLockBudget));
@@ -65,7 +70,7 @@ TEST(LockManagerTest, wantSharedButAlreadyExclusive) {
 };
 
 // Several transactions can acquire a shared lock on the same row
-TEST(LockManagerTest, multipleTransactionsSharedLock) {
+TEST_F(LockManagerTest, multipleTransactionsSharedLock) {
   LockManager lock_manager = LockManager();
   for (unsigned int transaction_id = 0; transaction_id < kLockBudget;
        transaction_id++) {
@@ -77,7 +82,7 @@ TEST(LockManagerTest, multipleTransactionsSharedLock) {
 };
 
 // Cannot get the same lock twice
-TEST(LockManagerTest, sameLockTwice) {
+TEST_F(LockManagerTest, sameLockTwice) {
   LockManager lock_manager = LockManager();
   EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
   EXPECT_TRUE(
@@ -89,7 +94,7 @@ TEST(LockManagerTest, sameLockTwice) {
 };
 
 // Lock budget runs out
-TEST(LockManagerTest, lockBudgetRunsOut) {
+TEST_F(LockManagerTest, lockBudgetRunsOut) {
   LockManager lock_manager = LockManager();
   EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
 
@@ -107,7 +112,7 @@ TEST(LockManagerTest, lockBudgetRunsOut) {
 };
 
 // Can upgrade a lock
-TEST(LockManagerTest, upgradeLock) {
+TEST_F(LockManagerTest, upgradeLock) {
   LockManager lock_manager = LockManager();
   EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
   EXPECT_TRUE(
@@ -119,7 +124,7 @@ TEST(LockManagerTest, upgradeLock) {
 };
 
 // Can unlock and acquire again
-TEST(LockManagerTest, unlock) {
+TEST_F(LockManagerTest, unlock) {
   LockManager lock_manager = LockManager();
   EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
   EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdB, kLockBudget));
@@ -141,7 +146,7 @@ TEST(LockManagerTest, unlock) {
 };
 
 // Cannot request more locks after transaction aborted
-TEST(LockManagerTest, noMoreLocksAfterAbort) {
+TEST_F(LockManagerTest, noMoreLocksAfterAbort) {
   LockManager lock_manager = LockManager();
   EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
   EXPECT_TRUE(
@@ -162,7 +167,7 @@ TEST(LockManagerTest, noMoreLocksAfterAbort) {
 };
 
 // Releasing a lock twice for the same transaction has no effect
-TEST(LockManagerTest, releaseLockTwice) {
+TEST_F(LockManagerTest, releaseLockTwice) {
   LockManager lock_manager = LockManager();
   EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
   EXPECT_TRUE(
@@ -173,7 +178,7 @@ TEST(LockManagerTest, releaseLockTwice) {
 };
 
 // Cannot acquire more locks in shrinking phase
-TEST(LockManagerTest, noMoreLocksInShrinkingPhase) {
+TEST_F(LockManagerTest, noMoreLocksInShrinkingPhase) {
   LockManager lock_manager = LockManager();
   EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
   EXPECT_TRUE(
@@ -184,3 +189,13 @@ TEST(LockManagerTest, noMoreLocksInShrinkingPhase) {
       lock_manager.lock(kTransactionIdA, kRowId, Lock::LockMode::kExclusive)
           .second);
 };
+
+TEST_F(LockManagerTest, verifySignature) {
+  LockManager lock_manager = LockManager();
+  EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
+  std::string signature =
+      lock_manager.lock(kTransactionIdA, kRowId, Lock::LockMode::kExclusive)
+          .first;
+  EXPECT_TRUE(lock_manager.verify_signature_string(signature, kTransactionIdA,
+                                                   kRowId, true));
+}

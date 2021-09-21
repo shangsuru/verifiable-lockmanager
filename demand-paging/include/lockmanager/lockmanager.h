@@ -108,6 +108,20 @@ class LockManager {
    */
   void unlock(unsigned int transactionId, unsigned int rowId);
 
+  /**
+   * This function is just for testing, to demonstrate that signatures created
+   * on lock requests are valid.
+   *
+   * @param signature containing the signature for the lock that was
+   * requested
+   * @param transactionId identifying the transaction that requested the lock
+   * @param rowId identifying the row the lock is refering to
+   * @param isExclusive if the lock is a shared or exclusive lock (boolean)
+   * @returns true, when the signature is valid
+   */
+  auto verify_signature_string(std::string signature, int transactionId,
+                               int rowId, int isExclusive) -> bool;
+
  private:
   /**
    * Initializes the enclave (in DEBUG mode).
@@ -152,6 +166,18 @@ class LockManager {
    */
   void configuration_init();
 
+  /**
+   * Creates a job and sends it to the enclave to get it processed by an enclave
+   * worker thread.
+   *
+   * @param command SHARED, EXCLUSIVE, REGISTER or QUIT
+   * @param transaction_id additional argument for SHARED, EXCLUSIVE or REGISTER
+   * @param row_id additional argument for SHARED or EXCLUSIVE
+   * @param lock_budget additional argument for REGISTER
+   * @returns a pair containing a boolean, that is true when the job was
+   * executed successfully and if true and the command was for a lock request,
+   * the pair also contains the signature as the return value
+   */
   auto create_job(Command command, unsigned int transaction_id = 0,
                   unsigned int row_id = 0, unsigned int lock_budget = 0)
       -> std::pair<std::string, bool>;

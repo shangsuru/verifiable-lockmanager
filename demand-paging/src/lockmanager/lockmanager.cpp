@@ -251,3 +251,18 @@ auto LockManager::create_job(Command command, unsigned int transaction_id,
 
   return std::make_pair(NO_SIGNATURE, true);
 }
+
+auto LockManager::verify_signature_string(std::string signature,
+                                          int transactionId, int rowId,
+                                          int isExclusive) -> bool {
+  int res = SGX_SUCCESS;
+  verify_signature(global_eid, &res, (char *)signature.c_str(), transactionId,
+                   rowId, isExclusive);
+  if (res != SGX_SUCCESS) {
+    print_error("Failed to verify signature");
+    return false;
+  } else {
+    print_info("Signature successfully verified");
+    return true;
+  }
+}
