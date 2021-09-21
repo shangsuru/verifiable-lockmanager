@@ -2,7 +2,7 @@
 
 #include <thread>
 
-#include "enclave/lock.h"
+#include "lock.h"
 
 const unsigned int kTransactionIdA = 0;
 const unsigned int kTransactionIdB = 1;
@@ -37,43 +37,22 @@ TEST(LockTest, exclusiveAccess) {
 // Cannot acquire shared access on an exclusive lock
 TEST(LockTest, noSharedOnExclusive) {
   Lock lock = Lock();
-  lock.getExclusiveAccess(kTransactionIdA);
-  try {
-    lock.getSharedAccess(kTransactionIdB);
-    FAIL() << "Expected std::domain_error";
-  } catch (std::domain_error& e) {
-    EXPECT_EQ(e.what(), std::string("Couldn't acquire lock"));
-  } catch (...) {
-    FAIL() << "Expected std::domain_error";
-  }
+  EXPECT_TRUE(lock.getExclusiveAccess(kTransactionIdA));
+  EXPECT_FALSE(lock.getSharedAccess(kTransactionIdB));
 };
 
 // Cannot get exclusive access on an exclusive lock
 TEST(LockTest, noExclusiveOnExclusive) {
   Lock lock = Lock();
-  lock.getExclusiveAccess(kTransactionIdA);
-  try {
-    lock.getExclusiveAccess(kTransactionIdB);
-    FAIL() << "Expected std::domain_error";
-  } catch (std::domain_error& e) {
-    EXPECT_EQ(e.what(), std::string("Couldn't acquire lock"));
-  } catch (...) {
-    FAIL() << "Expected std::domain_error";
-  }
+  EXPECT_TRUE(lock.getExclusiveAccess(kTransactionIdA));
+  EXPECT_FALSE(lock.getExclusiveAccess(kTransactionIdB));
 };
 
 // Cannot acquire exclusive access on a shared lock
 TEST(LockTest, noExclusiveOnShared) {
   Lock lock = Lock();
-  lock.getSharedAccess(kTransactionIdA);
-  try {
-    lock.getExclusiveAccess(kTransactionIdB);
-    FAIL() << "Expected std::domain_error";
-  } catch (std::domain_error& e) {
-    EXPECT_EQ(e.what(), std::string("Couldn't acquire lock"));
-  } catch (...) {
-    FAIL() << "Expected std::domain_error";
-  }
+  EXPECT_TRUE(lock.getSharedAccess(kTransactionIdA));
+  EXPECT_FALSE(lock.getExclusiveAccess(kTransactionIdB));
 };
 
 // Upgrade

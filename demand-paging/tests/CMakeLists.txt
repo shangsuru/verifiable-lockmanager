@@ -9,7 +9,9 @@ include_directories(${CMAKE_BINARY_DIR}/src ${SGX_INCLUDE_DIR})
 #package_add_test_with_libraries(lock_test "${CMAKE_CURRENT_SOURCE_DIR}/lock-t.cpp" lckMgr "${PROJECT_DIR}")
 add_executable(transaction_test "${CMAKE_CURRENT_SOURCE_DIR}/transaction-t.cpp")
 target_link_libraries(transaction_test gtest gmock gtest_main transaction lock)
-target_include_directories(transaction_test PUBLIC ${LockManager_SOURCE_DIR}/include/enclave)
+
+add_executable(lock_test "${CMAKE_CURRENT_SOURCE_DIR}/lock-t.cpp")
+target_link_libraries(lock_test gtest gmock gtest_main lock)
 
 #package_add_test_with_libraries(server_test "${CMAKE_CURRENT_SOURCE_DIR}/server-t.cpp" lckMgrClient lckMgrServer "${PROJECT_DIR}")
 #add_executable(server_test "${CMAKE_CURRENT_SOURCE_DIR}/server-t.cpp")
