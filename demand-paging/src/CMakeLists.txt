@@ -1,7 +1,13 @@
 # Intel SGX
 find_package(SGX REQUIRED)
 
-set(E_SRCS enclave/enclave.cpp base64-encoding.cpp enclave/transaction.cpp enclave/lock.cpp)
+add_library(transaction transaction.cpp lock.cpp)
+target_include_directories(transaction PUBLIC "${LockManager_SOURCE_DIR}/include")
+
+add_library(lock lock.cpp)
+target_include_directories(lock PUBLIC "${LockManager_SOURCE_DIR}/include")
+
+set(E_SRCS enclave/enclave.cpp base64-encoding.cpp transaction.cpp lock.cpp)
 set(T_SCRS "")
 set(EDL_SEARCH_PATHS enclave)
 
