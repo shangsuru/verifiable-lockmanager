@@ -1,6 +1,5 @@
 #pragma once
 
-#include <memory>
 #include <mutex>
 #include <set>
 #include <unordered_map>
@@ -62,7 +61,7 @@ class Transaction {
    * @param lock
    */
   auto addLock(unsigned int rowId, Lock::LockMode requestedMode, Lock* lock)
-      -> int;
+      -> bool;
 
   /**
    * Checks if the transaction currently holds a lock on the given row ID.

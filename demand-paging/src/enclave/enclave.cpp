@@ -143,10 +143,9 @@ void enclave_worker_thread() {
 
         // Acquire lock and receive signature
         sgx_ec256_signature_t sig;
-        int res = acquire_lock((void *)&sig, cur_job.transaction_id,
-                               cur_job.row_id, command == EXCLUSIVE);
 
-        if (res == SGX_ERROR_UNEXPECTED) {
+        if (!acquire_lock((void *)&sig, cur_job.transaction_id, cur_job.row_id,
+                          command == EXCLUSIVE)) {
           *cur_job.error = true;
         } else {
           // Write base64 encoded signature into the return value of the job
@@ -293,14 +292,14 @@ auto ecdsa_close() -> int {
 }
 
 auto acquire_lock(void *signature, unsigned int transactionId,
-                  unsigned int rowId, bool isExclusive) -> int {
-  int ret;
+                  unsigned int rowId, bool isExclusive) -> bool {
+  bool ok;
 
   // Get the transaction object for the given transaction ID
   auto transaction = transactionTable_[transactionId];
   if (transaction == nullptr) {
     print_error("Transaction was not registered");
-    return SGX_ERROR_UNEXPECTED;
+    return false;
   }
 
   // Get the lock object for the given row ID
@@ -325,34 +324,31 @@ auto acquire_lock(void *signature, unsigned int transactionId,
   // Check for upgrade request
   if (transaction->hasLock(rowId) && isExclusive &&
       lock->getMode() == Lock::LockMode::kShared) {
-    ret = lock->upgrade(transactionId);
-
-    if (ret != SGX_SUCCESS) {
-      goto abort;
+    if (lock->upgrade(transactionId)) {
+      goto sign;
     }
-    goto sign;
+    goto abort;
   }
 
   // Acquire lock in requested mode (shared, exclusive)
   if (!transaction->hasLock(rowId)) {
     if (isExclusive) {
-      ret = transaction->addLock(rowId, Lock::LockMode::kExclusive, lock);
+      ok = transaction->addLock(rowId, Lock::LockMode::kExclusive, lock);
     } else {
-      ret = transaction->addLock(rowId, Lock::LockMode::kShared, lock);
+      ok = transaction->addLock(rowId, Lock::LockMode::kShared, lock);
     }
 
-    if (ret != SGX_SUCCESS) {
-      goto abort;
+    if (ok) {
+      goto sign;
     }
-
-    goto sign;
+    goto abort;
   }
 
   print_error("Request for already acquired lock");
 
 abort:
   abort_transaction(transaction);
-  return SGX_ERROR_UNEXPECTED;
+  return false;
 
 sign:
   unsigned int block_timeout = get_block_timeout();
@@ -381,15 +377,15 @@ sign:
                  &ec256_private_key, (sgx_ec256_signature_t *)signature,
                  context);
 
-  ret = verify(string_to_sign.c_str(), (void *)signature,
-               sizeof(sgx_ec256_signature_t));
+  int ret = verify(string_to_sign.c_str(), (void *)signature,
+                   sizeof(sgx_ec256_signature_t));
   if (ret != SGX_SUCCESS) {
     print_error("Failed to verify signature");
+    return false;
   } else {
     print_info("Signature successfully verified");
+    return true;
   }
-
-  return ret;
 }
 
 void release_lock(unsigned int transactionId, unsigned int rowId) {

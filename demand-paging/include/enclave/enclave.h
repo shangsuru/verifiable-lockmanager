@@ -158,8 +158,8 @@ int register_transaction(unsigned int transactionId, unsigned int lockBudget);
  * request for a lock while in the shrinking phase, or when the lock budget is
  * exhausted
  */
-int acquire_lock(void *signature, unsigned int transactionId,
-                 unsigned int rowId, bool isExclusive);
+auto acquire_lock(void *signature, unsigned int transactionId,
+                  unsigned int rowId, bool isExclusive) -> bool;
 
 /**
  * Releases a lock for the specified row.
