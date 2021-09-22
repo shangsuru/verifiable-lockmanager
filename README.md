@@ -28,7 +28,7 @@ All (sub)folders containing C++ code follow the project structure describe in th
 ├── tests/                          #
 ```
 
-## Getting Started
+## Getting Started 
 
 1. Clone this repo with 
 ```
@@ -52,6 +52,19 @@ cmake --build build
 ```
 cmake --build build --target test | docs
 ```
+
+## Developing and debugging inside a Docker container
+
+To be able to run the SGX code in simulation mode without special hardware, 
+make sure to install the Remote-Containers extension of VSCode.
+Re-open the workspace in the devcontainer (command "Remote-Containers: Open folder in container").
+
+1. Inside the container you should be able to build the code in SGX SIM mode:
+   `cmake -DSGX_HW=OFF -DSGX_MODE=Debug -DCMAKE_BUILD_TYPE=Debug -S . -B build`
+
+2. Build the application: `cd build && make -j 5`
+
+3. Start a debugging session from within VSCode
 
 ## Requirements
 
