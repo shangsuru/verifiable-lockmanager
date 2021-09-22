@@ -107,6 +107,14 @@ TEST(HashTableTest, removeEndOfList) {
   EXPECT_TRUE(contains(hashTable, 32));
 };
 
+TEST(HashTableTest, removeListJustHasOneElement) {
+  HashTable* hashTable = newHashTable(10);
+  set(hashTable, 12, (void*)newLock());
+  EXPECT_TRUE(contains(hashTable, 12));
+  remove(hashTable, 12);
+  EXPECT_FALSE(contains(hashTable, 12));
+}
+
 TEST(HashTableTest, removeBeginningOfList) {
   HashTable* hashTable = newHashTable(10);
 

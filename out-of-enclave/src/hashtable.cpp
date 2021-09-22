@@ -77,7 +77,7 @@ void remove(HashTable* hashTable, int key) {
   }
 
   if (entry->key == key) {
-    entry = entry->next;
+    hashTable->table[hash(hashTable->size, key)] = entry->next;
     return;
   }
 
