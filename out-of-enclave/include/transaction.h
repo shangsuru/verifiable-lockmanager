@@ -6,9 +6,10 @@
 #include <set>
 #include <unordered_map>
 
-using std::memcpy;
-
+#include "hashtable.h"
 #include "lock.h"
+
+using std::memcpy;
 
 /**
  * The internal representation of a transaction for the lock manager.
@@ -63,8 +64,7 @@ auto addLock(Transaction* transaction, int rowId, bool isExclusive, Lock* lock)
  * @param rowId row ID of the released lock
  * @param lock the lock to release
  */
-void releaseLock(Transaction* transaction, int rowId,
-                 std::unordered_map<int, Lock*>* lockTable);
+void releaseLock(Transaction* transaction, int rowId, HashTable* lockTable);
 
 /**
  * Checks if the transaction has a lock on the specified row.
@@ -82,5 +82,4 @@ auto hasLock(Transaction* transaction, int rowId) -> bool;
  * @param Transaction transaction to execute the operation on
  * @param lockTable containing all the locks indexed by row ID
  */
-void releaseAllLocks(Transaction* transaction,
-                     std::unordered_map<int, Lock*>* lockTable);
+void releaseAllLocks(Transaction* transaction, HashTable* lockTable);

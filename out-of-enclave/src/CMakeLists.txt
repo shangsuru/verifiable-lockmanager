@@ -1,7 +1,20 @@
+
+# HashTable
+add_library(hashtable hashtable.cpp)
+target_include_directories(hashtable PUBLIC "${LockManager_SOURCE_DIR}/include")
+
+# Transaction
+add_library(transaction transaction.cpp lock.cpp)
+target_include_directories(transaction PUBLIC "${LockManager_SOURCE_DIR}/include")
+
+# Lock
+add_library(lock lock.cpp)
+target_include_directories(lock PUBLIC "${LockManager_SOURCE_DIR}/include")
+
 # Intel SGX
 find_package(SGX REQUIRED)
 
-set(E_SRCS enclave/enclave.cpp base64-encoding.cpp enclave/transaction.cpp enclave/lock.cpp)
+set(E_SRCS enclave/enclave.cpp base64-encoding.cpp transaction.cpp lock.cpp hashtable.cpp)
 set(T_SCRS "")
 set(EDL_SEARCH_PATHS enclave)
 
@@ -19,8 +32,9 @@ set(HEADER_LIST
     ${LOCK_MANAGER_INCLUDE_PATH}/files.h
     ${LockManager_SOURCE_DIR}/include/base64-encoding.h
     ${LockManager_SOURCE_DIR}/include/common.h
-    ${LockManager_SOURCE_DIR}/include/enclave/lock.h
-    ${LockManager_SOURCE_DIR}/include/enclave/transaction.h
+    ${LockManager_SOURCE_DIR}/include/lock.h
+    ${LockManager_SOURCE_DIR}/include/transaction.h
+    ${LockManager_SOURCE_DIR}/include/hashtable.h
   )
 set(LCKMGR_SRCS
   lockmanager/lockmanager.cpp 
@@ -28,8 +42,9 @@ set(LCKMGR_SRCS
   lockmanager/files.cpp 
   lockmanager/ocalls.cpp 
   base64-encoding.cpp
-  enclave/lock.cpp
-  enclave/transaction.cpp
+  lock.cpp
+  transaction.cpp
+  hashtable.cpp
 )
 set(SRCS ${LCKMGR_SRCS} ${HEADER_LIST})
 add_untrusted_library(lckMgr SHARED SRCS ${SRCS} EDL enclave/enclave.edl EDL_SEARCH_PATHS ${EDL_SEARCH_PATHS})

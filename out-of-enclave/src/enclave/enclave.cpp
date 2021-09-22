@@ -12,11 +12,9 @@ std::vector<std::queue<Job>> queue;  // a job queue for each worker threads
 void enclave_init_values(Arg arg) {
   // Get configuration parameters
   arg_enclave = arg;
-  transactionTableSize_ = arg.transaction_table_size;
-  lockTableSize_ = arg.lock_table_size;
 
-  transactionTable_ = new std::unordered_map<int, Transaction *>();
-  lockTable_ = new std::unordered_map<int, Lock *>();
+  transactionTable_ = newHashTable(arg.transaction_table_size);
+  lockTable_ = newHashTable(arg.lock_table_size);
 
   // Initialize mutex variables
   sgx_thread_mutex_init(&global_mutex, NULL);
@@ -60,7 +58,7 @@ void enclave_send_job(void *data) {
       new_job.error = ((Job *)data)->error;
 
       // If transaction is not registered, abort the request
-      if ((*transactionTable_)[new_job.transaction_id] == nullptr) {
+      if (!contains(transactionTable_, new_job.transaction_id)) {
         print_error("Need to register transaction before lock requests");
         *new_job.error = true;
         *new_job.finished = true;
@@ -68,8 +66,8 @@ void enclave_send_job(void *data) {
       }
 
       // Send the requests to specific worker thread
-      int thread_id = (int)((new_job.row_id % lockTableSize_) /
-                            (lockTableSize_ / (arg_enclave.num_threads - 1)));
+      int thread_id = (int)((new_job.row_id % lockTable_->size) /
+                            (lockTable_->size / (arg_enclave.num_threads - 1)));
       sgx_thread_mutex_lock(&queue_mutex[thread_id]);
       queue[thread_id].push(new_job);
       sgx_thread_cond_signal(&job_cond[thread_id]);
@@ -182,13 +180,12 @@ void enclave_worker_thread() {
         print_info(("Registering transaction " + std::to_string(transactionId))
                        .c_str());
 
-        if (transactionTable_->find(transactionId) !=
-            transactionTable_->end()) {
+        if (contains(transactionTable_, transactionId)) {
           print_error("Transaction is already registered");
           *cur_job.error = true;
         } else {
-          (*transactionTable_)[transactionId] =
-              newTransaction(transactionId, lockBudget);
+          set(transactionTable_, transactionId,
+              (void *)newTransaction(transactionId, lockBudget));
         }
         *cur_job.finished = true;
         transaction_count++;
@@ -302,17 +299,17 @@ auto acquire_lock(void *signature, int transactionId, int rowId,
   bool ok;
 
   // Get the transaction object for the given transaction ID
-  auto transaction = (*transactionTable_)[transactionId];
+  auto transaction = (Transaction *)get(transactionTable_, transactionId);
   if (transaction == nullptr) {
     print_error("Transaction was not registered");
     return false;
   }
 
   // Get the lock object for the given row ID
-  auto lock = (*lockTable_)[rowId];
+  auto lock = (Lock *)get(lockTable_, rowId);
   if (lock == nullptr) {
     lock = newLock();
-    (*lockTable_)[rowId] = lock;
+    set(lockTable_, rowId, lock);
   }
 
   // Check if 2PL is violated
@@ -383,14 +380,14 @@ sign:
 
 void release_lock(int transactionId, int rowId) {
   // Get the transaction object
-  auto transaction = (*transactionTable_)[transactionId];
+  auto transaction = (Transaction *)get(transactionTable_, transactionId);
   if (transaction == nullptr) {
     print_error("Transaction was not registered");
     return;
   }
 
   // Get the lock object
-  auto lock = (*lockTable_)[rowId];
+  auto lock = (Lock*)get(lockTable_, rowId);
   if (lock == nullptr) {
     print_error("Lock does not exist");
     return;
@@ -401,7 +398,7 @@ void release_lock(int transactionId, int rowId) {
 
 void abort_transaction(Transaction *transaction) {
   transaction_count--;
-  transactionTable_->erase(transaction->transaction_id);
+  remove(transactionTable_, transaction->transaction_id);
   releaseAllLocks(transaction, lockTable_);
   delete[] transaction->locked_rows;
   delete transaction;

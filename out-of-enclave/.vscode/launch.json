@@ -5,13 +5,23 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "(sgx) Debug",
+      "name": "serverMain",
       "type": "gdb",
       "request": "launch",
       "target": "serverMain",
       "cwd": "${workspaceRoot}/build/apps",
       "valuesFormatting": "parseText",
       "gdbpath": "/opt/intel/sgxsdk/bin/sgx-gdb"
+    },
+    {
+      "name": "hashtable_test",
+      "type": "gdb",
+      "request": "launch",
+      "target": "hashtable_test",
+      "cwd": "${workspaceRoot}/build/tests",
+      "valuesFormatting": "parseText",
+      "gdbpath": "/usr/bin/gdb"
     }
+
   ]
 }

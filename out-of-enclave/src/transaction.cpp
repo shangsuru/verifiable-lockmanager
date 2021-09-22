@@ -34,8 +34,7 @@ auto addLock(Transaction* transaction, int rowId, bool isExclusive, Lock* lock)
   return ret;
 };
 
-void releaseLock(Transaction* transaction, int rowId,
-                 std::unordered_map<int, Lock*>* lockTable) {
+void releaseLock(Transaction* transaction, int rowId, HashTable* lockTable) {
   for (int i = 0; i < transaction->num_locked; i++) {
     if (transaction->locked_rows[i] == rowId) {
       memcpy((void*)&transaction->locked_rows[i],
@@ -45,12 +44,12 @@ void releaseLock(Transaction* transaction, int rowId,
     break;
   }
   transaction->growing_phase = false;
-  auto lock = (*lockTable)[rowId];
+  auto lock = (Lock*)get(lockTable, rowId);
   release(lock, transaction->transaction_id);
 
   if (lock->num_owners == 0) {
+    remove(lockTable, rowId);
     delete lock;
-    lockTable->erase(rowId);
   }
 };
 
@@ -63,15 +62,14 @@ auto hasLock(Transaction* transaction, int rowId) -> bool {
   return false;
 };
 
-void releaseAllLocks(Transaction* transaction,
-                     std::unordered_map<int, Lock*>* lockTable) {
+void releaseAllLocks(Transaction* transaction, HashTable* lockTable) {
   for (int i = 0; i < transaction->num_locked; i++) {
     int locked_row = transaction->locked_rows[i];
-    auto lock = (*lockTable)[locked_row];
+    auto lock = (Lock*)get(lockTable, locked_row);
     release(lock, transaction->transaction_id);
     if (lock->num_owners == 0) {
+      remove(lockTable, locked_row);
       delete lock;
-      lockTable->erase(locked_row);
     }
   }
   transaction->num_locked = 0;

@@ -8,12 +8,12 @@
 #include <cstring>
 #include <queue>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #include "base64-encoding.h"
 #include "common.h"
 #include "enclave_t.h"
+#include "hashtable.h"
 #include "lock.h"
 #include "sgx_tcrypto.h"
 #include "sgx_tkey_exchange.h"
@@ -38,12 +38,10 @@ struct DataToSeal {
 };
 
 // Holds the transaction objects of the currently active transactions
-std::unordered_map<int, Transaction *> *transactionTable_;
-size_t transactionTableSize_;
+HashTable *transactionTable_;
 
 // Keeps track of a lock object for each row ID
-std::unordered_map<int, Lock *> *lockTable_;
-size_t lockTableSize_;
+HashTable *lockTable_;
 
 // Contains configuration parameters
 extern Arg arg_enclave;
