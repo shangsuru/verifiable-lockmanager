@@ -21,7 +21,15 @@
       "cwd": "${workspaceRoot}/build/tests",
       "valuesFormatting": "parseText",
       "gdbpath": "/usr/bin/gdb"
+    },
+    {
+      "name": "transaction_test",
+      "type": "gdb",
+      "request": "launch",
+      "target": "transaction_test",
+      "cwd": "${workspaceRoot}/build/tests",
+      "valuesFormatting": "parseText",
+      "gdbpath": "/usr/bin/gdb"
     }
-
   ]
 }

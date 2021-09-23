@@ -21,6 +21,7 @@ enclave {
 
         public void enclave_send_job([user_check]void* data) transition_using_threads;
 
+        public int verify_signature([user_check]char* signature, int transactionId, int rowId, int isExclusive);
     };
 
     untrusted {

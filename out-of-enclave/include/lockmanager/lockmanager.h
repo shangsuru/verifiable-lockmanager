@@ -110,6 +110,20 @@ class LockManager {
    */
   void unlock(int transactionId, int rowId);
 
+  /**
+   * This function is just for testing, to demonstrate that signatures created
+   * on lock requests are valid.
+   *
+   * @param signature containing the signature for the lock that was
+   * requested
+   * @param transactionId identifying the transaction that requested the lock
+   * @param rowId identifying the row the lock is refering to
+   * @param isExclusive if the lock is a shared or exclusive lock (boolean)
+   * @returns true, when the signature is valid
+   */
+  auto verify_signature_string(std::string signature, int transactionId,
+                               int rowId, int isExclusive) -> bool;
+
  private:
   /**
    * Initializes the enclave (in DEBUG mode).

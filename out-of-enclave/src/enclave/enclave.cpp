@@ -349,16 +349,8 @@ abort:
   return false;
 
 sign:
-  int block_timeout = get_block_timeout();
-
-  // Get string representation of the lock tuple:
-  // <TRANSACTION-ID>_<ROW-ID>_<MODE>_<BLOCKTIMEOUT>,
-  // where mode means, if the lock is for shared or exclusive access
-  std::string mode = lock->exclusive ? "X" : "S";
-
-  std::string string_to_sign = std::to_string(transactionId) + "_" +
-                               std::to_string(rowId) + "_" + mode + "_" +
-                               std::to_string(block_timeout);
+  std::string string_to_sign =
+      lock_to_string(transactionId, rowId, lock->exclusive);
 
   sgx_ecc_state_handle_t context = NULL;
   sgx_ecc256_open_context(&context);
@@ -366,14 +358,6 @@ sign:
                  strnlen(string_to_sign.c_str(), MAX_SIGNATURE_LENGTH),
                  &ec256_private_key, (sgx_ec256_signature_t *)signature,
                  context);
-
-  int ret = verify(string_to_sign.c_str(), (void *)signature,
-                   sizeof(sgx_ec256_signature_t));
-  if (ret != SGX_SUCCESS) {
-    print_error("Failed to verify signature");
-  } else {
-    print_info("Signature successfully verified");
-  }
 
   return true;
 }
@@ -387,7 +371,7 @@ void release_lock(int transactionId, int rowId) {
   }
 
   // Get the lock object
-  auto lock = (Lock*)get(lockTable_, rowId);
+  auto lock = (Lock *)get(lockTable_, rowId);
   if (lock == nullptr) {
     print_error("Lock does not exist");
     return;
@@ -402,4 +386,41 @@ void abort_transaction(Transaction *transaction) {
   releaseAllLocks(transaction, lockTable_);
   delete[] transaction->locked_rows;
   delete transaction;
+}
+
+auto verify_signature(char *signature, int transactionId, int rowId,
+                      int isExclusive) -> int {
+  std::string plain = lock_to_string(transactionId, rowId, isExclusive);
+
+  std::string signature_string(signature);
+  std::string x = signature_string.substr(0, signature_string.find("-"));
+  std::string y = signature_string.substr(signature_string.find("-") + 1,
+                                          signature_string.length());
+  sgx_ec256_signature_t sig_struct;
+  memcpy(sig_struct.x, base64_decode(x).c_str(), 8 * sizeof(uint32_t));
+  memcpy(sig_struct.y, base64_decode(y).c_str(), 8 * sizeof(uint32_t));
+
+  int ret =
+      verify(plain.c_str(), (void *)&sig_struct, sizeof(sgx_ec256_signature_t));
+  if (ret != SGX_SUCCESS) {
+    print_error("Failed to verify signature");
+  } else {
+    print_info("Signature successfully verified");
+  }
+  return ret;
+}
+
+auto lock_to_string(int transactionId, int rowId, bool isExclusive)
+    -> std::string {
+  unsigned int block_timeout = get_block_timeout();
+
+  std::string mode;
+  if (isExclusive) {
+    mode = "X";
+  } else {
+    mode = "S";
+  }
+
+  return std::to_string(transactionId) + "_" + std::to_string(rowId) + "_" +
+         mode + "_" + std::to_string(block_timeout);
 }

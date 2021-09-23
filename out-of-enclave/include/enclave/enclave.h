@@ -183,3 +183,31 @@ void abort_transaction(Transaction *transaction);
  *          smaller than the current block number
  */
 auto get_block_timeout() -> int;
+
+/**
+ * This function is just for testing, to demonstrate that signatures created on
+ * lock requests are valid.
+ *
+ * @param signature containing the signature for the lock that was
+ * requested
+ * @param transactionId identifying the transaction that requested the lock
+ * @param rowId identifying the row the lock is refering to
+ * @param isExclusive if the lock is a shared or exclusive lock (boolean)
+ * @returns SGX_SUCCESS, when the signature is valid
+ */
+auto verify_signature(char *signature, int transactionId, int rowId,
+                      int isExclusive) -> int;
+
+/**
+ *  Get string representation of the lock tuple:
+ * <TRANSACTION-ID>_<ROW-ID>_<MODE>_<BLOCKTIMEOUT>, where mode means, if the
+ * lock is for shared or exclusive access.
+ *
+ * @param transactionId identifies the transaction
+ * @param rowId identifies the row that is locked
+ * @param isExclusive if the lock is exclusive or shared
+ * @returns a string that represents a lock, that can be signed by the signing
+ * function
+ */
+auto lock_to_string(int transactionId, int rowId, bool isExclusive)
+    -> std::string;

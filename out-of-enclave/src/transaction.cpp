@@ -43,6 +43,7 @@ void releaseLock(Transaction* transaction, int rowId, HashTable* lockTable) {
     }
     break;
   }
+  transaction->num_locked--;
   transaction->growing_phase = false;
   auto lock = (Lock*)get(lockTable, rowId);
   release(lock, transaction->transaction_id);

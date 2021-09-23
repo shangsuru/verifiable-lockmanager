@@ -90,7 +90,7 @@ LockManager::~LockManager() {
 
 auto LockManager::registerTransaction(int transactionId, int lockBudget)
     -> bool {
-    return create_job(REGISTER, transactionId, 0, lockBudget).second;
+  return create_job(REGISTER, transactionId, 0, lockBudget).second;
 };
 
 auto LockManager::lock(int transactionId, int rowId, bool isExclusive)
@@ -250,4 +250,19 @@ auto LockManager::create_job(Command command, int transaction_id, int row_id,
   }
 
   return std::make_pair(NO_SIGNATURE, true);
+}
+
+auto LockManager::verify_signature_string(std::string signature,
+                                          int transactionId, int rowId,
+                                          int isExclusive) -> bool {
+  int res = SGX_SUCCESS;
+  verify_signature(global_eid, &res, (char *)signature.c_str(), transactionId,
+                   rowId, isExclusive);
+  if (res != SGX_SUCCESS) {
+    print_error("Failed to verify signature");
+    return false;
+  } else {
+    print_info("Signature successfully verified");
+    return true;
+  }
 }
