@@ -4,13 +4,13 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
-#include <unordered_map>
 
 #include "base64-encoding.h"
 #include "common.h"
 #include "enclave_u.h"
 #include "errors.h"
 #include "files.h"
+#include "hashtable.h"
 #include "lock.h"
 #include "sgx_eid.h"
 #include "sgx_tcrypto.h"
@@ -174,4 +174,6 @@ class LockManager {
   Arg arg;  // configuration parameters for the enclave
   pthread_t
       *threads;  // worker threads that execute requests inside the enclave
+  HashTable *lockTable;
+  HashTable *transactionTable;
 };

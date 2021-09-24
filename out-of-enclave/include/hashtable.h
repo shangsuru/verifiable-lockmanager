@@ -2,23 +2,7 @@
 
 #include <stdlib.h>
 
-/**
- * This struct is used either as a transaction table, where the keys
- * resemble the TXIDs and the value the transaction structs or a lock table,
- * with RIDs as keys and lock structs as values.
- */
-struct HashTable {
-  int size;
-  struct Entry** table;
-};
-typedef HashTable HashTable;
-
-struct Entry {
-  int key;
-  void* value;
-  struct Entry* next;
-};
-typedef Entry Entry;
+#include "common.h"
 
 HashTable* newHashTable(int size);
 

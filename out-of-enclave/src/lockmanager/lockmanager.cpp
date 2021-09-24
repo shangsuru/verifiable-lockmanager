@@ -51,7 +51,9 @@ LockManager::LockManager() {
     // TODO: implement error handling
   }
 
-  enclave_init_values(global_eid, arg);
+  lockTable = newHashTable(arg.lock_table_size);
+  transactionTable = newHashTable(arg.transaction_table_size);
+  enclave_init_values(global_eid, arg, lockTable, transactionTable);
 
   // Create threads for lock requests and for registering transactions
   threads = (pthread_t *)malloc(sizeof(pthread_t) * (arg.num_threads));

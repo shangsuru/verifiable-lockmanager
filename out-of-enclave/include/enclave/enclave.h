@@ -53,9 +53,14 @@ extern int transactionCount;
  * the enclave. Also initializes the job queue and associated mutexes and
  * condition variables.
  *
- * @param Arg configuration parameters
+ * @param arg configuration parameters
+ * @param lock_table pointer to lock table whose memory was allocated in the
+ * untrusted part
+ * @param transaction_table pointer to transaction table whose memory was
+ * allocated in the untrusted part
  */
-void enclave_init_values(Arg arg);
+void enclave_init_values(Arg arg, HashTable *lock_table,
+                         HashTable *transaction_table);
 
 /**
  * Function that receives a job from the untrusted application.

@@ -9,12 +9,12 @@ sgx_thread_cond_t
     *job_cond;  // wakes up worker threads when a new job is available
 std::vector<std::queue<Job>> queue;  // a job queue for each worker threads
 
-void enclave_init_values(Arg arg) {
+void enclave_init_values(Arg arg, HashTable *lock_table,
+                         HashTable *transaction_table) {
   // Get configuration parameters
   arg_enclave = arg;
-
-  transactionTable_ = newHashTable(arg.transaction_table_size);
-  lockTable_ = newHashTable(arg.lock_table_size);
+  lockTable_ = lock_table;
+  transactionTable_ = transaction_table;
 
   // Initialize mutex variables
   sgx_thread_mutex_init(&global_mutex, NULL);
