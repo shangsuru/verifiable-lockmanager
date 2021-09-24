@@ -180,12 +180,22 @@ void enclave_worker_thread() {
         print_info(("Registering transaction " + std::to_string(transactionId))
                        .c_str());
 
-        if (contains(transactionTable_, transactionId)) {
+        // TODO: Verify integrity of transaction table
+        // TODO: for this to work, we need to work on our own local copy of the
+        // hashtable
+
+        auto transaction = (Transaction *)get(transactionTable_, transactionId);
+        if (transaction == nullptr || transaction->transaction_id != 0) {
+          // New transaction objects, that are created for new, not-yet
+          // registered transaction beforehand by the untrusted application
+          // always have their transaction ID set to -1 to differentiate them
+          // from transaction objects refering to already registered
+          // transactions
           print_error("Transaction is already registered");
           *cur_job.error = true;
         } else {
-          set(transactionTable_, transactionId,
-              (void *)newTransaction(transactionId, lockBudget));
+          transaction->transaction_id = transactionId;
+          transaction->lock_budget = lockBudget;
         }
         *cur_job.finished = true;
         transaction_count++;

@@ -92,6 +92,7 @@ LockManager::~LockManager() {
 
 auto LockManager::registerTransaction(int transactionId, int lockBudget)
     -> bool {
+  set(transactionTable, transactionId, (void *)newTransaction());
   return create_job(REGISTER, transactionId, 0, lockBudget).second;
 };
 
