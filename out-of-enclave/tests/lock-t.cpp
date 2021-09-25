@@ -58,3 +58,14 @@ TEST(LockTest, upgrade) {
   EXPECT_EQ(lock->num_owners, 1);
   EXPECT_EQ(lock->owners[0], kTransactionIdA);
 }
+
+TEST(LockTest, releaseUnownedLock) {
+  Lock* lock = newLock();
+  EXPECT_TRUE(getExclusiveAccess(lock, kTransactionIdA));
+  // B tries to release the lock of A
+  release(lock, kTransactionIdB);
+  // This has no effectg, A still owns the lock
+  EXPECT_TRUE(lock->exclusive);
+  EXPECT_EQ(lock->num_owners, 1);
+  EXPECT_EQ(lock->owners[0], kTransactionIdA);
+}

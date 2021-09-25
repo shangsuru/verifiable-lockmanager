@@ -117,6 +117,16 @@ TEST_F(LockManagerTest, releaseLockTwice) {
   lockManager_->unlock(kTransactionIdA, kRowId);
 };
 
+TEST_F(LockManagerTest, releasingAnUnownedLock) {
+    EXPECT_TRUE(lockManager_->registerTransaction(kTransactionIdA));
+    EXPECT_TRUE(lockManager_->registerTransaction(kTransactionIdB));
+    EXPECT_TRUE(lockManager_->lock(kTransactionIdA, kRowId, true));
+    
+    // Transaction B tries to unlock A's lock and acquire it
+    lockManager_->unlock(kTransactionIdB, kRowId);
+    EXPECT_FALSE(lockManager_->lock(kTransactionIdB, kRowId, true));
+}
+
 // Cannot acquire more locks in shrinking phase
 TEST_F(LockManagerTest, noMoreLocksInShrinkingPhase) {
   EXPECT_TRUE(lockManager_->registerTransaction(kTransactionIdA));

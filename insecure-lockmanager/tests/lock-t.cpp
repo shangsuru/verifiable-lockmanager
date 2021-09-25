@@ -8,8 +8,8 @@ class LockTest : public ::testing::Test {
  protected:
   void SetUp() override { spdlog::set_level(spdlog::level::off); };
 
-  const unsigned int kTransactionIdA_ = 0;
-  const unsigned int kTransactionIdB_ = 1;
+  const unsigned int kTransactionIdA_ = 1;
+  const unsigned int kTransactionIdB_ = 2;
 };
 
 // Shared access works
@@ -64,4 +64,13 @@ TEST_F(LockTest, upgrade) {
   EXPECT_EQ(lock.getMode(), Lock::LockMode::kExclusive);
   EXPECT_EQ(owners.count(kTransactionIdA_), 1);
   EXPECT_EQ(owners.size(), 1);
+}
+
+TEST_F(LockTest, releaseUnownedLock) {
+  Lock lock = Lock();
+  lock.getExclusiveAccess(kTransactionIdA_);
+  lock.release(kTransactionIdB_);
+  EXPECT_EQ(lock.getMode(), Lock::LockMode::kExclusive);
+  EXPECT_EQ(lock.getOwners().count(kTransactionIdA_), 1);
+  EXPECT_EQ(lock.getOwners().size(), 1);
 }

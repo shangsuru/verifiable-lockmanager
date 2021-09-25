@@ -66,6 +66,15 @@ TEST(LockTest, upgrade) {
   EXPECT_EQ(owners.size(), 1);
 }
 
+TEST(LockTest, releaseUnownedLock) {
+  Lock lock = Lock();
+  lock.getExclusiveAccess(kTransactionIdA);
+  lock.release(kTransactionIdB);
+  EXPECT_EQ(lock.getMode(), Lock::LockMode::kExclusive);
+  EXPECT_EQ(lock.getOwners().count(kTransactionIdA), 1);
+  EXPECT_EQ(lock.getOwners().size(), 1);
+}
+
 // Concurrently adding and releasing locks
 TEST(LockTest, concurrentlyAddingAndReleasingLocks) {
   Lock lock = Lock();
