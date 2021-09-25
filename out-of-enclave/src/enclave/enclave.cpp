@@ -3,7 +3,7 @@
 Arg arg_enclave;  // configuration parameters for the enclave
 int num = 0;      // global variable used to give every thread a unique ID
 int transaction_count = 0;        // counts the number of active transactions
-sgx_thread_mutex_t global_mutex;  // synchronizes access to num
+sgx_thread_mutex_t global_num_mutex;  // synchronizes access to num
 sgx_thread_mutex_t *queue_mutex;  // synchronizes access to the job queue
 sgx_thread_cond_t
     *job_cond;  // wakes up worker threads when a new job is available
@@ -17,7 +17,7 @@ void enclave_init_values(Arg arg, HashTable *lock_table,
   transactionTable_ = transaction_table;
 
   // Initialize mutex variables
-  sgx_thread_mutex_init(&global_mutex, NULL);
+  sgx_thread_mutex_init(&global_num_mutex, NULL);
   queue_mutex = (sgx_thread_mutex_t *)malloc(sizeof(sgx_thread_mutex_t) *
                                              arg_enclave.num_threads);
   job_cond = (sgx_thread_cond_t *)malloc(sizeof(sgx_thread_cond_t) *
@@ -94,8 +94,8 @@ void enclave_send_job(void *data) {
   }
 }
 
-void enclave_worker_thread() {
-  sgx_thread_mutex_lock(&global_mutex);
+void enclave_process_request() {
+  sgx_thread_mutex_lock(&global_num_mutex);
 
   int thread_id = num;
   num += 1;
@@ -103,7 +103,7 @@ void enclave_worker_thread() {
   sgx_thread_mutex_init(&queue_mutex[thread_id], NULL);
   sgx_thread_cond_init(&job_cond[thread_id], NULL);
 
-  sgx_thread_mutex_unlock(&global_mutex);
+  sgx_thread_mutex_unlock(&global_num_mutex);
 
   sgx_thread_mutex_lock(&queue_mutex[thread_id]);
 
@@ -310,7 +310,7 @@ auto acquire_lock(void *signature, int transactionId, int rowId,
 
   // Get the transaction object for the given transaction ID
   auto transaction = (Transaction *)get(transactionTable_, transactionId);
-  if (transaction == nullptr) {
+  if (transaction == nullptr || transaction->transaction_id == 0) {
     print_error("Transaction was not registered");
     return false;
   }
@@ -318,8 +318,7 @@ auto acquire_lock(void *signature, int transactionId, int rowId,
   // Get the lock object for the given row ID
   auto lock = (Lock *)get(lockTable_, rowId);
   if (lock == nullptr) {
-    lock = newLock();
-    set(lockTable_, rowId, lock);
+    return false;  // lock should have been allocated in untrusted app
   }
 
   // Check if 2PL is violated
@@ -394,8 +393,6 @@ void abort_transaction(Transaction *transaction) {
   transaction_count--;
   remove(transactionTable_, transaction->transaction_id);
   releaseAllLocks(transaction, lockTable_);
-  delete[] transaction->locked_rows;
-  delete transaction;
 }
 
 auto verify_signature(char *signature, int transactionId, int rowId,

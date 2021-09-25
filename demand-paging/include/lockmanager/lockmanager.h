@@ -159,7 +159,7 @@ class LockManager {
    *
    * @param tmp not used
    */
-  static auto load_and_initialize_threads(void *tmp) -> void *;
+  static auto create_worker_thread(void *tmp) -> void *;
 
   /**
    * Initializes the configuration parameters for the enclave
@@ -178,7 +178,7 @@ class LockManager {
    * executed successfully and if true and the command was for a lock request,
    * the pair also contains the signature as the return value
    */
-  auto create_job(Command command, unsigned int transaction_id = 0,
+  auto create_enclave_job(Command command, unsigned int transaction_id = 0,
                   unsigned int row_id = 0, unsigned int lock_budget = 0)
       -> std::pair<std::string, bool>;
 

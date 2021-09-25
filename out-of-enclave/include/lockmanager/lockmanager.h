@@ -161,14 +161,14 @@ class LockManager {
    *
    * @param tmp not used
    */
-  static auto load_and_initialize_threads(void *tmp) -> void *;
+  static auto create_worker_thread(void *tmp) -> void *;
 
   /**
    * Initializes the configuration parameters for the enclave
    */
   void configuration_init();
 
-  auto create_job(Command command, int transaction_id = 0, int row_id = 0,
+  auto create_enclave_job(Command command, int transaction_id = 0, int row_id = 0,
                   int lock_budget = 0) -> std::pair<std::string, bool>;
 
   Arg arg;  // configuration parameters for the enclave

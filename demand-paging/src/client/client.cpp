@@ -8,11 +8,11 @@ LockingServiceClient::LockingServiceClient(
 auto LockingServiceClient::registerTransaction(unsigned int transactionId,
                                                unsigned int lockBudget)
     -> bool {
-  Registration registration;
+  RegistrationRequest registration;
   registration.set_transaction_id(transactionId);
   registration.set_lock_budget(lockBudget);
 
-  Acceptance acceptance;
+  RegistrationResponse acceptance;
   ClientContext context;
 
   Status status =
@@ -68,7 +68,7 @@ auto LockingServiceClient::requestExclusiveLock(unsigned int transactionId,
   }
 
   spdlog::error(
-      "Acquiring exclusive log failed (TXID: " + std::to_string(transactionId) +
+      "Acquiring exclusive lock failed (TXID: " + std::to_string(transactionId) +
       ", RID: " + std::to_string(rowId) + ")");
   return "";
 }

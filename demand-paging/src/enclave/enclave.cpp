@@ -2,7 +2,7 @@
 
 Arg arg_enclave;  // configuration parameters for the enclave
 int num = 0;      // global variable used to give every thread a unique ID
-sgx_thread_mutex_t global_mutex;  // synchronizes access to num
+sgx_thread_mutex_t global_num_mutex;  // synchronizes access to num
 sgx_thread_mutex_t *queue_mutex;  // synchronizes access to the job queue
 sgx_thread_cond_t
     *job_cond;  // wakes up worker threads when a new job is available
@@ -15,7 +15,7 @@ void enclave_init_values(Arg arg) {
   lockTableSize_ = arg.lock_table_size;
 
   // Initialize mutex variables
-  sgx_thread_mutex_init(&global_mutex, NULL);
+  sgx_thread_mutex_init(&global_num_mutex, NULL);
   queue_mutex = (sgx_thread_mutex_t *)malloc(sizeof(sgx_thread_mutex_t) *
                                              arg_enclave.num_threads);
   job_cond = (sgx_thread_cond_t *)malloc(sizeof(sgx_thread_cond_t) *
@@ -92,8 +92,8 @@ void enclave_send_job(void *data) {
   }
 }
 
-void enclave_worker_thread() {
-  sgx_thread_mutex_lock(&global_mutex);
+void enclave_process_request() {
+  sgx_thread_mutex_lock(&global_num_mutex);
 
   int thread_id = num;
   num += 1;
@@ -101,7 +101,7 @@ void enclave_worker_thread() {
   sgx_thread_mutex_init(&queue_mutex[thread_id], NULL);
   sgx_thread_cond_init(&job_cond[thread_id], NULL);
 
-  sgx_thread_mutex_unlock(&global_mutex);
+  sgx_thread_mutex_unlock(&global_num_mutex);
 
   sgx_thread_mutex_lock(&queue_mutex[thread_id]);
 

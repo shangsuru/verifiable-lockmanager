@@ -50,7 +50,6 @@ void releaseLock(Transaction* transaction, int rowId, HashTable* lockTable) {
 
   if (lock->num_owners == 0) {
     remove(lockTable, rowId);
-    delete lock;
   }
 };
 
@@ -70,7 +69,6 @@ void releaseAllLocks(Transaction* transaction, HashTable* lockTable) {
     release(lock, transaction->transaction_id);
     if (lock->num_owners == 0) {
       remove(lockTable, locked_row);
-      delete lock;
     }
   }
   transaction->num_locked = 0;

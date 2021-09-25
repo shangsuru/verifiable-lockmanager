@@ -45,8 +45,8 @@ class ServerTest : public ::testing::Test {
   ServerContext context_;
   LockRequest request_;
   LockResponse response_;
-  Registration registration_;
-  Acceptance acceptance_;
+  RegistrationRequest registration_;
+  RegistrationResponse acceptance_;
   unsigned int transactionId_ = 0;
   unsigned int rowId_ = 0;
 };

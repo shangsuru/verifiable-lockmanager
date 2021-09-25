@@ -30,6 +30,15 @@
       "cwd": "${workspaceRoot}/build/tests",
       "valuesFormatting": "parseText",
       "gdbpath": "/usr/bin/gdb"
+    },
+    {
+      "name": "lockmanager_test",
+      "type": "gdb",
+      "request": "launch",
+      "target": "lockmanager_test",
+      "cwd": "${workspaceRoot}/build/tests",
+      "valuesFormatting": "parseText",
+      "gdbpath": "/usr/bin/gdb"
     }
   ]
 }

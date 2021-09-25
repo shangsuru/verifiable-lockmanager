@@ -34,8 +34,8 @@ class LockingServiceImpl final : public LockingService::Service {
    * @param response contains if the registration was successful
    * @return the status code of the RPC call (OK or a specific error code)
    */
-  auto RegisterTransaction(ServerContext* context, const Registration* request,
-                           Acceptance* response) -> Status override;
+  auto RegisterTransaction(ServerContext* context, const RegistrationRequest* request,
+                           RegistrationResponse* response) -> Status override;
 
   /**
    * Unpacks the LockRequest by a client to acquire the respective exclusive

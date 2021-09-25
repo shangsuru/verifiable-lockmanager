@@ -33,12 +33,16 @@ auto upgrade(Lock* lock, int transactionId) -> bool {
 };
 
 void release(Lock* lock, int transactionId) {
-  lock->exclusive = false;
+  bool wasOwner = false; // only release when the transactionId was actually within the set of owners of that lock 
   for (int i = 0; i < lock->num_owners; i++) {
     if (lock->owners[i] == transactionId) {
       memcpy((void*)&lock->owners[i], (void*)&lock->owners[i + 1],
              sizeof(int) * (lock->num_owners - 1 - i));
+      wasOwner = true;
     }
   }
-  lock->num_owners--;
+  if (wasOwner) {
+    lock->exclusive = false;
+    lock->num_owners--;
+  }
 }

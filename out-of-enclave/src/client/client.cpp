@@ -8,11 +8,11 @@ LockingServiceClient::LockingServiceClient(
 auto LockingServiceClient::registerTransaction(unsigned int transactionId,
                                                unsigned int lockBudget)
     -> bool {
-  Registration registration;
+  RegistrationRequest registration;
   registration.set_transaction_id(transactionId);
   registration.set_lock_budget(lockBudget);
 
-  Acceptance acceptance;
+  RegistrationResponse acceptance;
   ClientContext context;
 
   Status status =

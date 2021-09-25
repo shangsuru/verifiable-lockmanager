@@ -42,8 +42,10 @@ auto Lock::upgrade(unsigned int transactionId) -> bool {
 };
 
 void Lock::release(unsigned int transactionId) {
-  exclusive_ = false;
-  owners_.erase(transactionId);
+  if (owners_.find(transactionId) != owners_.end()) {
+    exclusive_ = false;
+    owners_.erase(transactionId);
+  }
 }
 
 auto Lock::getOwners() -> std::set<unsigned int> { return owners_; }

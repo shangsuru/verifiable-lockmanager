@@ -127,6 +127,7 @@ TEST_F(LockManagerTest, noMoreLocksInShrinkingPhase) {
   EXPECT_FALSE(lockManager_->lock(kTransactionIdA, kRowId, true));
 };
 
+// Lets two transaction request the same 2 shared locks and one of the transactions another exclusive lock
 TEST_F(LockManagerTest, concurrentLockRequests) {
   EXPECT_TRUE(lockManager_->registerTransaction(kTransactionIdA));
   EXPECT_TRUE(lockManager_->registerTransaction(kTransactionIdB));

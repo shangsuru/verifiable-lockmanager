@@ -18,20 +18,24 @@ message LockResponse {
     optional string signature = 2;
 }
 
-message Registration {
+message RegistrationRequest
+ {
     // Identifies the transaction, that wants to register
     uint32 transaction_id = 1;
     // The maximum number of locks, the transaction can acquire during its lifetime
     uint32 lock_budget = 2;
 }
 
-message Acceptance {
+message RegistrationResponse
+ {
     // Only uses the Status of the response to convey the information, Status::OK or Status::CANCELLED.
 }
 
 service LockingService {
     // Sets maximum number of locks the transaction aims to acquire prior to requesting locks
-    rpc RegisterTransaction(Registration) returns (Acceptance) {};
+    rpc RegisterTransaction(RegistrationRequest
+    ) returns (RegistrationResponse
+    ) {};
     // Requests a shared lock for reading a row
     rpc LockShared(LockRequest) returns (LockResponse) {};
     // Requests an exclusive lock for writing a row

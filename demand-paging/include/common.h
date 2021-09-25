@@ -13,7 +13,7 @@ struct Job {
   volatile bool* finished;
   volatile bool* error;
 };
-typedef struct Job Job;
+typedef struct Job Job; // Required to use C++ structs as C structs
 
 struct Arg {
   int num_threads;
@@ -21,4 +21,4 @@ struct Arg {
   int transaction_table_size;
   int lock_table_size;
 };
-typedef struct Arg Arg;
+typedef struct Arg Arg; // Required to use C++ structs as C structs
