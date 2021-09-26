@@ -55,12 +55,12 @@ LockManager::LockManager() {
   transactionTable = newHashTable(arg.transaction_table_size);
   enclave_init_values(global_eid, arg, lockTable, transactionTable);
 
-  // Create worker threads inside the enclave to serve lock requests and registrations of transactions
+  // Create worker threads inside the enclave to serve lock requests and
+  // registrations of transactions
   threads = (pthread_t *)malloc(sizeof(pthread_t) * (arg.num_threads));
   spdlog::info("Initializing " + std::to_string(arg.num_threads) + " threads");
   for (int i = 0; i < arg.num_threads; i++) {
-    pthread_create(&threads[i], NULL, &LockManager::create_worker_thread,
-                   this);
+    pthread_create(&threads[i], NULL, &LockManager::create_worker_thread, this);
   }
 
   // Generate new keys if keys from sealed storage cannot be found
@@ -87,7 +87,7 @@ LockManager::~LockManager() {
   free(threads);
 
   spdlog::info("Destroying enclave");
-  sgx_destroy_enclave(global_eid);
+  // sgx_destroy_enclave(global_eid);
 }
 
 auto LockManager::registerTransaction(int transactionId, int lockBudget)
@@ -105,7 +105,7 @@ auto LockManager::registerTransaction(int transactionId, int lockBudget)
 auto LockManager::lock(int transactionId, int rowId, bool isExclusive)
     -> std::pair<std::string, bool> {
   // TODO: guard for concurrent requests
-  if (!contains(lockTable, transactionId)) {
+  if (!contains(lockTable, rowId)) {
     set(lockTable, rowId, (void *)newLock());
   }
 
@@ -211,8 +211,9 @@ auto LockManager::read_and_unseal_keys() -> bool {
   return true;
 }
 
-auto LockManager::create_enclave_job(Command command, int transaction_id, int row_id,
-                             int lock_budget) -> std::pair<std::string, bool> {
+auto LockManager::create_enclave_job(Command command, int transaction_id,
+                                     int row_id, int lock_budget)
+    -> std::pair<std::string, bool> {
   // Set job parameters
   Job job;
   job.command = command;
@@ -223,8 +224,9 @@ auto LockManager::create_enclave_job(Command command, int transaction_id, int ro
 
   // Need to track, when job is finished or error has occurred
   if (command == SHARED || command == EXCLUSIVE || command == REGISTER) {
-    // Allocate dynamic memory in the untrusted part of the application, so the enclave can modify it via its pointer
-    job.finished = new bool; 
+    // Allocate dynamic memory in the untrusted part of the application, so the
+    // enclave can modify it via its pointer
+    job.finished = new bool;
     job.error = new bool;
     *job.finished = false;
     *job.error = false;

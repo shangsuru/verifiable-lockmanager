@@ -14,9 +14,9 @@ void RunClient() {
 
   client.registerTransaction(transaction_id, default_lock_budget);
   client.registerTransaction(transaction_id + 1, default_lock_budget);
-  client.requestExclusiveLock(transaction_id, 0);
-  // client.requestUnlock(transaction_id, 0);
-  client.requestSharedLock(transaction_id + 1, 0);
+  client.requestSharedLock(transaction_id, 1);
+  client.requestUnlock(transaction_id, 1);
+  client.requestExclusiveLock(transaction_id + 1, 1);
 
   /*  int num_threads = 8;
   unsigned int row_id = 1;

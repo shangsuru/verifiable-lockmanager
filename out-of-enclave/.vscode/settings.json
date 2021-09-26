@@ -74,7 +74,9 @@
     "variant": "cpp",
     "*.inc": "cpp",
     "__functional_base": "cpp",
-    "locale": "cpp"
+    "locale": "cpp",
+    "__mutex_base": "cpp",
+    "__sgx_mutex_base": "cpp"
   },
   "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
 }

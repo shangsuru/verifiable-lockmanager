@@ -7,11 +7,11 @@ class LockManagerTest : public ::testing::Test {
  protected:
   void SetUp() override { spdlog::set_level(spdlog::level::off); };
 
-  const unsigned int kTransactionIdA = 0;
-  const unsigned int kTransactionIdB = 1;
-  const unsigned int kTransactionIdC = 2;
+  const unsigned int kTransactionIdA = 1;
+  const unsigned int kTransactionIdB = 2;
+  const unsigned int kTransactionIdC = 3;
   const unsigned int kLockBudget = 10;
-  const unsigned int kRowId = 0;
+  const unsigned int kRowId = 1;
 };
 
 // Lock request aborts, when transaction is not registered
@@ -58,7 +58,7 @@ TEST_F(LockManagerTest, wantSharedButAlreadyExclusive) {
 // Several transactions can acquire a shared lock on the same row
 TEST_F(LockManagerTest, multipleTransactionsSharedLock) {
   LockManager lock_manager = LockManager();
-  for (unsigned int transaction_id = 0; transaction_id < kLockBudget;
+  for (unsigned int transaction_id = 1; transaction_id < kLockBudget;
        transaction_id++) {
     EXPECT_TRUE(lock_manager.registerTransaction(transaction_id, kLockBudget));
     EXPECT_TRUE(lock_manager.lock(transaction_id, kRowId, false).second);
@@ -100,15 +100,10 @@ TEST_F(LockManagerTest, unlock) {
   LockManager lock_manager = LockManager();
   EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
   EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdB, kLockBudget));
-  EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdC, kLockBudget));
 
   EXPECT_TRUE(lock_manager.lock(kTransactionIdA, kRowId, false).second);
-  EXPECT_TRUE(lock_manager.lock(kTransactionIdB, kRowId, false).second);
-
   lock_manager.unlock(kTransactionIdA, kRowId);
-  lock_manager.unlock(kTransactionIdB, kRowId);
-
-  EXPECT_TRUE(lock_manager.lock(kTransactionIdC, kRowId, true).second);
+  EXPECT_TRUE(lock_manager.lock(kTransactionIdB, kRowId, true).second);
 };
 
 // Cannot request more locks after transaction aborted
@@ -133,6 +128,17 @@ TEST_F(LockManagerTest, releaseLockTwice) {
   lock_manager.unlock(kTransactionIdA, kRowId);
 };
 
+TEST_F(LockManagerTest, releasingAnUnownedLock) {
+  LockManager lock_manager = LockManager();
+  EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
+  EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdB, kLockBudget));
+  EXPECT_TRUE(lock_manager.lock(kTransactionIdA, kRowId, true).second);
+
+  // Transaction B tries to unlock A's lock and acquire it
+  lock_manager.unlock(kTransactionIdB, kRowId);
+  EXPECT_FALSE(lock_manager.lock(kTransactionIdB, kRowId, true).second);
+}
+
 // Cannot acquire more locks in shrinking phase
 TEST_F(LockManagerTest, noMoreLocksInShrinkingPhase) {
   LockManager lock_manager = LockManager();
@@ -149,4 +155,15 @@ TEST_F(LockManagerTest, verifySignature) {
       lock_manager.lock(kTransactionIdA, kRowId, true).first;
   EXPECT_TRUE(lock_manager.verify_signature_string(signature, kTransactionIdA,
                                                    kRowId, true));
+}
+
+TEST_F(LockManagerTest, abortedTransactionCanRegisterAgain) {
+  LockManager lock_manager = LockManager();
+  EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
+  EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdB, kLockBudget));
+
+  EXPECT_TRUE(lock_manager.lock(kTransactionIdB, kRowId, true).second);
+  EXPECT_FALSE(lock_manager.lock(kTransactionIdA, kRowId, true)
+                   .second);  // makes A abort
+  EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
 }

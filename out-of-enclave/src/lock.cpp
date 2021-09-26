@@ -4,6 +4,7 @@ Lock* newLock() {
   Lock* lock = new Lock();
   lock->exclusive = false;
   lock->owners = (int*)malloc(sizeof(int) * kTransactionBudget);
+  lock->num_owners = 0;
   return lock;
 }
 
@@ -33,7 +34,8 @@ auto upgrade(Lock* lock, int transactionId) -> bool {
 };
 
 void release(Lock* lock, int transactionId) {
-  bool wasOwner = false; // only release when the transactionId was actually within the set of owners of that lock 
+  bool wasOwner = false;  // only release when the transactionId was actually
+                          // within the set of owners of that lock
   for (int i = 0; i < lock->num_owners; i++) {
     if (lock->owners[i] == transactionId) {
       memcpy((void*)&lock->owners[i], (void*)&lock->owners[i + 1],

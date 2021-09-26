@@ -47,8 +47,8 @@ class ServerTest : public ::testing::Test {
   LockResponse response_;
   RegistrationRequest registration_;
   RegistrationResponse acceptance_;
-  unsigned int transactionId_ = 0;
-  unsigned int rowId_ = 0;
+  unsigned int transactionId_ = 1;
+  unsigned int rowId_ = 1;
 };
 
 // Make lock request without registering

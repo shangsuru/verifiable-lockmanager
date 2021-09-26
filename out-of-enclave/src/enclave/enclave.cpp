@@ -2,9 +2,9 @@
 
 Arg arg_enclave;  // configuration parameters for the enclave
 int num = 0;      // global variable used to give every thread a unique ID
-int transaction_count = 0;        // counts the number of active transactions
+int transaction_count = 0;  // counts the number of active transactions
 sgx_thread_mutex_t global_num_mutex;  // synchronizes access to num
-sgx_thread_mutex_t *queue_mutex;  // synchronizes access to the job queue
+sgx_thread_mutex_t *queue_mutex;      // synchronizes access to the job queue
 sgx_thread_cond_t
     *job_cond;  // wakes up worker threads when a new job is available
 std::vector<std::queue<Job>> queue;  // a job queue for each worker threads
@@ -318,7 +318,8 @@ auto acquire_lock(void *signature, int transactionId, int rowId,
   // Get the lock object for the given row ID
   auto lock = (Lock *)get(lockTable_, rowId);
   if (lock == nullptr) {
-    return false;  // lock should have been allocated in untrusted app
+    print_error("Lock not allocated in untrusted app");
+    return false;
   }
 
   // Check if 2PL is violated
@@ -391,6 +392,7 @@ void release_lock(int transactionId, int rowId) {
 
 void abort_transaction(Transaction *transaction) {
   transaction_count--;
+  transaction->transaction_id = 0;
   remove(transactionTable_, transaction->transaction_id);
   releaseAllLocks(transaction, lockTable_);
 }
