@@ -35,7 +35,7 @@ auto LockManager::create_worker_thread(void *tmp) -> void * {
 }
 
 void LockManager::configuration_init() {
-  arg.num_threads = 2;
+  arg.num_threads = 8;
   arg.tx_thread_id = arg.num_threads - 1;
 }
 
@@ -51,12 +51,12 @@ LockManager::LockManager() {
 
   enclave_init_values(global_eid, arg);
 
-  // Create worker threads inside the enclave to serve lock requests and registrations of transactions
+  // Create worker threads inside the enclave to serve lock requests and
+  // registrations of transactions
   threads = (pthread_t *)malloc(sizeof(pthread_t) * (arg.num_threads));
   spdlog::info("Initializing " + std::to_string(arg.num_threads) + " threads");
   for (int i = 0; i < arg.num_threads; i++) {
-    pthread_create(&threads[i], NULL, &LockManager::create_worker_thread,
-                   this);
+    pthread_create(&threads[i], NULL, &LockManager::create_worker_thread, this);
   }
 
   // Generate new keys if keys from sealed storage cannot be found
@@ -195,8 +195,10 @@ auto LockManager::read_and_unseal_keys() -> bool {
   return true;
 }
 
-auto LockManager::create_enclave_job(Command command, unsigned int transaction_id,
-                             unsigned int row_id, unsigned int lock_budget)
+auto LockManager::create_enclave_job(Command command,
+                                     unsigned int transaction_id,
+                                     unsigned int row_id,
+                                     unsigned int lock_budget)
     -> std::pair<std::string, bool> {
   // Set job parameters
   Job job;
@@ -208,8 +210,9 @@ auto LockManager::create_enclave_job(Command command, unsigned int transaction_i
 
   // Need to track, when job is finished or error has occurred
   if (command == SHARED || command == EXCLUSIVE || command == REGISTER) {
-    // Allocate dynamic memory in the untrusted part of the application, so the enclave can modify it via its pointer
-    job.finished = new bool; 
+    // Allocate dynamic memory in the untrusted part of the application, so the
+    // enclave can modify it via its pointer
+    job.finished = new bool;
     job.error = new bool;
     *job.finished = false;
     *job.error = false;

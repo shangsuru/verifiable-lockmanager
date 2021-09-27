@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <memory>
+#include <mutex>
 #include <stdexcept>
 #include <string>
 
@@ -168,12 +169,17 @@ class LockManager {
    */
   void configuration_init();
 
-  auto create_enclave_job(Command command, int transaction_id = 0, int row_id = 0,
-                  int lock_budget = 0) -> std::pair<std::string, bool>;
+  auto create_enclave_job(Command command, int transaction_id = 0,
+                          int row_id = 0, int lock_budget = 0)
+      -> std::pair<std::string, bool>;
 
   Arg arg;  // configuration parameters for the enclave
   pthread_t
       *threads;  // worker threads that execute requests inside the enclave
   HashTable *lockTable;
   HashTable *transactionTable;
+  std::mutex new_lock_mut;  // controls the insertion of new lock objects into
+                            // the lock table
+  std::mutex new_transaction_mut;  // controls the insertion of new transaction
+                                   // objects into the lock table
 };

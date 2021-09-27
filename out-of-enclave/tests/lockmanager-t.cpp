@@ -78,10 +78,9 @@ TEST_F(LockManagerTest, lockBudgetRunsOut) {
   LockManager lock_manager = LockManager();
   EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
 
-  unsigned int row_id = 0;
-  for (; row_id < kLockBudget; row_id++) {
+  unsigned int row_id = 1;
+  for (; row_id <= kLockBudget; row_id++) {
     EXPECT_TRUE(lock_manager.lock(kTransactionIdA, row_id, false).second);
-    std::string expected_signature = "0-" + std::to_string(row_id) + "S-0";
   }
 
   EXPECT_FALSE(lock_manager.lock(kTransactionIdA, row_id + 1, false).second);

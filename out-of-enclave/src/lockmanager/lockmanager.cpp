@@ -37,8 +37,8 @@ auto LockManager::create_worker_thread(void *tmp) -> void * {
 void LockManager::configuration_init() {
   arg.num_threads = 2;
   arg.tx_thread_id = arg.num_threads - 1;
-  arg.lock_table_size = 10000;
-  arg.transaction_table_size = 200;
+  arg.lock_table_size = 10;
+  arg.transaction_table_size = 20;
 }
 
 LockManager::LockManager() {
@@ -75,6 +75,7 @@ LockManager::LockManager() {
 
 LockManager::~LockManager() {
   // TODO: Destructor never called (esp. on CTRL+C shutdown)!
+
   // Send QUIT to worker threads
   create_enclave_job(QUIT);
 
@@ -87,27 +88,29 @@ LockManager::~LockManager() {
   free(threads);
 
   spdlog::info("Destroying enclave");
-  // sgx_destroy_enclave(global_eid);
+  sgx_destroy_enclave(global_eid);
 }
 
 auto LockManager::registerTransaction(int transactionId, int lockBudget)
     -> bool {
-  // TODO: guard for concurrent requests
+  new_transaction_mut.lock();
   auto transaction = (Transaction *)get(transactionTable, transactionId);
   if (transaction != nullptr && transaction->transaction_id != 0) {
     spdlog::error("Transaction already registered");
     return false;
   }
-  set(transactionTable, transactionId, (void *)newTransaction());
+  set(transactionTable, transactionId, (void *)newTransaction(lockBudget));
+  new_transaction_mut.unlock();
   return create_enclave_job(REGISTER, transactionId, 0, lockBudget).second;
 };
 
 auto LockManager::lock(int transactionId, int rowId, bool isExclusive)
     -> std::pair<std::string, bool> {
-  // TODO: guard for concurrent requests
+  new_lock_mut.lock();
   if (!contains(lockTable, rowId)) {
     set(lockTable, rowId, (void *)newLock());
   }
+  new_lock_mut.unlock();
 
   if (isExclusive) {
     return create_enclave_job(EXCLUSIVE, transactionId, rowId);

@@ -38,11 +38,15 @@ typedef struct Transaction Transaction;
 
 /**
  * Initializes the transaction struct. New transaction objects, that are created
- for new, not-yet registered transaction beforehand by the untrusted application
- always have their transaction ID set to -1 to differentiate them from
- transaction objects refering to already registered transactions
+ * for new, not-yet registered transaction beforehand by the untrusted
+ * application always have their transaction ID set to -1 to differentiate them
+ * from transaction objects refering to already registered transactions.
+ *
+ * @param lockBudget maximum number of locks the transaction is allowed to
+ * acquire
+ * @returns a pointer to the transaction struct
  */
-Transaction* newTransaction(int transactionId = 0, int lockBudget = 0);
+Transaction* newTransaction(int lockBudget);
 
 /**
  * When the transaction acquires a new lock, the row ID that lock refers to is

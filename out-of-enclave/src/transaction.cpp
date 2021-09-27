@@ -1,8 +1,9 @@
 #include "transaction.h"
 
-Transaction* newTransaction(int transactionId, int lockBudget) {
+Transaction* newTransaction(int lockBudget) {
   Transaction* transaction = new Transaction();
-  transaction->transaction_id = transactionId;
+  transaction->transaction_id =
+      0;  // zero for newly initialized transaction structs!
   transaction->aborted = false;
   transaction->growing_phase = true;
   transaction->lock_budget = lockBudget;
@@ -26,7 +27,6 @@ auto addLock(Transaction* transaction, int rowId, bool isExclusive, Lock* lock)
   }
 
   if (ret) {
-    // lockbudget (max) to copy everything
     transaction->locked_rows[transaction->num_locked++] = rowId;
     transaction->lock_budget--;
   }

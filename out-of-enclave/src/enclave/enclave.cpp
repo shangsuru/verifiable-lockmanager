@@ -114,7 +114,7 @@ void enclave_process_request() {
       continue;
     }
 
-    print_info("Worker got a job");
+    print_info(("Worker " + std::to_string(thread_id) + " got a job").c_str());
     Job cur_job = queue[thread_id].front();
     Command command = cur_job.command;
 
