@@ -10,15 +10,11 @@ void RunClient() {
       grpc::CreateChannel(target_address, grpc::InsecureChannelCredentials()));
 
   unsigned int transaction_id = 1;
-  const unsigned int default_lock_budget = 10;
+  const unsigned int default_lock_budget = 100;
 
   client.registerTransaction(transaction_id, default_lock_budget);
-  client.registerTransaction(transaction_id + 1, default_lock_budget);
-  client.requestSharedLock(transaction_id, 1);
-  client.requestUnlock(transaction_id, 1);
-  client.requestExclusiveLock(transaction_id + 1, 1);
 
-  /*  int num_threads = 8;
+  int num_threads = 8;
   unsigned int row_id = 1;
   std::vector<std::thread> threads;
   for (int i = 0; i < num_threads; i++) {
@@ -27,7 +23,7 @@ void RunClient() {
 
   for (int i = 0; i < num_threads; i++) {
     threads[i].join();
-  }*/
+  }
 }
 
 auto main() -> int {

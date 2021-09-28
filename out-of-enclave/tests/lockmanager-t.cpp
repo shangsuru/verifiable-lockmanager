@@ -10,7 +10,7 @@ class LockManagerTest : public ::testing::Test {
   const unsigned int kTransactionIdA = 1;
   const unsigned int kTransactionIdB = 2;
   const unsigned int kTransactionIdC = 3;
-  const unsigned int kLockBudget = 10;
+  const unsigned int kLockBudget = 100;
   const unsigned int kRowId = 1;
 };
 

@@ -66,8 +66,9 @@ void enclave_send_job(void *data) {
       }
 
       // Send the requests to specific worker thread
-      int thread_id = (int)((new_job.row_id % lockTable_->size) /
-                            (lockTable_->size / (arg_enclave.num_threads - 1)));
+      int thread_id =
+          (int)((new_job.row_id % lockTable_->size) /
+                ((float)lockTable_->size / (arg_enclave.num_threads - 1)));
       sgx_thread_mutex_lock(&queue_mutex[thread_id]);
       queue[thread_id].push(new_job);
       sgx_thread_cond_signal(&job_cond[thread_id]);
