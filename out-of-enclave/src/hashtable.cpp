@@ -92,3 +92,44 @@ void remove(HashTable* hashTable, int key) {
     next = entry->next;
   }
 }
+
+auto locktable_entry_to_uint8_t(Entry* entry, uint8_t* result) -> uint32_t {
+  Lock* lock = (Lock*)(entry->value);
+  int num_owners = lock->num_owners;
+  uint32_t size = 3 + num_owners;
+
+  // Get the entry key and every member of the lock struct
+  result = new uint8_t[size];
+  result[0] = entry->key;
+  result[1] = lock->exclusive;
+  result[2] = num_owners;
+
+  for (int i = 0; i < num_owners; i++) {
+    result[3 + i] = lock->owners[i];
+  }
+
+  return size;
+}
+
+auto transactiontable_entry_to_uint8_t(Entry* entry, uint8_t* result)
+    -> uint32_t {
+  Transaction* transaction = (Transaction*)(entry->value);
+  int num_locked = transaction->num_locked;
+  uint32_t size = 6 + num_locked;
+
+  // Get the entry key and every member of the transaction struct
+  result = new uint8_t[size];
+  result[0] = entry->key;
+  result[1] = transaction->transaction_id;
+  result[2] = transaction->aborted;
+  result[3] = transaction->growing_phase;
+  result[4] = transaction->lock_budget;
+  result[5] = transaction->locked_rows_size;
+  result[6] = num_locked;
+
+  for (int i = 0; i < num_locked; i++) {
+    result[7 + i] = transaction->locked_rows[i];
+  }
+
+  return size;
+}

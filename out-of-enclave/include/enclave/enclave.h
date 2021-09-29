@@ -216,3 +216,27 @@ auto verify_signature(char *signature, int transactionId, int rowId,
  */
 auto lock_to_string(int transactionId, int rowId, bool isExclusive)
     -> std::string;
+
+/**
+ * Hashes a bucket of the lock table. The hash is saved by the enclave and can
+ * be used to detect if the contents of the bucket was altered, by computing
+ * the hash again and comparing it with the saved hash. If
+ * they don't match, then something inside the bucket changed. The hash does not
+ * include locks without owners.
+ *
+ * @param bucket the bucket to compute the hash over
+ * @returns the hash over the given bucket
+ */
+auto hash_locktable_bucket(Entry *bucket) -> sgx_sha256_hash_t *;
+
+/**
+ * Hashes a bucket of the transaction table. The hash is saved by the enclave
+ * and can be used to detect if the contents of the bucket was altered, by
+ * computing the hash again and comparing it with the saved hash. If they don't
+ * match, then something inside the bucket changed. The hash does not include
+ * unregistered transactions, i.e. transactions with transaction_id = 0.
+ *
+ * @param bucket the bucket to compute the hash over
+ * @returns the hash over the given bucket
+ */
+auto hash_transactiontable_bucket(Entry *bucket) -> sgx_sha256_hash_t *;

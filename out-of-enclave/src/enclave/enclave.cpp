@@ -434,3 +434,97 @@ auto lock_to_string(int transactionId, int rowId, bool isExclusive)
   return std::to_string(transactionId) + "_" + std::to_string(rowId) + "_" +
          mode + "_" + std::to_string(block_timeout);
 }
+
+auto hash_locktable_bucket(Entry *bucket) -> sgx_sha256_hash_t * {
+  if (bucket == nullptr) {
+    return nullptr;
+  }
+
+  Entry *entry = bucket;
+  uint8_t *data;     // the serialized entry with lock
+  uint32_t size;     // size of the serialized entry
+  sgx_status_t ret;  // status code of sgx library calls
+
+  // To hold the hash over the entries in the bucket
+  sgx_sha256_hash_t *p_hash =
+      (sgx_sha256_hash_t *)malloc(sizeof(sgx_sha256_hash_t));
+
+  // Need to initialize a handle struct, when we incrementally build the hash
+  sgx_sha_state_handle_t *p_sha_handle =
+      (sgx_sha_state_handle_t *)malloc(sizeof(sgx_sha_state_handle_t));
+  ret = sgx_sha256_init(p_sha_handle);
+  if (ret != SGX_SUCCESS) {
+    print_error("Initializing SHA handler failed");
+  }
+
+  do {  // Update the hash with each entry in the bucket
+    // Only include locks with owners into the hash
+    if (((Lock *)entry->value)->num_owners != 0) {
+      size = locktable_entry_to_uint8_t(entry, data);
+      ret = sgx_sha256_update(data, size, *p_sha_handle);
+      if (ret != SGX_SUCCESS) {
+        print_error("Updating hash failed");
+      }
+    }
+    entry = entry->next;
+  } while (entry != nullptr);
+
+  ret = sgx_sha256_get_hash(*p_sha_handle, p_hash);
+  if (ret != SGX_SUCCESS) {
+    print_error("Getting hash failed");
+  }
+
+  ret = sgx_sha256_close(*p_sha_handle);
+  if (ret != SGX_SUCCESS) {
+    print_error("Closing SHA handle failed");
+  }
+
+  return p_hash;
+}
+
+auto hash_transactiontable_bucket(Entry *bucket) -> sgx_sha256_hash_t * {
+  if (bucket == nullptr) {
+    return nullptr;
+  }
+
+  Entry *entry = bucket;
+  uint8_t *data;     // the serialized entry with transaction
+  uint32_t size;     // size of the serialized entry
+  sgx_status_t ret;  // status code of sgx library calls
+
+  // To hold the hash over the entries in the bucket
+  sgx_sha256_hash_t *p_hash =
+      (sgx_sha256_hash_t *)malloc(sizeof(sgx_sha256_hash_t));
+
+  // Need to initialize a handle struct, when we incrementally build the hash
+  sgx_sha_state_handle_t *p_sha_handle =
+      (sgx_sha_state_handle_t *)malloc(sizeof(sgx_sha_state_handle_t));
+  ret = sgx_sha256_init(p_sha_handle);
+  if (ret != SGX_SUCCESS) {
+    print_error("Initializing SHA handler failed");
+  }
+
+  do {  // Update the hash with each entry in the bucket
+    // Only include registered transactions
+    if (((Transaction *)entry->value)->transaction_id != 0) {  // TODO:
+      size = transactiontable_entry_to_uint8_t(entry, data);
+      ret = sgx_sha256_update(data, size, *p_sha_handle);
+      if (ret != SGX_SUCCESS) {
+        print_error("Updating hash failed");
+      }
+    }
+    entry = entry->next;
+  } while (entry != nullptr);
+
+  ret = sgx_sha256_get_hash(*p_sha_handle, p_hash);
+  if (ret != SGX_SUCCESS) {
+    print_error("Getting hash failed");
+  }
+
+  ret = sgx_sha256_close(*p_sha_handle);
+  if (ret != SGX_SUCCESS) {
+    print_error("Closing SHA handle failed");
+  }
+
+  return p_hash;
+}
