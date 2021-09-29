@@ -532,3 +532,40 @@ auto hash_transactiontable_bucket(Entry *bucket) -> sgx_sha256_hash_t * {
 
   return p_hash;
 }
+
+auto integrity_verified_get_locktable(int key) -> Lock * {
+  // TODO: Make a deep copy of the hashTable (from untrusted to trusted memory)
+  HashTable *copy = lockTable_;
+
+  int index = hash(copy->size, key);
+  Entry *entry = copy->table[index];
+
+  // Verify the integrity of the bucket
+  sgx_sha256_hash_t *hash = hash_locktable_bucket(entry);
+  if (hash == lockTableIntegrityHashes[index]) {
+    return (Lock *)get(copy, key);  // TODO: change this so that we only need to
+                                    // copy bucket instead of whole hashtable
+  }
+
+  // Hashes are not the same
+  return nullptr;
+}
+
+auto integrity_verified_get_transactiontable(int key) -> Transaction * {
+  // TODO: Make a deep copy of the bucket (from untrusted to trusted memory)
+  HashTable *copy = transactionTable_;
+
+  int index = hash(copy->size, key);
+  Entry *entry = copy->table[index];
+
+  // Verify the integrity of the bucket
+  sgx_sha256_hash_t *hash = hash_transactiontable_bucket(entry);
+  if (hash == transactionTableIntegrityHashes[index]) {
+    return (Transaction *)get(
+        copy, key);  // TODO: change this so that we only need to
+                     // copy bucket instead of whole hashtable
+  }
+
+  // Hashes are not the same
+  return nullptr;
+}

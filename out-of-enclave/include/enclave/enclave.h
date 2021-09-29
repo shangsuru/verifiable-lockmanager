@@ -246,3 +246,27 @@ auto hash_locktable_bucket(Entry *bucket) -> sgx_sha256_hash_t *;
  * @returns the hash over the given bucket
  */
 auto hash_transactiontable_bucket(Entry *bucket) -> sgx_sha256_hash_t *;
+
+/**
+ * Gets the entry from the lock table, but verifies the integrity of the
+ * corresponding bucket via integrity hashes.
+ *
+ * @param integrityHashes hash over each bucket of the hashtable
+ * @param hashTable the lock table
+ * @param key the row ID
+ * @returns the lock for the corresponding key, or
+ * nullptr, when the verification of the hashes failed
+ */
+auto integrity_verified_get_locktable(int key) -> Lock *;
+
+/**
+ * Gets the entry from the transaction table, but verifies the integrity of the
+ * corresponding bucket via integrity hashes.
+ *
+ * @param integrityHashes hash over each bucket of the hashtable
+ * @param hashTable the transaction table
+ * @param key the transaction ID
+ * @returns the transaction for the corresponding key, or
+ * nullptr, when the verification of the hashes failed
+ */
+auto integrity_verified_get_transactiontable(int key) -> Transaction *;

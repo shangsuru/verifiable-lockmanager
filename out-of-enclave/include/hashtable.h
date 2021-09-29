@@ -13,11 +13,10 @@ Entry* newEntry(int key, void* value);
 /**
  * Maps each key to an index from 0..size-1 within the hashtable
  *
- * @param hashTable either the lock or transaction table to execute the
- * operation on
+ * @param size the number of buckets of either the lock or transaction table
  * @param key TXID or RID to map into the hashtable
  */
-int hash(HashTable* hashTable, int key);
+int hash(int size, int key);
 
 /**
  * Retrieves the value for the given key.
