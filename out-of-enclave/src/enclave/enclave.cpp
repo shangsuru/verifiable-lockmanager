@@ -27,6 +27,10 @@ void enclave_init_values(Arg arg, HashTable *lock_table,
   for (int i = 0; i < arg_enclave.num_threads; i++) {
     queue.push_back(std::queue<Job>());
   }
+
+  // Allocate space for one hash per bucket
+  transactionTableIntegrityHashes.resize(transactionTable_->size);
+  lockTableIntegrityHashes.resize(lockTable_->size);
 }
 
 void enclave_send_job(void *data) {
