@@ -35,7 +35,7 @@ auto LockManager::load_and_initialize_threads(void *tmp) -> void * {
 }
 
 void LockManager::configuration_init() {
-  arg.num_threads = 2;
+  arg.num_threads = 8;
   arg.tx_thread_id = arg.num_threads - 1;
 }
 

@@ -150,7 +150,7 @@ void LockManager::send_job(void *data) {
 
       // Send the requests to specific worker thread
       int thread_id = (int)((new_job.row_id % lockTableSize_) /
-                            (lockTableSize_ / (arg.num_threads - 1)));
+                            ((float)lockTableSize_ / (arg.num_threads - 1)));
       pthread_mutex_lock(&queue_mutex[thread_id]);
       queue[thread_id].push(new_job);
       pthread_cond_signal(&job_cond[thread_id]);
