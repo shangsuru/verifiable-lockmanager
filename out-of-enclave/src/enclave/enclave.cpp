@@ -534,17 +534,17 @@ auto hash_transactiontable_bucket(Entry *bucket) -> sgx_sha256_hash_t * {
 }
 
 auto integrity_verified_get_locktable(int key) -> Lock * {
-  // TODO: Make a deep copy of the hashTable (from untrusted to trusted memory)
-  HashTable *copy = lockTable_;
+  int index = hash(lockTable_->size, key);
+  Entry *entry = lockTable_->table[index];
 
-  int index = hash(copy->size, key);
-  Entry *entry = copy->table[index];
+  // Need to copy bucket from untrusted to protected memory to prevent malicious
+  // modifications during integrity verification
+  Entry *copy = copy_lock_bucket(entry);
 
   // Verify the integrity of the bucket
-  sgx_sha256_hash_t *hash = hash_locktable_bucket(entry);
+  sgx_sha256_hash_t *hash = hash_locktable_bucket(copy);
   if (hash == lockTableIntegrityHashes[index]) {
-    return (Lock *)get(copy, key);  // TODO: change this so that we only need to
-                                    // copy bucket instead of whole hashtable
+    return (Lock *)get(copy, key);
   }
 
   // Hashes are not the same
@@ -553,19 +553,40 @@ auto integrity_verified_get_locktable(int key) -> Lock * {
 
 auto integrity_verified_get_transactiontable(int key) -> Transaction * {
   // TODO: Make a deep copy of the bucket (from untrusted to trusted memory)
-  HashTable *copy = transactionTable_;
+  int index = hash(transactionTable_->size, key);
+  Entry *entry = transactionTable_->table[index];
 
-  int index = hash(copy->size, key);
-  Entry *entry = copy->table[index];
+  // Need to copy bucket from untrusted to protected memory to prevent malicious
+  // modifications during integrity verification
+  Entry *copy = copy_transaction_bucket(entry);
 
   // Verify the integrity of the bucket
   sgx_sha256_hash_t *hash = hash_transactiontable_bucket(entry);
   if (hash == transactionTableIntegrityHashes[index]) {
-    return (Transaction *)get(
-        copy, key);  // TODO: change this so that we only need to
-                     // copy bucket instead of whole hashtable
+    return (Transaction *)get(copy, key);
   }
 
   // Hashes are not the same
   return nullptr;
+}
+
+auto copy_lock_bucket(Entry *entry) -> Entry * {
+  if (entry == nullptr) {
+    return nullptr;
+  }
+
+  Entry *copy = newEntry(entry->key, copy_lock((Lock *)entry->value));
+  copy->next = copy_lock_bucket(entry->next);
+  return copy;
+}
+
+auto copy_transaction_bucket(Entry *entry) -> Entry * {
+  if (entry == nullptr) {
+    return nullptr;
+  }
+
+  Entry *copy =
+      newEntry(entry->key, copy_transaction((Transaction *)entry->value));
+  copy->next = copy_transaction_bucket(entry->next);
+  return copy;
 }

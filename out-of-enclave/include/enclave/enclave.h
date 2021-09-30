@@ -270,3 +270,21 @@ auto integrity_verified_get_locktable(int key) -> Lock *;
  * nullptr, when the verification of the hashes failed
  */
 auto integrity_verified_get_transactiontable(int key) -> Transaction *;
+
+/**
+ * Copies the whole bucket from untrusted to protected memory. The entries are
+ * assumed to contain locks.
+ *
+ * @param entry entry from untrusted memory to copy
+ * @returns copy in protected memory
+ */
+auto copy_lock_bucket(Entry *entry) -> Entry *;
+
+/**
+ * Copies the whole bucket from untrusted to protected memory. The entries are
+ * assumed to contain transactions.
+ *
+ * @param entry entry from untrusted memory to copy
+ * @returns copy in protected memory
+ */
+auto copy_transaction_bucket(Entry *entry) -> Entry *;
