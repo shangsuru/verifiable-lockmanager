@@ -3,7 +3,7 @@
 Arg arg_enclave;  // configuration parameters for the enclave
 int num = 0;      // global variable used to give every thread a unique ID
 sgx_thread_mutex_t global_num_mutex;  // synchronizes access to num
-sgx_thread_mutex_t *queue_mutex;  // synchronizes access to the job queue
+sgx_thread_mutex_t *queue_mutex;      // synchronizes access to the job queue
 sgx_thread_cond_t
     *job_cond;  // wakes up worker threads when a new job is available
 std::vector<std::queue<Job>> queue;  // a job queue for each worker thread
@@ -64,8 +64,9 @@ void enclave_send_job(void *data) {
       }
 
       // Send the requests to specific worker thread
-      int thread_id = (int)((new_job.row_id % lockTableSize_) /
-                            (lockTableSize_ / (arg_enclave.num_threads - 1)));
+      int thread_id =
+          (int)((new_job.row_id % lockTableSize_) /
+                ((float)lockTableSize_ / (arg_enclave.num_threads - 1)));
       sgx_thread_mutex_lock(&queue_mutex[thread_id]);
       queue[thread_id].push(new_job);
       sgx_thread_cond_signal(&job_cond[thread_id]);
