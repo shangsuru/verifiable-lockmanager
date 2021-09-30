@@ -17,7 +17,7 @@ enclave {
 
         public void enclave_init_values(Arg arg);
 
-        public void enclave_worker_thread();
+        public void enclave_process_request();
 
         public void enclave_send_job([user_check]void* data) transition_using_threads;
 
