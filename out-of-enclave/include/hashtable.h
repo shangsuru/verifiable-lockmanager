@@ -19,7 +19,7 @@ Entry* newEntry(int key, void* value);
 int hash(int size, int key);
 
 /**
- * Retrieves the value for the given key.
+ * Retrieves the value for the given key from a hashtable.
  *
  * @param hashTable either the lock or transaction table to execute the
  * operation on
@@ -29,6 +29,18 @@ int hash(int size, int key);
  * key could not be found.
  */
 auto get(HashTable* hashTable, int key) -> void*;
+
+/**
+ * Retrieves the value for the given key from a bucket.
+ *
+ * @param entry either the bucket of the lock or transaction table to execute
+ * the operation on
+ * @param key idedentifies the value, i.e. TXID or RID
+ * @returns value for the given key. Needs to be casted to the appropriate
+ * pointer type, i.e. Transaction or Lock. Or nullptr, when the corresponding
+ * key could not be found.
+ */
+auto get(Entry* entry, int key) -> void*;
 
 /**
  *  Sets the value for a given key. Doesn't do anything when the key already

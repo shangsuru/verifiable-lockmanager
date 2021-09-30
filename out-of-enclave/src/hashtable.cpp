@@ -21,14 +21,16 @@ int hash(int size, int key) { return key % size; }
 
 auto get(HashTable* hashTable, int key) -> void* {
   Entry* entry = hashTable->table[hash(hashTable->size, key)];
+  return get(entry, key);
+}
 
+auto get(Entry* entry, int key) -> void* {
   while (entry != nullptr) {
     if (entry->key == key) {
       return entry->value;
     }
     entry = entry->next;
   }
-
   return nullptr;
 }
 
