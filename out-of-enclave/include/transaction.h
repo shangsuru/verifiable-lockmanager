@@ -90,3 +90,13 @@ auto hasLock(Transaction* transaction, int rowId) -> bool;
  * @param lockTable containing all the locks indexed by row ID
  */
 void releaseAllLocks(Transaction* transaction, HashTable* lockTable);
+
+/**
+ * Creates a new transaction that has the same content as the given transaction.
+ * This is used to move a transaction that is allocated in untrusted memory into
+ * protected memory.
+ *
+ * @param transaction the transaction to copy
+ * @return copy casted as void*
+ */
+auto copy_transaction(Transaction* transaction) -> void*;
