@@ -6,9 +6,10 @@
 #include <set>
 #include <unordered_map>
 
-using std::memcpy;
-
+#include "hashtable.h"
 #include "lock.h"
+
+using std::memcpy;
 
 /**
  * The internal representation of a transaction for the lock manager.
@@ -36,9 +37,16 @@ struct Transaction {
 typedef struct Transaction Transaction;
 
 /**
- * Initializes the transaction struct
+ * Initializes the transaction struct. New transaction objects, that are created
+ * for new, not-yet registered transaction beforehand by the untrusted
+ * application always have their transaction ID set to -1 to differentiate them
+ * from transaction objects refering to already registered transactions.
+ *
+ * @param lockBudget maximum number of locks the transaction is allowed to
+ * acquire
+ * @returns a pointer to the transaction struct
  */
-Transaction* newTransaction(int transactionId, int lockBudget);
+Transaction* newTransaction(int lockBudget);
 
 /**
  * When the transaction acquires a new lock, the row ID that lock refers to is
@@ -63,8 +71,7 @@ auto addLock(Transaction* transaction, int rowId, bool isExclusive, Lock* lock)
  * @param rowId row ID of the released lock
  * @param lock the lock to release
  */
-void releaseLock(Transaction* transaction, int rowId,
-                 std::unordered_map<int, Lock*>* lockTable);
+void releaseLock(Transaction* transaction, int rowId, HashTable* lockTable);
 
 /**
  * Checks if the transaction has a lock on the specified row.
@@ -82,5 +89,14 @@ auto hasLock(Transaction* transaction, int rowId) -> bool;
  * @param Transaction transaction to execute the operation on
  * @param lockTable containing all the locks indexed by row ID
  */
-void releaseAllLocks(Transaction* transaction,
-                     std::unordered_map<int, Lock*>* lockTable);
+void releaseAllLocks(Transaction* transaction, HashTable* lockTable);
+
+/**
+ * Creates a new transaction that has the same content as the given transaction.
+ * This is used to move a transaction that is allocated in untrusted memory into
+ * protected memory.
+ *
+ * @param transaction the transaction to copy
+ * @return copy casted as void*
+ */
+auto copy_transaction(Transaction* transaction) -> void*;

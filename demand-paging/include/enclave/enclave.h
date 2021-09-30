@@ -76,7 +76,7 @@ void enclave_send_job(void *data);
  * table. The transaction table is accessed by only one single thread for all
  * requests to register a transaction.
  */
-void enclave_worker_thread();
+void enclave_process_request();
 
 /**
  * @returns the size of the encrypted DataToSeal struct

@@ -66,25 +66,11 @@ TEST(LockTest, upgrade) {
   EXPECT_EQ(owners.size(), 1);
 }
 
-// Concurrently adding and releasing locks
-TEST(LockTest, concurrentlyAddingAndReleasingLocks) {
+TEST(LockTest, releaseUnownedLock) {
   Lock lock = Lock();
-  lock.getSharedAccess(1);
-  lock.getSharedAccess(2);
-  lock.getSharedAccess(3);
-  lock.getSharedAccess(4);
-
-  std::thread t1{&Lock::release, &lock, 1};
-  std::thread t2{&Lock::getSharedAccess, &lock, 0};
-  std::thread t3{&Lock::release, &lock, 3};
-
-  t1.join();
-  t2.join();
-  t3.join();
-
-  auto owners = lock.getOwners();
-  EXPECT_EQ(owners.size(), 3);
-  EXPECT_EQ(owners.count(2), 1);
-  EXPECT_EQ(owners.count(4), 1);
-  EXPECT_EQ(owners.count(0), 1);
+  lock.getExclusiveAccess(kTransactionIdA);
+  lock.release(kTransactionIdB);
+  EXPECT_EQ(lock.getMode(), Lock::LockMode::kExclusive);
+  EXPECT_EQ(lock.getOwners().count(kTransactionIdA), 1);
+  EXPECT_EQ(lock.getOwners().size(), 1);
 }

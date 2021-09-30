@@ -2,24 +2,22 @@
 
 Arg arg_enclave;  // configuration parameters for the enclave
 int num = 0;      // global variable used to give every thread a unique ID
-int transaction_count = 0;        // counts the number of active transactions
-sgx_thread_mutex_t global_mutex;  // synchronizes access to num
-sgx_thread_mutex_t *queue_mutex;  // synchronizes access to the job queue
+int transaction_count = 0;  // counts the number of active transactions
+sgx_thread_mutex_t global_num_mutex;  // synchronizes access to num
+sgx_thread_mutex_t *queue_mutex;      // synchronizes access to the job queue
 sgx_thread_cond_t
     *job_cond;  // wakes up worker threads when a new job is available
 std::vector<std::queue<Job>> queue;  // a job queue for each worker threads
 
-void enclave_init_values(Arg arg) {
+void enclave_init_values(Arg arg, HashTable *lock_table,
+                         HashTable *transaction_table) {
   // Get configuration parameters
   arg_enclave = arg;
-  transactionTableSize_ = arg.transaction_table_size;
-  lockTableSize_ = arg.lock_table_size;
-
-  transactionTable_ = new std::unordered_map<int, Transaction *>();
-  lockTable_ = new std::unordered_map<int, Lock *>();
+  lockTable_ = lock_table;
+  transactionTable_ = transaction_table;
 
   // Initialize mutex variables
-  sgx_thread_mutex_init(&global_mutex, NULL);
+  sgx_thread_mutex_init(&global_num_mutex, NULL);
   queue_mutex = (sgx_thread_mutex_t *)malloc(sizeof(sgx_thread_mutex_t) *
                                              arg_enclave.num_threads);
   job_cond = (sgx_thread_cond_t *)malloc(sizeof(sgx_thread_cond_t) *
@@ -29,6 +27,10 @@ void enclave_init_values(Arg arg) {
   for (int i = 0; i < arg_enclave.num_threads; i++) {
     queue.push_back(std::queue<Job>());
   }
+
+  // Allocate space for one hash per bucket
+  transactionTableIntegrityHashes.resize(transactionTable_->size);
+  lockTableIntegrityHashes.resize(lockTable_->size);
 }
 
 void enclave_send_job(void *data) {
@@ -60,7 +62,7 @@ void enclave_send_job(void *data) {
       new_job.error = ((Job *)data)->error;
 
       // If transaction is not registered, abort the request
-      if ((*transactionTable_)[new_job.transaction_id] == nullptr) {
+      if (!contains(transactionTable_, new_job.transaction_id)) {
         print_error("Need to register transaction before lock requests");
         *new_job.error = true;
         *new_job.finished = true;
@@ -68,8 +70,9 @@ void enclave_send_job(void *data) {
       }
 
       // Send the requests to specific worker thread
-      int thread_id = (int)((new_job.row_id % lockTableSize_) /
-                            (lockTableSize_ / (arg_enclave.num_threads - 1)));
+      int thread_id =
+          (int)((new_job.row_id % lockTable_->size) /
+                ((float)lockTable_->size / (arg_enclave.num_threads - 1)));
       sgx_thread_mutex_lock(&queue_mutex[thread_id]);
       queue[thread_id].push(new_job);
       sgx_thread_cond_signal(&job_cond[thread_id]);
@@ -96,8 +99,8 @@ void enclave_send_job(void *data) {
   }
 }
 
-void enclave_worker_thread() {
-  sgx_thread_mutex_lock(&global_mutex);
+void enclave_process_request() {
+  sgx_thread_mutex_lock(&global_num_mutex);
 
   int thread_id = num;
   num += 1;
@@ -105,7 +108,7 @@ void enclave_worker_thread() {
   sgx_thread_mutex_init(&queue_mutex[thread_id], NULL);
   sgx_thread_cond_init(&job_cond[thread_id], NULL);
 
-  sgx_thread_mutex_unlock(&global_mutex);
+  sgx_thread_mutex_unlock(&global_num_mutex);
 
   sgx_thread_mutex_lock(&queue_mutex[thread_id]);
 
@@ -116,7 +119,7 @@ void enclave_worker_thread() {
       continue;
     }
 
-    print_info("Worker got a job");
+    print_info(("Worker " + std::to_string(thread_id) + " got a job").c_str());
     Job cur_job = queue[thread_id].front();
     Command command = cur_job.command;
 
@@ -182,13 +185,22 @@ void enclave_worker_thread() {
         print_info(("Registering transaction " + std::to_string(transactionId))
                        .c_str());
 
-        if (transactionTable_->find(transactionId) !=
-            transactionTable_->end()) {
+        // TODO: Verify integrity of transaction table
+        // TODO: for this to work, we need to work on our own local copy of the
+        // hashtable
+
+        auto transaction = (Transaction *)get(transactionTable_, transactionId);
+        if (transaction == nullptr || transaction->transaction_id != 0) {
+          // New transaction objects, that are created for new, not-yet
+          // registered transaction beforehand by the untrusted application
+          // always have their transaction ID set to -1 to differentiate them
+          // from transaction objects refering to already registered
+          // transactions
           print_error("Transaction is already registered");
           *cur_job.error = true;
         } else {
-          (*transactionTable_)[transactionId] =
-              newTransaction(transactionId, lockBudget);
+          transaction->transaction_id = transactionId;
+          transaction->lock_budget = lockBudget;
         }
         *cur_job.finished = true;
         transaction_count++;
@@ -302,17 +314,17 @@ auto acquire_lock(void *signature, int transactionId, int rowId,
   bool ok;
 
   // Get the transaction object for the given transaction ID
-  auto transaction = (*transactionTable_)[transactionId];
-  if (transaction == nullptr) {
+  auto transaction = (Transaction *)get(transactionTable_, transactionId);
+  if (transaction == nullptr || transaction->transaction_id == 0) {
     print_error("Transaction was not registered");
     return false;
   }
 
   // Get the lock object for the given row ID
-  auto lock = (*lockTable_)[rowId];
+  auto lock = (Lock *)get(lockTable_, rowId);
   if (lock == nullptr) {
-    lock = newLock();
-    (*lockTable_)[rowId] = lock;
+    print_error("Lock not allocated in untrusted app");
+    return false;
   }
 
   // Check if 2PL is violated
@@ -352,16 +364,8 @@ abort:
   return false;
 
 sign:
-  int block_timeout = get_block_timeout();
-
-  // Get string representation of the lock tuple:
-  // <TRANSACTION-ID>_<ROW-ID>_<MODE>_<BLOCKTIMEOUT>,
-  // where mode means, if the lock is for shared or exclusive access
-  std::string mode = lock->exclusive ? "X" : "S";
-
-  std::string string_to_sign = std::to_string(transactionId) + "_" +
-                               std::to_string(rowId) + "_" + mode + "_" +
-                               std::to_string(block_timeout);
+  std::string string_to_sign =
+      lock_to_string(transactionId, rowId, lock->exclusive);
 
   sgx_ecc_state_handle_t context = NULL;
   sgx_ecc256_open_context(&context);
@@ -370,27 +374,19 @@ sign:
                  &ec256_private_key, (sgx_ec256_signature_t *)signature,
                  context);
 
-  int ret = verify(string_to_sign.c_str(), (void *)signature,
-                   sizeof(sgx_ec256_signature_t));
-  if (ret != SGX_SUCCESS) {
-    print_error("Failed to verify signature");
-  } else {
-    print_info("Signature successfully verified");
-  }
-
   return true;
 }
 
 void release_lock(int transactionId, int rowId) {
   // Get the transaction object
-  auto transaction = (*transactionTable_)[transactionId];
+  auto transaction = (Transaction *)get(transactionTable_, transactionId);
   if (transaction == nullptr) {
     print_error("Transaction was not registered");
     return;
   }
 
   // Get the lock object
-  auto lock = (*lockTable_)[rowId];
+  auto lock = (Lock *)get(lockTable_, rowId);
   if (lock == nullptr) {
     print_error("Lock does not exist");
     return;
@@ -401,8 +397,196 @@ void release_lock(int transactionId, int rowId) {
 
 void abort_transaction(Transaction *transaction) {
   transaction_count--;
-  transactionTable_->erase(transaction->transaction_id);
+  transaction->transaction_id = 0;
+  remove(transactionTable_, transaction->transaction_id);
   releaseAllLocks(transaction, lockTable_);
-  delete[] transaction->locked_rows;
-  delete transaction;
+}
+
+auto verify_signature(char *signature, int transactionId, int rowId,
+                      int isExclusive) -> int {
+  std::string plain = lock_to_string(transactionId, rowId, isExclusive);
+
+  std::string signature_string(signature);
+  std::string x = signature_string.substr(0, signature_string.find("-"));
+  std::string y = signature_string.substr(signature_string.find("-") + 1,
+                                          signature_string.length());
+  sgx_ec256_signature_t sig_struct;
+  memcpy(sig_struct.x, base64_decode(x).c_str(), 8 * sizeof(uint32_t));
+  memcpy(sig_struct.y, base64_decode(y).c_str(), 8 * sizeof(uint32_t));
+
+  int ret =
+      verify(plain.c_str(), (void *)&sig_struct, sizeof(sgx_ec256_signature_t));
+  if (ret != SGX_SUCCESS) {
+    print_error("Failed to verify signature");
+  } else {
+    print_info("Signature successfully verified");
+  }
+  return ret;
+}
+
+auto lock_to_string(int transactionId, int rowId, bool isExclusive)
+    -> std::string {
+  unsigned int block_timeout = get_block_timeout();
+
+  std::string mode;
+  if (isExclusive) {
+    mode = "X";
+  } else {
+    mode = "S";
+  }
+
+  return std::to_string(transactionId) + "_" + std::to_string(rowId) + "_" +
+         mode + "_" + std::to_string(block_timeout);
+}
+
+auto hash_locktable_bucket(Entry *bucket) -> sgx_sha256_hash_t * {
+  if (bucket == nullptr) {
+    return nullptr;
+  }
+
+  Entry *entry = bucket;
+  uint8_t *data;     // the serialized entry with lock
+  uint32_t size;     // size of the serialized entry
+  sgx_status_t ret;  // status code of sgx library calls
+
+  // To hold the hash over the entries in the bucket
+  sgx_sha256_hash_t *p_hash =
+      (sgx_sha256_hash_t *)malloc(sizeof(sgx_sha256_hash_t));
+
+  // Need to initialize a handle struct, when we incrementally build the hash
+  sgx_sha_state_handle_t *p_sha_handle =
+      (sgx_sha_state_handle_t *)malloc(sizeof(sgx_sha_state_handle_t));
+  ret = sgx_sha256_init(p_sha_handle);
+  if (ret != SGX_SUCCESS) {
+    print_error("Initializing SHA handler failed");
+  }
+
+  do {  // Update the hash with each entry in the bucket
+    // Only include locks with owners into the hash
+    if (((Lock *)entry->value)->num_owners != 0) {
+      size = locktable_entry_to_uint8_t(entry, data);
+      ret = sgx_sha256_update(data, size, *p_sha_handle);
+      if (ret != SGX_SUCCESS) {
+        print_error("Updating hash failed");
+      }
+    }
+    entry = entry->next;
+  } while (entry != nullptr);
+
+  ret = sgx_sha256_get_hash(*p_sha_handle, p_hash);
+  if (ret != SGX_SUCCESS) {
+    print_error("Getting hash failed");
+  }
+
+  ret = sgx_sha256_close(*p_sha_handle);
+  if (ret != SGX_SUCCESS) {
+    print_error("Closing SHA handle failed");
+  }
+
+  return p_hash;
+}
+
+auto hash_transactiontable_bucket(Entry *bucket) -> sgx_sha256_hash_t * {
+  if (bucket == nullptr) {
+    return nullptr;
+  }
+
+  Entry *entry = bucket;
+  uint8_t *data;     // the serialized entry with transaction
+  uint32_t size;     // size of the serialized entry
+  sgx_status_t ret;  // status code of sgx library calls
+
+  // To hold the hash over the entries in the bucket
+  sgx_sha256_hash_t *p_hash =
+      (sgx_sha256_hash_t *)malloc(sizeof(sgx_sha256_hash_t));
+
+  // Need to initialize a handle struct, when we incrementally build the hash
+  sgx_sha_state_handle_t *p_sha_handle =
+      (sgx_sha_state_handle_t *)malloc(sizeof(sgx_sha_state_handle_t));
+  ret = sgx_sha256_init(p_sha_handle);
+  if (ret != SGX_SUCCESS) {
+    print_error("Initializing SHA handler failed");
+  }
+
+  do {  // Update the hash with each entry in the bucket
+    // Only include registered transactions
+    if (((Transaction *)entry->value)->transaction_id != 0) {  // TODO:
+      size = transactiontable_entry_to_uint8_t(entry, data);
+      ret = sgx_sha256_update(data, size, *p_sha_handle);
+      if (ret != SGX_SUCCESS) {
+        print_error("Updating hash failed");
+      }
+    }
+    entry = entry->next;
+  } while (entry != nullptr);
+
+  ret = sgx_sha256_get_hash(*p_sha_handle, p_hash);
+  if (ret != SGX_SUCCESS) {
+    print_error("Getting hash failed");
+  }
+
+  ret = sgx_sha256_close(*p_sha_handle);
+  if (ret != SGX_SUCCESS) {
+    print_error("Closing SHA handle failed");
+  }
+
+  return p_hash;
+}
+
+auto integrity_verified_get_locktable(int key) -> Lock * {
+  int index = hash(lockTable_->size, key);
+  Entry *entry = lockTable_->table[index];
+
+  // Need to copy bucket from untrusted to protected memory to prevent malicious
+  // modifications during integrity verification
+  Entry *copy = copy_lock_bucket(entry);
+
+  // Verify the integrity of the bucket
+  sgx_sha256_hash_t *hash = hash_locktable_bucket(copy);
+  if (hash == lockTableIntegrityHashes[index]) {
+    return (Lock *)get(copy, key);
+  }
+
+  // Hashes are not the same
+  return nullptr;
+}
+
+auto integrity_verified_get_transactiontable(int key) -> Transaction * {
+  // TODO: Make a deep copy of the bucket (from untrusted to trusted memory)
+  int index = hash(transactionTable_->size, key);
+  Entry *entry = transactionTable_->table[index];
+
+  // Need to copy bucket from untrusted to protected memory to prevent malicious
+  // modifications during integrity verification
+  Entry *copy = copy_transaction_bucket(entry);
+
+  // Verify the integrity of the bucket
+  sgx_sha256_hash_t *hash = hash_transactiontable_bucket(entry);
+  if (hash == transactionTableIntegrityHashes[index]) {
+    return (Transaction *)get(copy, key);
+  }
+
+  // Hashes are not the same
+  return nullptr;
+}
+
+auto copy_lock_bucket(Entry *entry) -> Entry * {
+  if (entry == nullptr) {
+    return nullptr;
+  }
+
+  Entry *copy = newEntry(entry->key, copy_lock((Lock *)entry->value));
+  copy->next = copy_lock_bucket(entry->next);
+  return copy;
+}
+
+auto copy_transaction_bucket(Entry *entry) -> Entry * {
+  if (entry == nullptr) {
+    return nullptr;
+  }
+
+  Entry *copy =
+      newEntry(entry->key, copy_transaction((Transaction *)entry->value));
+  copy->next = copy_transaction_bucket(entry->next);
+  return copy;
 }

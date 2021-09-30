@@ -10,29 +10,20 @@ void RunClient() {
       grpc::CreateChannel(target_address, grpc::InsecureChannelCredentials()));
 
   unsigned int transaction_id = 1;
-  const unsigned int default_lock_budget = 10;
+  const unsigned int default_lock_budget = 100;
 
   client.registerTransaction(transaction_id, default_lock_budget);
-  client.registerTransaction(transaction_id + 1, default_lock_budget);
-  client.requestExclusiveLock(transaction_id, 0);
-  client.requestUnlock(transaction_id, 0);
-  client.requestSharedLock(transaction_id + 1, 0);
 
-  /*unsigned int i = 0;
-  std::thread t1(requestLocks, std::ref(client), i++);
-  std::thread t2(requestLocks, std::ref(client), i++);
-  std::thread t3(requestLocks, std::ref(client), i++);
-  std::thread t4(requestLocks, std::ref(client), i++);
-  std::thread t5(requestLocks, std::ref(client), i++);
-  std::thread t6(requestLocks, std::ref(client), i++);
-  std::thread t7(requestLocks, std::ref(client), i++);
-  t1.join();
-  t2.join();
-  t3.join();
-  t4.join();
-  t5.join();
-  t6.join();
-  t7.join();*/
+  int num_threads = 8;
+  unsigned int row_id = 1;
+  std::vector<std::thread> threads;
+  for (int i = 0; i < num_threads; i++) {
+    threads.push_back(std::thread(requestLocks, std::ref(client), row_id++));
+  }
+
+  for (int i = 0; i < num_threads; i++) {
+    threads[i].join();
+  }
 }
 
 auto main() -> int {

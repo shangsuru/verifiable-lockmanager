@@ -1,8 +1,8 @@
 #include "server.h"
 
 auto LockingServiceImpl::RegisterTransaction(ServerContext* context,
-                                             const Registration* request,
-                                             Acceptance* response) -> Status {
+                                             const RegistrationRequest* request,
+                                             RegistrationResponse* response) -> Status {
   unsigned int transaction_id = request->transaction_id();
   unsigned int lock_budget = request->lock_budget();
 

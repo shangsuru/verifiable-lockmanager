@@ -29,16 +29,16 @@ auto LockManager::load_and_initialize_enclave(sgx_enclave_id_t *eid)
   return ret;
 }
 
-auto LockManager::load_and_initialize_threads(void *tmp) -> void * {
-  enclave_worker_thread(global_eid);
+auto LockManager::create_worker_thread(void *tmp) -> void * {
+  enclave_process_request(global_eid);
   return 0;
 }
 
 void LockManager::configuration_init() {
-  arg.num_threads = 2;
+  arg.num_threads = 8;
   arg.tx_thread_id = arg.num_threads - 1;
-  arg.lock_table_size = 10000;
-  arg.transaction_table_size = 200;
+  arg.lock_table_size = 10;
+  arg.transaction_table_size = 20;
 }
 
 LockManager::LockManager() {
@@ -51,14 +51,16 @@ LockManager::LockManager() {
     // TODO: implement error handling
   }
 
-  enclave_init_values(global_eid, arg);
+  lockTable = newHashTable(arg.lock_table_size);
+  transactionTable = newHashTable(arg.transaction_table_size);
+  enclave_init_values(global_eid, arg, lockTable, transactionTable);
 
-  // Create threads for lock requests and for registering transactions
+  // Create worker threads inside the enclave to serve lock requests and
+  // registrations of transactions
   threads = (pthread_t *)malloc(sizeof(pthread_t) * (arg.num_threads));
   spdlog::info("Initializing " + std::to_string(arg.num_threads) + " threads");
   for (int i = 0; i < arg.num_threads; i++) {
-    pthread_create(&threads[i], NULL, &LockManager::load_and_initialize_threads,
-                   this);
+    pthread_create(&threads[i], NULL, &LockManager::create_worker_thread, this);
   }
 
   // Generate new keys if keys from sealed storage cannot be found
@@ -73,15 +75,16 @@ LockManager::LockManager() {
 
 LockManager::~LockManager() {
   // TODO: Destructor never called (esp. on CTRL+C shutdown)!
+
   // Send QUIT to worker threads
-  create_job(QUIT);
+  create_enclave_job(QUIT);
 
   spdlog::info("Waiting for thread to stop");
   for (int i = 0; i < arg.num_threads; i++) {
     pthread_join(threads[i], NULL);
   }
 
-  spdlog::info("Freing threads");
+  spdlog::info("Freeing threads");
   free(threads);
 
   spdlog::info("Destroying enclave");
@@ -90,19 +93,33 @@ LockManager::~LockManager() {
 
 auto LockManager::registerTransaction(int transactionId, int lockBudget)
     -> bool {
-    return create_job(REGISTER, transactionId, 0, lockBudget).second;
+  new_transaction_mut.lock();
+  auto transaction = (Transaction *)get(transactionTable, transactionId);
+  if (transaction != nullptr && transaction->transaction_id != 0) {
+    spdlog::error("Transaction already registered");
+    return false;
+  }
+  set(transactionTable, transactionId, (void *)newTransaction(lockBudget));
+  new_transaction_mut.unlock();
+  return create_enclave_job(REGISTER, transactionId, 0, lockBudget).second;
 };
 
 auto LockManager::lock(int transactionId, int rowId, bool isExclusive)
     -> std::pair<std::string, bool> {
-  if (isExclusive) {
-    return create_job(EXCLUSIVE, transactionId, rowId);
+  new_lock_mut.lock();
+  if (!contains(lockTable, rowId)) {
+    set(lockTable, rowId, (void *)newLock());
   }
-  return create_job(SHARED, transactionId, rowId);
+  new_lock_mut.unlock();
+
+  if (isExclusive) {
+    return create_enclave_job(EXCLUSIVE, transactionId, rowId);
+  }
+  return create_enclave_job(SHARED, transactionId, rowId);
 };
 
 void LockManager::unlock(int transactionId, int rowId) {
-  create_job(UNLOCK, transactionId, rowId);
+  create_enclave_job(UNLOCK, transactionId, rowId);
 };
 
 auto LockManager::initialize_enclave() -> bool {
@@ -197,8 +214,9 @@ auto LockManager::read_and_unseal_keys() -> bool {
   return true;
 }
 
-auto LockManager::create_job(Command command, int transaction_id, int row_id,
-                             int lock_budget) -> std::pair<std::string, bool> {
+auto LockManager::create_enclave_job(Command command, int transaction_id,
+                                     int row_id, int lock_budget)
+    -> std::pair<std::string, bool> {
   // Set job parameters
   Job job;
   job.command = command;
@@ -207,12 +225,13 @@ auto LockManager::create_job(Command command, int transaction_id, int row_id,
   job.row_id = row_id;
   job.lock_budget = lock_budget;
 
+  // Need to track, when job is finished or error has occurred
   if (command == SHARED || command == EXCLUSIVE || command == REGISTER) {
-    // Need to track, when job is finished
+    // Allocate dynamic memory in the untrusted part of the application, so the
+    // enclave can modify it via its pointer
     job.finished = new bool;
-    *job.finished = false;
-    // Need to track, if an error occured
     job.error = new bool;
+    *job.finished = false;
     *job.error = false;
   }
 
@@ -250,4 +269,19 @@ auto LockManager::create_job(Command command, int transaction_id, int row_id,
   }
 
   return std::make_pair(NO_SIGNATURE, true);
+}
+
+auto LockManager::verify_signature_string(std::string signature,
+                                          int transactionId, int rowId,
+                                          int isExclusive) -> bool {
+  int res = SGX_SUCCESS;
+  verify_signature(global_eid, &res, (char *)signature.c_str(), transactionId,
+                   rowId, isExclusive);
+  if (res != SGX_SUCCESS) {
+    print_error("Failed to verify signature");
+    return false;
+  } else {
+    print_info("Signature successfully verified");
+    return true;
+  }
 }

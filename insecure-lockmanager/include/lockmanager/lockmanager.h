@@ -73,7 +73,7 @@ class LockManager {
    * @param object pointer to lockmanager object (this) to be able to call
    * worker thread member function from within static function
    */
-  static auto load_and_initialize_threads(void *tmp) -> void *;
+  static auto create_worker_thread(void *tmp) -> void *;
 
   /**
    * Initializes configuration parameters.
@@ -100,7 +100,7 @@ class LockManager {
    * lock table. The transaction table is accessed by only one single thread for
    * all requests to register a transaction.
    */
-  void worker_thread();
+  void process_request();
 
   /**
    * Function that receives a job, which can be a lock request or a request to
@@ -147,7 +147,7 @@ class LockManager {
   pthread_t
       *threads;  // worker threads that execute requests inside the enclave
 
-  pthread_mutex_t global_mutex;  // synchronizes access to num
+  pthread_mutex_t global_num_mutex;  // synchronizes access to num
   pthread_mutex_t *queue_mutex;  // synchronizes access to the job queue
   pthread_cond_t
       *job_cond;  // wakes up worker threads when a new job is available

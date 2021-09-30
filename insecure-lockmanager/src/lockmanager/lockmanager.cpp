@@ -2,8 +2,8 @@
 
 size_t transactionTableSize_;
 size_t lockTableSize_;
-auto LockManager::load_and_initialize_threads(void *object) -> void * {
-  reinterpret_cast<LockManager *>(object)->worker_thread();
+auto LockManager::create_worker_thread(void *object) -> void * {
+  reinterpret_cast<LockManager *>(object)->process_request();
   return 0;
 }
 
@@ -22,7 +22,7 @@ LockManager::LockManager() {
   lockTableSize_ = arg.lock_table_size;
 
   // Initialize mutex variables
-  pthread_mutex_init(&global_mutex, NULL);
+  pthread_mutex_init(&global_num_mutex, NULL);
   queue_mutex =
       (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t) * arg.num_threads);
   job_cond = (pthread_cond_t *)malloc(sizeof(pthread_cond_t) * arg.num_threads);
@@ -32,14 +32,13 @@ LockManager::LockManager() {
     queue.push_back(std::queue<Job>());
   }
 
-  // Create threads for lock requests and an additional one for registering
-  // transactions
+  // Create worker threads to serve lock requests and registrations of transactions
   threads = (pthread_t *)malloc(sizeof(pthread_t) * (arg.num_threads));
   spdlog::info("Initializing " + std::to_string(arg.num_threads) + " threads");
   for (int i = 0; i < arg.num_threads; i++) {
     pthread_mutex_init(&queue_mutex[i], NULL);
     pthread_cond_init(&job_cond[i], NULL);
-    pthread_create(&threads[i], NULL, &LockManager::load_and_initialize_threads,
+    pthread_create(&threads[i], NULL, &LockManager::create_worker_thread,
                    this);
   }
 }
@@ -56,7 +55,7 @@ LockManager::~LockManager() {
     pthread_cond_destroy(&job_cond[i]);
   }
 
-  spdlog::info("Freing threads");
+  spdlog::info("Freeing threads");
   free(threads);
 }
 
@@ -85,12 +84,12 @@ auto LockManager::create_job(Command command, unsigned int transaction_id,
   job.transaction_id = transaction_id;
   job.row_id = row_id;
 
+  // Need to track, when job is finished or error has occurred
   if (command == SHARED || command == EXCLUSIVE || command == REGISTER) {
-    // Need to track, when job is finished
-    job.finished = new bool;
-    *job.finished = false;
-    // Need to track, if an error occured
+    // Allocate dynamic memory in the untrusted part of the application, so the enclave can modify it via its pointer
+    job.finished = new bool; 
     job.error = new bool;
+    *job.finished = false;
     *job.error = false;
   }
 
@@ -177,13 +176,13 @@ void LockManager::send_job(void *data) {
   }
 }
 
-void LockManager::worker_thread() {
-  pthread_mutex_lock(&global_mutex);
+void LockManager::process_request() {
+  pthread_mutex_lock(&global_num_mutex);
 
   int thread_id = num;
   num += 1;
 
-  pthread_mutex_unlock(&global_mutex);
+  pthread_mutex_unlock(&global_num_mutex);
 
   pthread_mutex_lock(&queue_mutex[thread_id]);
   while (1) {
@@ -286,7 +285,8 @@ auto LockManager::acquire_lock(unsigned int transactionId, unsigned int rowId,
   // Check if 2PL is violated
   if (transaction->getPhase() == Transaction::Phase::kShrinking) {
     spdlog::error("Cannot acquire more locks according to 2PL");
-    goto abort;
+    abort_transaction(transaction);
+    return false;
   }
 
   // Check for upgrade request
@@ -295,7 +295,8 @@ auto LockManager::acquire_lock(unsigned int transactionId, unsigned int rowId,
     ret = lock->upgrade(transactionId);
 
     if (!ret) {
-      goto abort;
+      abort_transaction(transaction);
+      return false;
     }
     return ret;
   }
@@ -309,15 +310,14 @@ auto LockManager::acquire_lock(unsigned int transactionId, unsigned int rowId,
     }
 
     if (!ret) {
-      goto abort;
+      abort_transaction(transaction);
+      return false;
     }
 
     return ret;
   }
 
   spdlog::error("Request for already acquired lock");
-
-abort:
   abort_transaction(transaction);
   return false;
 }

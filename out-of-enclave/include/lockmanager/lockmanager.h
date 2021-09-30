@@ -2,15 +2,16 @@
 
 #include <iostream>
 #include <memory>
+#include <mutex>
 #include <stdexcept>
 #include <string>
-#include <unordered_map>
 
 #include "base64-encoding.h"
 #include "common.h"
 #include "enclave_u.h"
 #include "errors.h"
 #include "files.h"
+#include "hashtable.h"
 #include "lock.h"
 #include "sgx_eid.h"
 #include "sgx_tcrypto.h"
@@ -110,6 +111,20 @@ class LockManager {
    */
   void unlock(int transactionId, int rowId);
 
+  /**
+   * This function is just for testing, to demonstrate that signatures created
+   * on lock requests are valid.
+   *
+   * @param signature containing the signature for the lock that was
+   * requested
+   * @param transactionId identifying the transaction that requested the lock
+   * @param rowId identifying the row the lock is refering to
+   * @param isExclusive if the lock is a shared or exclusive lock (boolean)
+   * @returns true, when the signature is valid
+   */
+  auto verify_signature_string(std::string signature, int transactionId,
+                               int rowId, int isExclusive) -> bool;
+
  private:
   /**
    * Initializes the enclave (in DEBUG mode).
@@ -147,17 +162,24 @@ class LockManager {
    *
    * @param tmp not used
    */
-  static auto load_and_initialize_threads(void *tmp) -> void *;
+  static auto create_worker_thread(void *tmp) -> void *;
 
   /**
    * Initializes the configuration parameters for the enclave
    */
   void configuration_init();
 
-  auto create_job(Command command, int transaction_id = 0, int row_id = 0,
-                  int lock_budget = 0) -> std::pair<std::string, bool>;
+  auto create_enclave_job(Command command, int transaction_id = 0,
+                          int row_id = 0, int lock_budget = 0)
+      -> std::pair<std::string, bool>;
 
   Arg arg;  // configuration parameters for the enclave
   pthread_t
       *threads;  // worker threads that execute requests inside the enclave
+  HashTable *lockTable;
+  HashTable *transactionTable;
+  std::mutex new_lock_mut;  // controls the insertion of new lock objects into
+                            // the lock table
+  std::mutex new_transaction_mut;  // controls the insertion of new transaction
+                                   // objects into the lock table
 };

@@ -4,189 +4,123 @@
 #include <functional>
 #include <thread>
 
+#include "hashtable.h"
 #include "lock.h"
 #include "transaction.h"
-
-using libcuckoo::cuckoohash_map;
 
 class TransactionTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    lock_ = std::make_shared<Lock>();
-    transactionA_ =
-        std::make_unique<Transaction>(kTransactionIdA_, kLockBudget_);
-    transaction_b_ =
-        std::make_unique<Transaction>(kTransactionIdB_, kLockBudget_);
-    mock_lock_table_ =
-        std::make_unique<cuckoohash_map<unsigned int, std::shared_ptr<Lock>>>();
+    lock_ = newLock();
+    transactionA_ = newTransaction(kLockBudget_);
+    transactionA_->transaction_id = kTransactionIdA_;
+    transactionB_ = newTransaction(kLockBudget_);
+    transactionB_->transaction_id = kTransactionIdB_;
+    lockTable_ = newHashTable(100);
   };
+
+  void TearDown() override {
+    delete transactionA_;
+    delete transactionB_;
+  }
 
   const unsigned int kTransactionIdA_ = 0;
   const unsigned int kTransactionIdB_ = 1;
   const unsigned int kLockBudget_ = 10;
   std::atomic<unsigned int> rowId_ = 0;
-  std::shared_ptr<Lock> lock_;
-  std::unique_ptr<Transaction> transactionA_;
-  std::unique_ptr<Transaction> transaction_b_;
-  std::unique_ptr<cuckoohash_map<unsigned int, std::shared_ptr<Lock>>>
-      mock_lock_table_;
+  Lock* lock_;
+  Transaction* transactionA_;
+  Transaction* transactionB_;
+  HashTable* lockTable_;
 
  public:
-  void threadAcquireLock(std::unique_ptr<Transaction>& transaction,
-                         unsigned int rowId) {
-    auto lock = std::make_shared<Lock>();
-    lock->getSharedAccess(transaction->getTransactionId());
-    mock_lock_table_->insert(rowId, lock);
-    transaction->addLock(rowId, Lock::LockMode::kShared, lock);
+  void acquireLock(Transaction* transaction, unsigned int rowId) {
+    auto lock = newLock();
+    getSharedAccess(lock, transaction->transaction_id);
+    set(lockTable_, rowId, (void*)lock);
+    addLock(transaction, rowId, false, lock);
   };
 };
 
 // Several transactions can hold a shared lock together
 TEST_F(TransactionTest, multipleSharedOwners) {
-  transactionA_->addLock(rowId_, Lock::LockMode::kShared, lock_);
-  transaction_b_->addLock(rowId_, Lock::LockMode::kShared, lock_);
+  addLock(transactionA_, rowId_, false, lock_);
+  addLock(transactionB_, rowId_, false, lock_);
 
-  EXPECT_TRUE(transactionA_->hasLock(rowId_));
-  EXPECT_TRUE(transaction_b_->hasLock(rowId_));
+  EXPECT_TRUE(hasLock(transactionA_, rowId_));
+  EXPECT_TRUE(hasLock(transactionB_, rowId_));
 };
 
 // Cannot get exclusive access on a shared lock
 TEST_F(TransactionTest, noExclusiveOnShared) {
-  transactionA_->addLock(rowId_, Lock::LockMode::kShared, lock_);
-  EXPECT_TRUE(transactionA_->hasLock(rowId_));
-
-  try {
-    transaction_b_->addLock(rowId_, Lock::LockMode::kExclusive, lock_);
-    FAIL() << "Expected std::domain_error";
-  } catch (const std::domain_error& e) {
-    EXPECT_EQ(e.what(), std::string("Couldn't acquire lock"));
-  } catch (...) {
-    FAIL() << "Expected std::domain_error";
-  }
+  addLock(transactionA_, rowId_, false, lock_);
+  EXPECT_TRUE(hasLock(transactionA_, rowId_));
+  EXPECT_FALSE(addLock(transactionB_, rowId_, true, lock_));
 };
 
 // Cannot get shared access on an exclusive lock
 TEST_F(TransactionTest, noSharedOnExclusive) {
-  transactionA_->addLock(rowId_, Lock::LockMode::kExclusive, lock_);
-  EXPECT_TRUE(transactionA_->hasLock(rowId_));
-
-  try {
-    transaction_b_->addLock(rowId_, Lock::LockMode::kShared, lock_);
-    FAIL() << "Expected std::domain_error";
-  } catch (const std::domain_error& e) {
-    EXPECT_EQ(e.what(), std::string("Couldn't acquire lock"));
-  } catch (...) {
-    FAIL() << "Expected std::domain_error";
-  }
+  addLock(transactionA_, rowId_, true, lock_);
+  EXPECT_TRUE(hasLock(transactionA_, rowId_));
+  EXPECT_FALSE(addLock(transactionB_, rowId_, false, lock_));
 };
 
 // Enters shrinking phase after releasing a lock
 TEST_F(TransactionTest, entersShrinkingPhase) {
-  transactionA_->addLock(rowId_, Lock::LockMode::kShared, lock_);
+  EXPECT_TRUE(addLock(transactionA_, rowId_, false, lock_));
+  set(lockTable_, rowId_, (void*)lock_);
 
-  auto locked_rows = transactionA_->getLockedRows();
-  EXPECT_EQ(locked_rows.count(rowId_), 1);
-  EXPECT_EQ(locked_rows.size(), 1);
-  EXPECT_EQ(transactionA_->getPhase(), Transaction::Phase::kGrowing);
+  auto locked_rows = transactionA_->locked_rows;
+  EXPECT_EQ(transactionA_->num_locked, 1);
+  EXPECT_EQ(locked_rows[0], kTransactionIdA_);
+  EXPECT_TRUE(transactionA_->growing_phase);
 
-  transactionA_->releaseLock(rowId_, lock_);
+  releaseLock(transactionA_, rowId_, lockTable_);
 
-  locked_rows = transactionA_->getLockedRows();
-  EXPECT_EQ(locked_rows.count(rowId_), 0);
-  EXPECT_EQ(locked_rows.size(), 0);
-  EXPECT_EQ(transactionA_->getPhase(), Transaction::Phase::kShrinking);
+  EXPECT_EQ(transactionA_->num_locked, 0);
+  EXPECT_FALSE(transactionA_->growing_phase);
 };
 
 // Lock budget decreases when acquiring locks
 TEST_F(TransactionTest, lockBudgetDecreases) {
-  auto another_lock = std::make_shared<Lock>();
-  transactionA_->addLock(rowId_, Lock::LockMode::kShared, lock_);
-  transactionA_->addLock(rowId_ + 1, Lock::LockMode::kExclusive, another_lock);
-  EXPECT_EQ(transactionA_->getLockBudget(), kLockBudget_ - 2);
+  auto another_lock = newLock();
+  addLock(transactionA_, rowId_, false, lock_);
+  set(lockTable_, rowId_, (void*)lock_);
+  addLock(transactionA_, rowId_ + 1, true, another_lock);
+  set(lockTable_, rowId_ + 1, (void*)another_lock);
+  EXPECT_EQ(transactionA_->lock_budget, kLockBudget_ - 2);
 
-  transactionA_->releaseLock(rowId_, lock_);
-  EXPECT_EQ(transactionA_->getLockBudget(), kLockBudget_ - 2);
+  releaseLock(transactionA_, rowId_, lockTable_);
+  EXPECT_EQ(transactionA_->lock_budget, kLockBudget_ - 2);
 };
 
 // Has lock after aquiring it
 TEST_F(TransactionTest, hasLock) {
-  transactionA_->addLock(rowId_, Lock::LockMode::kShared, lock_);
-  EXPECT_TRUE(transactionA_->hasLock(rowId_));
+  addLock(transactionA_, rowId_, false, lock_);
+  EXPECT_TRUE(hasLock(transactionA_, rowId_));
 };
 
 // Transaction releases all locks under concurrent lock requests
 TEST_F(TransactionTest, releasesAllLocks) {
   // Start multiple threads that add Locks for that transaction
-  std::thread t1{&TransactionTest::threadAcquireLock, this,
-                 std::ref(transactionA_), rowId_++};
-  std::thread t2{&TransactionTest::threadAcquireLock, this,
-                 std::ref(transactionA_), rowId_++};
-  std::thread t3{&TransactionTest::threadAcquireLock, this,
-                 std::ref(transactionA_), rowId_++};
-  std::thread t4{&TransactionTest::threadAcquireLock, this,
-                 std::ref(transactionA_), rowId_++};
-  std::thread t5{&TransactionTest::threadAcquireLock, this,
-                 std::ref(transactionA_), rowId_++};
-  std::thread t6{&TransactionTest::threadAcquireLock, this,
-                 std::ref(transactionA_), rowId_++};
+  acquireLock(transactionA_, rowId_++);
+  acquireLock(transactionA_, rowId_++);
+  acquireLock(transactionA_, rowId_++);
+  acquireLock(transactionA_, rowId_++);
+  acquireLock(transactionA_, rowId_++);
+  acquireLock(transactionA_, rowId_++);
 
   // Release all locks
-  transactionA_->releaseAllLocks(*mock_lock_table_);
+  releaseAllLocks(transactionA_, lockTable_);
 
   // Start more threads that add locks for that transaction
-  std::thread t7{&TransactionTest::threadAcquireLock, this,
-                 std::ref(transactionA_), rowId_++};
-  std::thread t8{&TransactionTest::threadAcquireLock, this,
-                 std::ref(transactionA_), rowId_++};
-  std::thread t9{&TransactionTest::threadAcquireLock, this,
-                 std::ref(transactionA_), rowId_++};
-  std::thread t10{&TransactionTest::threadAcquireLock, this,
-                  std::ref(transactionA_), rowId_++};
-  std::thread t11{&TransactionTest::threadAcquireLock, this,
-                  std::ref(transactionA_), rowId_++};
-  std::thread t12{&TransactionTest::threadAcquireLock, this,
-                  std::ref(transactionA_), rowId_++};
-
-  t1.join();
-  t2.join();
-  t3.join();
-  t4.join();
-  t5.join();
-  t6.join();
-  t7.join();
-  t8.join();
-  t9.join();
-  t10.join();
-  t11.join();
-  t12.join();
+  acquireLock(transactionA_, rowId_++);
+  acquireLock(transactionA_, rowId_++);
+  acquireLock(transactionA_, rowId_++);
+  acquireLock(transactionA_, rowId_++);
+  acquireLock(transactionA_, rowId_++);
+  acquireLock(transactionA_, rowId_++);
 
   // Assert that the transaction holds no locks
-  EXPECT_EQ(transactionA_->getLockedRows().size(), 0);
-};
-
-// Add locks concurrently
-TEST_F(TransactionTest, concurrentAddLock) {
-  // Start multiple threads that acquire Locks for that transaction
-  std::thread t1{&TransactionTest::threadAcquireLock, this,
-                 std::ref(transactionA_), rowId_++};
-  std::thread t2{&TransactionTest::threadAcquireLock, this,
-                 std::ref(transactionA_), rowId_++};
-  std::thread t3{&TransactionTest::threadAcquireLock, this,
-                 std::ref(transactionA_), rowId_++};
-  std::thread t4{&TransactionTest::threadAcquireLock, this,
-                 std::ref(transactionA_), rowId_++};
-  std::thread t5{&TransactionTest::threadAcquireLock, this,
-                 std::ref(transactionA_), rowId_++};
-  std::thread t6{&TransactionTest::threadAcquireLock, this,
-                 std::ref(transactionA_), rowId_++};
-
-  t1.join();
-  t2.join();
-  t3.join();
-  t4.join();
-  t5.join();
-  t6.join();
-
-  EXPECT_EQ(transactionA_->getLockBudget(), kLockBudget_ - 6);
-  EXPECT_EQ(transactionA_->getLockedRows().size(), 6);
+  EXPECT_EQ(transactionA_->num_locked, 0);
 };

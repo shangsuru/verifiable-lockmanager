@@ -36,7 +36,7 @@ class ServerTest : public ::testing::Test {
   auto unlock(LockingServiceImpl &server) -> bool {
     request_.set_transaction_id(transactionId_);
     request_.set_row_id(rowId_);
-
+    
     Status status = server.Unlock(&context_, &request_, &response_);
     return status.ok();
   }
@@ -45,8 +45,8 @@ class ServerTest : public ::testing::Test {
   ServerContext context_;
   LockRequest request_;
   LockResponse response_;
-  Registration registration_;
-  Acceptance acceptance_;
+  RegistrationRequest registration_;
+  RegistrationResponse acceptance_;
   unsigned int transactionId_ = 0;
   unsigned int rowId_ = 0;
 };

@@ -1,8 +1,9 @@
 #include "transaction.h"
 
-Transaction* newTransaction(int transactionId, int lockBudget) {
+Transaction* newTransaction(int lockBudget) {
   Transaction* transaction = new Transaction();
-  transaction->transaction_id = transactionId;
+  transaction->transaction_id =
+      0;  // zero for newly initialized transaction structs!
   transaction->aborted = false;
   transaction->growing_phase = true;
   transaction->lock_budget = lockBudget;
@@ -26,7 +27,6 @@ auto addLock(Transaction* transaction, int rowId, bool isExclusive, Lock* lock)
   }
 
   if (ret) {
-    // lockbudget (max) to copy everything
     transaction->locked_rows[transaction->num_locked++] = rowId;
     transaction->lock_budget--;
   }
@@ -34,8 +34,7 @@ auto addLock(Transaction* transaction, int rowId, bool isExclusive, Lock* lock)
   return ret;
 };
 
-void releaseLock(Transaction* transaction, int rowId,
-                 std::unordered_map<int, Lock*>* lockTable) {
+void releaseLock(Transaction* transaction, int rowId, HashTable* lockTable) {
   for (int i = 0; i < transaction->num_locked; i++) {
     if (transaction->locked_rows[i] == rowId) {
       memcpy((void*)&transaction->locked_rows[i],
@@ -44,13 +43,13 @@ void releaseLock(Transaction* transaction, int rowId,
     }
     break;
   }
+  transaction->num_locked--;
   transaction->growing_phase = false;
-  auto lock = (*lockTable)[rowId];
+  auto lock = (Lock*)get(lockTable, rowId);
   release(lock, transaction->transaction_id);
 
   if (lock->num_owners == 0) {
-    delete lock;
-    lockTable->erase(rowId);
+    remove(lockTable, rowId);
   }
 };
 
@@ -63,17 +62,34 @@ auto hasLock(Transaction* transaction, int rowId) -> bool {
   return false;
 };
 
-void releaseAllLocks(Transaction* transaction,
-                     std::unordered_map<int, Lock*>* lockTable) {
+void releaseAllLocks(Transaction* transaction, HashTable* lockTable) {
   for (int i = 0; i < transaction->num_locked; i++) {
     int locked_row = transaction->locked_rows[i];
-    auto lock = (*lockTable)[locked_row];
+    auto lock = (Lock*)get(lockTable, locked_row);
     release(lock, transaction->transaction_id);
     if (lock->num_owners == 0) {
-      delete lock;
-      lockTable->erase(locked_row);
+      remove(lockTable, locked_row);
     }
   }
   transaction->num_locked = 0;
   transaction->aborted = true;
 };
+
+auto copy_transaction(Transaction* transaction) -> void* {
+  Transaction* copy = new Transaction();
+  copy->transaction_id = transaction->transaction_id;
+  copy->aborted = transaction->aborted;
+  copy->growing_phase = transaction->growing_phase;
+  copy->lock_budget = transaction->lock_budget;
+  copy->locked_rows_size = transaction->locked_rows_size;
+
+  int num_locked = transaction->num_locked;
+  copy->num_locked = num_locked;
+
+  copy->locked_rows = new int[num_locked];
+  for (int i = 0; i < num_locked; i++) {
+    copy->locked_rows[i] = transaction->locked_rows[i];
+  }
+
+  return (void*)copy;
+}

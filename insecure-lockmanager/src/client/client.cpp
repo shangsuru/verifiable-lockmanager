@@ -7,10 +7,10 @@ LockingServiceClient::LockingServiceClient(
 
 auto LockingServiceClient::registerTransaction(unsigned int transactionId)
     -> bool {
-  Registration registration;
+  RegistrationRequest registration;
   registration.set_transaction_id(transactionId);
 
-  Acceptance acceptance;
+  RegistrationResponse acceptance;
   ClientContext context;
 
   Status status =
@@ -40,7 +40,7 @@ auto LockingServiceClient::requestSharedLock(unsigned int transactionId,
 
   if (status.ok()) {
     spdlog::info(
-        "Acquired exclusive lock (TXID: " + std::to_string(transactionId) +
+        "Acquired shared lock (TXID: " + std::to_string(transactionId) +
         ", RID: " + std::to_string(rowId) + ")");
   }
 

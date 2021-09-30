@@ -2,9 +2,11 @@
 #include <gtest/gtest.h>
 
 #include "server.h"
+#include "spdlog/spdlog.h"
 
 class ServerTest : public ::testing::Test {
  protected:
+  void SetUp() override { spdlog::set_level(spdlog::level::off); };
   auto registerTransaction(LockingServiceImpl &server,
                            unsigned int lockBudget = 10) -> bool {
     registration_.set_transaction_id(transactionId_);
@@ -43,10 +45,10 @@ class ServerTest : public ::testing::Test {
   ServerContext context_;
   LockRequest request_;
   LockResponse response_;
-  Registration registration_;
-  Acceptance acceptance_;
-  unsigned int transactionId_ = 0;
-  unsigned int rowId_ = 0;
+  RegistrationRequest registration_;
+  RegistrationResponse acceptance_;
+  unsigned int transactionId_ = 1;
+  unsigned int rowId_ = 1;
 };
 
 // Make lock request without registering
@@ -68,7 +70,7 @@ TEST_F(ServerTest, sharedAccess) {
 
   const int requests = 5;
   for (int i = 0; i < requests; i++) {
-    registerTransaction(server);
+    EXPECT_TRUE(registerTransaction(server));
     EXPECT_TRUE(getSharedLock(server));
     transactionId_++;
   }
@@ -77,7 +79,7 @@ TEST_F(ServerTest, sharedAccess) {
 // Lock budget runs out
 TEST_F(ServerTest, lockBudget) {
   LockingServiceImpl server;
-  registerTransaction(server, 1);
+  EXPECT_TRUE(registerTransaction(server, 1));
   EXPECT_TRUE(getSharedLock(server));
   rowId_++;
   EXPECT_FALSE(getSharedLock(server));
@@ -86,7 +88,7 @@ TEST_F(ServerTest, lockBudget) {
 // Simple request for exclusive access
 TEST_F(ServerTest, exclusiveAccess) {
   LockingServiceImpl server;
-  registerTransaction(server);
+  EXPECT_TRUE(registerTransaction(server));
   EXPECT_TRUE(getExclusiveLock(server));
 }
 
@@ -101,16 +103,16 @@ TEST_F(ServerTest, upgrade) {
 // Unlock
 TEST_F(ServerTest, unlock) {
   LockingServiceImpl server;
-  registerTransaction(server);
-  getSharedLock(server);
+  EXPECT_TRUE(registerTransaction(server));
+  EXPECT_TRUE(getSharedLock(server));
   EXPECT_TRUE(unlock(server));
 };
 
 // Unlock twice
 TEST_F(ServerTest, unlockTwice) {
   LockingServiceImpl server;
-  registerTransaction(server);
-  getSharedLock(server);
+  EXPECT_TRUE(registerTransaction(server));
+  EXPECT_TRUE(getSharedLock(server));
   EXPECT_TRUE(unlock(server));
   EXPECT_TRUE(unlock(server));
 };
@@ -118,26 +120,28 @@ TEST_F(ServerTest, unlockTwice) {
 // No shared while exclusive
 TEST_F(ServerTest, noSharedWhileExclusive) {
   LockingServiceImpl server;
-  registerTransaction(server);
-  getExclusiveLock(server);
+  EXPECT_TRUE(registerTransaction(server));
+  EXPECT_TRUE(getExclusiveLock(server));
   transactionId_++;
+  EXPECT_TRUE(registerTransaction(server));
   EXPECT_FALSE(getSharedLock(server));
 };
 
 // No exclusive while exclusive
 TEST_F(ServerTest, noExclusiveWhileExclusive) {
   LockingServiceImpl server;
-  registerTransaction(server);
-  getExclusiveLock(server);
+  EXPECT_TRUE(registerTransaction(server));
+  EXPECT_TRUE(getExclusiveLock(server));
   transactionId_++;
+  EXPECT_TRUE(registerTransaction(server));
   EXPECT_FALSE(getExclusiveLock(server));
 };
 
 // No exclusive while shared
 TEST_F(ServerTest, noExclusiveWhileShared) {
   LockingServiceImpl server;
-  registerTransaction(server);
-  getSharedLock(server);
+  EXPECT_TRUE(registerTransaction(server));
+  EXPECT_TRUE(getSharedLock(server));
   transactionId_++;
   EXPECT_FALSE(getExclusiveLock(server));
 };
