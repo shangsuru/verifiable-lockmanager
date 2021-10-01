@@ -55,7 +55,7 @@ void set(HashTable* hashTable, int key, void* value) {
     entry = entry->next;
   }
 
-  entry->next = entryToInsert;
+  entry->next = entryToInsert;  // Add new entry at the end of the list
 }
 
 auto contains(HashTable* hashTable, int key) -> bool {
@@ -110,10 +110,10 @@ auto locktable_entry_to_uint8_t(Entry* entry, uint8_t* result) -> uint32_t {
     result[3 + i] = lock->owners[i];
   }
 
-  return size;
+  return size * sizeof(uint8_t);
 }
 
-auto transactiontable_entry_to_uint8_t(Entry* entry, uint8_t* result)
+auto transactiontable_entry_to_uint8_t(Entry* entry, uint8_t*& result)
     -> uint32_t {
   Transaction* transaction = (Transaction*)(entry->value);
   int num_locked = transaction->num_locked;
@@ -133,5 +133,5 @@ auto transactiontable_entry_to_uint8_t(Entry* entry, uint8_t* result)
     result[7 + i] = transaction->locked_rows[i];
   }
 
-  return size;
+  return size * sizeof(uint8_t);
 }

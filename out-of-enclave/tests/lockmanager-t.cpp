@@ -166,3 +166,25 @@ TEST_F(LockManagerTest, abortedTransactionCanRegisterAgain) {
                    .second);  // makes A abort
   EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
 }
+
+TEST_F(LockManagerTest,
+       registrationFailsAfterTransactionTableIsMaliciouslyAltered) {
+  LockManager lock_manager = LockManager();
+  EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
+
+  // Maliciously change the contents of transaction table
+  auto transaction =
+      (Transaction*)get(lock_manager.transactionTable, kTransactionIdA);
+  transaction->lock_budget = 10000;
+
+  // It is not detected when we access a different bucket from the one where the
+  // change happened
+  EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdB, kLockBudget));
+
+  // Fails because an unauthorized change to the transaction table in the same
+  // bucket was detected
+  int anotherTransactionSameBucket =
+      kTransactionIdA + lock_manager.transactionTable->size;
+  EXPECT_FALSE(lock_manager.registerTransaction(anotherTransactionSameBucket,
+                                                kLockBudget));
+}

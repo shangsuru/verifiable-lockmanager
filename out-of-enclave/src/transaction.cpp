@@ -35,14 +35,21 @@ auto addLock(Transaction* transaction, int rowId, bool isExclusive, Lock* lock)
 };
 
 void releaseLock(Transaction* transaction, int rowId, HashTable* lockTable) {
+  bool wasOwner = false;
   for (int i = 0; i < transaction->num_locked; i++) {
     if (transaction->locked_rows[i] == rowId) {
       memcpy((void*)&transaction->locked_rows[i],
              (void*)&transaction->locked_rows[i + 1],
              sizeof(int) * (transaction->num_locked - 1 - i));
+      wasOwner = true;
     }
     break;
   }
+
+  if (!wasOwner) {
+    return;
+  }
+
   transaction->num_locked--;
   transaction->growing_phase = false;
   auto lock = (Lock*)get(lockTable, rowId);

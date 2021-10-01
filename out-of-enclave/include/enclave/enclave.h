@@ -260,16 +260,24 @@ auto hash_transactiontable_bucket(Entry *bucket) -> sgx_sha256_hash_t *;
 auto integrity_verified_get_locktable(int key) -> Lock *;
 
 /**
- * Gets the entry from the transaction table, but verifies the integrity of the
- * corresponding bucket via integrity hashes.
+ * Verifies the integrity hashes on a copy of the bucket in protected
+ * memory, so that no changes can be made from untrusted memory while computing
+ * the hash. Returns the bucket together with the corresponding transaction
+ * within it. The returned transaction is therefore guaranteed to be an
+ * unaltered copy from untrusted memory. Changes can be applied on it to update
+ * the verification hash afterwards, but the changes need to be redone on the
+ * corresponding transaction in untrusted memory. The returned transaction in
+ * protected memory is just a temporary copy.
  *
- * @param integrityHashes hash over each bucket of the hashtable
- * @param hashTable the transaction table
  * @param key the transaction ID
- * @returns the transaction for the corresponding key, or
- * nullptr, when the verification of the hashes failed
+ * @returns the transaction for the corresponding key together with the bucket
+ * allocated in protected memory that was used to compute the integrity hash, or
+ * nullptr, when the verification of the hashes failed. The bucket is needed to
+ * recompute the integrity hash on a trusted copy when the transaction is
+ * changed later, e.g., when registering or aborting it.
  */
-auto integrity_verified_get_transactiontable(int key) -> Transaction *;
+auto integrity_verified_get_transactiontable(int key)
+    -> std::pair<Transaction *, Entry *>;
 
 /**
  * Copies the whole bucket from untrusted to protected memory. The entries are
@@ -288,3 +296,9 @@ auto copy_lock_bucket(Entry *entry) -> Entry *;
  * @returns copy in protected memory
  */
 auto copy_transaction_bucket(Entry *entry) -> Entry *;
+
+/**
+ * Computes the hash over the given bucket and updates the integrity hashes
+ * stored inside the en
+ */
+void update_integrity_hash_transactiontable(Entry *entry);

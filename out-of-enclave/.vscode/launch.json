@@ -33,12 +33,23 @@
     },
     {
       "name": "lockmanager_test",
-      "type": "gdb",
+      "type": "cppdbg",
       "request": "launch",
-      "target": "lockmanager_test",
+      "program": "${workspaceFolder}/build/tests/lockmanager_test",
+      "args": [],
+      "stopAtEntry": false,
       "cwd": "${workspaceRoot}/build/tests",
-      "valuesFormatting": "parseText",
-      "gdbpath": "/usr/bin/gdb"
-    }
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "miDebuggerPath":"/opt/intel/sgxsdk/bin/sgx-gdb",
+      "setupCommands": [
+          {
+              "description": "Enable pretty-printing for gdb",
+              "text": "-enable-pretty-printing",
+              "ignoreFailures": true
+          }
+      ]
+  },
   ]
 }

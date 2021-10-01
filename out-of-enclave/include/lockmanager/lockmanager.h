@@ -64,6 +64,9 @@ void print_warn(const char *str);
  */
 class LockManager {
  public:
+  HashTable *lockTable;
+  HashTable *transactionTable;
+
   /**
    * Initializes the enclave and seals the public and private key for signing.
    */
@@ -176,8 +179,6 @@ class LockManager {
   Arg arg;  // configuration parameters for the enclave
   pthread_t
       *threads;  // worker threads that execute requests inside the enclave
-  HashTable *lockTable;
-  HashTable *transactionTable;
   std::mutex new_lock_mut;  // controls the insertion of new lock objects into
                             // the lock table
   std::mutex new_transaction_mut;  // controls the insertion of new transaction

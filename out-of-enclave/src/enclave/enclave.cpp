@@ -185,22 +185,30 @@ void enclave_process_request() {
         print_info(("Registering transaction " + std::to_string(transactionId))
                        .c_str());
 
-        // TODO: Verify integrity of transaction table
-        // TODO: for this to work, we need to work on our own local copy of the
-        // hashtable
-
-        auto transaction = (Transaction *)get(transactionTable_, transactionId);
+        auto [transaction, entry] =
+            integrity_verified_get_transactiontable(transactionId);
+        if (entry == nullptr) {
+          print_error("Integrity verification failed");
+          *cur_job.error = true;
+        }
         if (transaction == nullptr || transaction->transaction_id != 0) {
           // New transaction objects, that are created for new, not-yet
           // registered transaction beforehand by the untrusted application
-          // always have their transaction ID set to -1 to differentiate them
-          // from transaction objects refering to already registered
-          // transactions
+          // always have their transaction ID set to 0 to differentiate them
+          // from already registered transactions
           print_error("Transaction is already registered");
           *cur_job.error = true;
         } else {
+          // Register transaction by setting transaction ID and lock budget
           transaction->transaction_id = transactionId;
           transaction->lock_budget = lockBudget;
+          update_integrity_hash_transactiontable(entry);
+
+          // Make changes in untrusted memory as well
+          auto transactionUntrusted =
+              (Transaction *)get(transactionTable_, transactionId);
+          transactionUntrusted->transaction_id = transactionId;
+          transactionUntrusted->lock_budget = lockBudget;
         }
         *cur_job.finished = true;
         transaction_count++;
@@ -284,7 +292,7 @@ auto generate_key_pair() -> int {
   encoded_public_key = base64_encode((unsigned char *)&ec256_public_key,
                                      sizeof(ec256_public_key));
 
-  // append the number of characters for the encoded public key for easy
+  // Append the number of characters for the encoded public key for easy
   // extraction from sealed text file
   encoded_public_key += std::to_string(encoded_public_key.length());
   return ret;
@@ -313,9 +321,21 @@ auto acquire_lock(void *signature, int transactionId, int rowId,
                   bool isExclusive) -> bool {
   bool ok;
 
-  // Get the transaction object for the given transaction ID
-  auto transaction = (Transaction *)get(transactionTable_, transactionId);
-  if (transaction == nullptr || transaction->transaction_id == 0) {
+  // Get the transaction for the given transaction ID
+  auto transactionUntrusted =
+      (Transaction *)get(transactionTable_, transactionId);
+  // Get a copy of the transaction in protected memory
+  auto [transactionTrustedCopy, entry] =
+      integrity_verified_get_transactiontable(transactionId);
+
+  if (entry == nullptr) {
+    print_error("Integrity verification failed");
+    return false;
+  }
+  // Run checks on trusted copy of the transaction, which is protected by the
+  // enclave
+  if (transactionTrustedCopy == nullptr ||
+      transactionTrustedCopy->transaction_id == 0) {
     print_error("Transaction was not registered");
     return false;
   }
@@ -328,19 +348,20 @@ auto acquire_lock(void *signature, int transactionId, int rowId,
   }
 
   // Check if 2PL is violated
-  if (!transaction->growing_phase) {
+  if (!transactionTrustedCopy->growing_phase) {
     print_error("Cannot acquire more locks according to 2PL");
     goto abort;
   }
 
   // Check if lock budget is enough
-  if (transaction->lock_budget < 1) {
+  if (transactionTrustedCopy->lock_budget < 1) {
     print_error("Lock budget exhausted");
     goto abort;
   }
 
   // Check for upgrade request
-  if (hasLock(transaction, rowId) && isExclusive && !lock->exclusive) {
+  if (hasLock(transactionTrustedCopy, rowId) && isExclusive &&
+      !lock->exclusive) {
     ok = upgrade(lock, transactionId);
 
     if (!ok) {
@@ -350,8 +371,14 @@ auto acquire_lock(void *signature, int transactionId, int rowId,
   }
 
   // Acquire lock in requested mode (shared, exclusive)
-  if (!hasLock(transaction, rowId)) {
-    if (addLock(transaction, rowId, isExclusive, lock)) {
+  if (!hasLock(transactionTrustedCopy, rowId)) {
+    if (addLock(transactionTrustedCopy, rowId, isExclusive, lock)) {
+      update_integrity_hash_transactiontable(entry);
+
+      // Update transaction in untrusted part
+      addLock(transactionUntrusted, rowId, isExclusive,
+              (Lock *)copy_lock(
+                  lock));  // work on copy of lock so to not acquire lock twice
       goto sign;
     }
     goto abort;
@@ -360,7 +387,15 @@ auto acquire_lock(void *signature, int transactionId, int rowId,
   print_error("Request for already acquired lock");
 
 abort:
-  abort_transaction(transaction);
+  // Simulate transaction abort in protected memory
+  transactionTrustedCopy->transaction_id = 0;
+  transactionTrustedCopy->num_locked = 0;
+  transactionTrustedCopy->aborted = true;
+  // Recompute the hash over the bucket in protected memory
+  update_integrity_hash_transactiontable(entry);
+
+  // Actually abort transaction in untrusted memory
+  abort_transaction(transactionUntrusted);
   return false;
 
 sign:
@@ -444,6 +479,11 @@ auto hash_locktable_bucket(Entry *bucket) -> sgx_sha256_hash_t * {
     return nullptr;
   }
 
+  if (bucket->next == nullptr && ((Lock *)bucket->value)->num_owners == 0) {
+    // Bucket only contains an unacquired lock
+    return nullptr;
+  }
+
   Entry *entry = bucket;
   uint8_t *data;     // the serialized entry with lock
   uint32_t size;     // size of the serialized entry
@@ -487,7 +527,9 @@ auto hash_locktable_bucket(Entry *bucket) -> sgx_sha256_hash_t * {
 }
 
 auto hash_transactiontable_bucket(Entry *bucket) -> sgx_sha256_hash_t * {
-  if (bucket == nullptr) {
+  if (bucket == nullptr ||
+      ((Transaction *)bucket->value)->transaction_id == 0) {
+    // Bucket is empty or contains only unregistered transaction
     return nullptr;
   }
 
@@ -510,7 +552,7 @@ auto hash_transactiontable_bucket(Entry *bucket) -> sgx_sha256_hash_t * {
 
   do {  // Update the hash with each entry in the bucket
     // Only include registered transactions
-    if (((Transaction *)entry->value)->transaction_id != 0) {  // TODO:
+    if (((Transaction *)entry->value)->transaction_id != 0) {
       size = transactiontable_entry_to_uint8_t(entry, data);
       ret = sgx_sha256_update(data, size, *p_sha_handle);
       if (ret != SGX_SUCCESS) {
@@ -542,8 +584,17 @@ auto integrity_verified_get_locktable(int key) -> Lock * {
   Entry *copy = copy_lock_bucket(entry);
 
   // Verify the integrity of the bucket
-  sgx_sha256_hash_t *hash = hash_locktable_bucket(copy);
-  if (hash == lockTableIntegrityHashes[index]) {
+  sgx_sha256_hash_t *recomputed_hash = hash_locktable_bucket(copy);
+  sgx_sha256_hash_t *saved_hash = transactionTableIntegrityHashes[index];
+  bool equal = true;
+  for (int i = 0; i < SGX_SHA256_HASH_SIZE; i++) {
+    auto a = (*recomputed_hash)[i];
+    auto b = (*saved_hash)[i];
+    if (a != b) {
+      equal = false;
+    }
+  }
+  if (equal) {
     return (Lock *)get(copy, key);
   }
 
@@ -551,8 +602,8 @@ auto integrity_verified_get_locktable(int key) -> Lock * {
   return nullptr;
 }
 
-auto integrity_verified_get_transactiontable(int key) -> Transaction * {
-  // TODO: Make a deep copy of the bucket (from untrusted to trusted memory)
+auto integrity_verified_get_transactiontable(int key)
+    -> std::pair<Transaction *, Entry *> {
   int index = hash(transactionTable_->size, key);
   Entry *entry = transactionTable_->table[index];
 
@@ -560,14 +611,32 @@ auto integrity_verified_get_transactiontable(int key) -> Transaction * {
   // modifications during integrity verification
   Entry *copy = copy_transaction_bucket(entry);
 
-  // Verify the integrity of the bucket
-  sgx_sha256_hash_t *hash = hash_transactiontable_bucket(entry);
-  if (hash == transactionTableIntegrityHashes[index]) {
-    return (Transaction *)get(copy, key);
+  // Verify the integrity of the bucket by checking if recomputed and saved hash
+  // are the same
+  sgx_sha256_hash_t *recomputed_hash = hash_transactiontable_bucket(entry);
+  sgx_sha256_hash_t *saved_hash = transactionTableIntegrityHashes[index];
+
+  bool equal = true;
+  // If both are nullptr, they are equal
+  if (!(recomputed_hash == nullptr && saved_hash == nullptr)) {
+    if (recomputed_hash == nullptr || saved_hash == nullptr) {
+      equal = false;  // if only one is nullptr they are unequal
+    } else {          // none is nullptr: compare values
+      for (int i = 0; i < SGX_SHA256_HASH_SIZE; i++) {
+        auto a = (*recomputed_hash)[i];
+        auto b = (*saved_hash)[i];
+        if (a != b) {
+          equal = false;
+        }
+      }
+    }
+  }
+  if (equal) {
+    return std::make_pair((Transaction *)get(copy, key), copy);
   }
 
   // Hashes are not the same
-  return nullptr;
+  return std::make_pair(nullptr, nullptr);
 }
 
 auto copy_lock_bucket(Entry *entry) -> Entry * {
@@ -589,4 +658,10 @@ auto copy_transaction_bucket(Entry *entry) -> Entry * {
       newEntry(entry->key, copy_transaction((Transaction *)entry->value));
   copy->next = copy_transaction_bucket(entry->next);
   return copy;
+}
+
+void update_integrity_hash_transactiontable(Entry *entry) {
+  sgx_sha256_hash_t *p_hash = hash_transactiontable_bucket(entry);
+  transactionTableIntegrityHashes[hash(transactionTable_->size, entry->key)] =
+      p_hash;
 }
