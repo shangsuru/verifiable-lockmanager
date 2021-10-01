@@ -257,7 +257,7 @@ auto hash_transactiontable_bucket(Entry *bucket) -> sgx_sha256_hash_t *;
  * @returns the lock for the corresponding key, or
  * nullptr, when the verification of the hashes failed
  */
-auto integrity_verified_get_locktable(int key) -> Lock *;
+auto integrity_verified_get_locktable(int key) -> std::pair<Lock *, Entry *>;
 
 /**
  * Verifies the integrity hashes on a copy of the bucket in protected
@@ -298,7 +298,17 @@ auto copy_lock_bucket(Entry *entry) -> Entry *;
 auto copy_transaction_bucket(Entry *entry) -> Entry *;
 
 /**
- * Computes the hash over the given bucket and updates the integrity hashes
- * stored inside the en
+ * Computes the hash over the given bucket from the transaction table and
+ * updates the integrity hashes stored inside the enclave.
+ *
+ * @param entry the bucket to compute the new integrity hash over
  */
 void update_integrity_hash_transactiontable(Entry *entry);
+
+/**
+ * Computes the hash over the given bucket from the lock table and updates the
+ * integrity hashes stored inside the enclave.
+ *
+ *  * @param entry the bucket to compute the new integrity hash over
+ */
+void update_integrity_hash_locktable(Entry *entry);

@@ -188,7 +188,9 @@ void enclave_process_request() {
         auto [transaction, entry] =
             integrity_verified_get_transactiontable(transactionId);
         if (entry == nullptr) {
-          print_error("Integrity verification failed");
+          print_error(
+              "Integrity verification failed on transaction table when "
+              "registering");
           *cur_job.error = true;
         }
         if (transaction == nullptr || transaction->transaction_id != 0) {
@@ -325,45 +327,59 @@ auto acquire_lock(void *signature, int transactionId, int rowId,
   auto transactionUntrusted =
       (Transaction *)get(transactionTable_, transactionId);
   // Get a copy of the transaction in protected memory
-  auto [transactionTrustedCopy, entry] =
+  auto [transactionTrusted, transactionEntry] =
       integrity_verified_get_transactiontable(transactionId);
 
-  if (entry == nullptr) {
-    print_error("Integrity verification failed");
+  if (transactionEntry == nullptr) {
+    print_error(
+        "Integrity verification failed on transaction table when acquiring a "
+        "lock");
     return false;
   }
   // Run checks on trusted copy of the transaction, which is protected by the
   // enclave
-  if (transactionTrustedCopy == nullptr ||
-      transactionTrustedCopy->transaction_id == 0) {
+  if (transactionTrusted == nullptr ||
+      transactionTrusted->transaction_id == 0) {
     print_error("Transaction was not registered");
     return false;
   }
 
   // Get the lock object for the given row ID
-  auto lock = (Lock *)get(lockTable_, rowId);
-  if (lock == nullptr) {
+  auto lockUntrusted = (Lock *)get(lockTable_, rowId);
+  auto [lockTrusted, lockEntry] = integrity_verified_get_locktable(rowId);
+  if (lockEntry == nullptr) {
+    print_error(
+        "Integrity verification failed on lock table when acquiring a lock");
+    return false;
+  }
+  if (lockTrusted == nullptr) {
     print_error("Lock not allocated in untrusted app");
     return false;
   }
 
   // Check if 2PL is violated
-  if (!transactionTrustedCopy->growing_phase) {
+  if (!transactionTrusted->growing_phase) {
     print_error("Cannot acquire more locks according to 2PL");
     goto abort;
   }
 
   // Check if lock budget is enough
-  if (transactionTrustedCopy->lock_budget < 1) {
+  if (transactionTrusted->lock_budget < 1) {
     print_error("Lock budget exhausted");
     goto abort;
   }
 
   // Check for upgrade request
-  if (hasLock(transactionTrustedCopy, rowId) && isExclusive &&
-      !lock->exclusive) {
-    ok = upgrade(lock, transactionId);
+  if (hasLock(transactionTrusted, rowId) && isExclusive &&
+      !lockTrusted->exclusive) {
+    // Apply operation on temporary trusted copy
+    ok = upgrade(lockTrusted, transactionId);
 
+    // Update lock table hash
+    update_integrity_hash_locktable(lockEntry);
+
+    // Make changes in untrusted memory
+    upgrade(lockUntrusted, transactionId);
     if (!ok) {
       goto abort;
     }
@@ -371,14 +387,15 @@ auto acquire_lock(void *signature, int transactionId, int rowId,
   }
 
   // Acquire lock in requested mode (shared, exclusive)
-  if (!hasLock(transactionTrustedCopy, rowId)) {
-    if (addLock(transactionTrustedCopy, rowId, isExclusive, lock)) {
-      update_integrity_hash_transactiontable(entry);
+  if (!hasLock(transactionTrusted, rowId)) {
+    bool ok = addLock(transactionTrusted, rowId, isExclusive, lockTrusted);
+    update_integrity_hash_transactiontable(transactionEntry);
+    update_integrity_hash_locktable(lockEntry);
 
-      // Update transaction in untrusted part
-      addLock(transactionUntrusted, rowId, isExclusive,
-              (Lock *)copy_lock(
-                  lock));  // work on copy of lock so to not acquire lock twice
+    // Repeat operation in untrusted part
+    addLock(transactionUntrusted, rowId, isExclusive, lockUntrusted);
+
+    if (ok) {
       goto sign;
     }
     goto abort;
@@ -388,11 +405,18 @@ auto acquire_lock(void *signature, int transactionId, int rowId,
 
 abort:
   // Simulate transaction abort in protected memory
-  transactionTrustedCopy->transaction_id = 0;
-  transactionTrustedCopy->num_locked = 0;
-  transactionTrustedCopy->aborted = true;
+  transactionTrusted->transaction_id = 0;
+  transactionTrusted->num_locked = 0;
+  transactionTrusted->aborted = true;
+  for (int i = 0; i < transactionTrusted->num_locked; i++) {
+    int locked_row = transactionTrusted->locked_rows[i];
+    auto lock = (Lock *)get(lockEntry, locked_row);
+    release(lock, transactionTrusted->transaction_id);
+  }
+
   // Recompute the hash over the bucket in protected memory
-  update_integrity_hash_transactiontable(entry);
+  update_integrity_hash_transactiontable(transactionEntry);
+  update_integrity_hash_locktable(lockEntry);
 
   // Actually abort transaction in untrusted memory
   abort_transaction(transactionUntrusted);
@@ -400,7 +424,7 @@ abort:
 
 sign:
   std::string string_to_sign =
-      lock_to_string(transactionId, rowId, lock->exclusive);
+      lock_to_string(transactionId, rowId, lockTrusted->exclusive);
 
   sgx_ecc_state_handle_t context = NULL;
   sgx_ecc256_open_context(&context);
@@ -413,21 +437,35 @@ sign:
 }
 
 void release_lock(int transactionId, int rowId) {
-  // Get the transaction object
-  auto transaction = (Transaction *)get(transactionTable_, transactionId);
-  if (transaction == nullptr) {
+  // Get the transaction from untrusted memory and a trusted copy
+  auto [transactionTrusted, transactionEntry] =
+      integrity_verified_get_transactiontable(transactionId);
+  auto transactionUntrusted =
+      (Transaction *)get(transactionTable_, transactionId);
+
+  if (transactionTrusted == nullptr) {
     print_error("Transaction was not registered");
     return;
   }
 
-  // Get the lock object
-  auto lock = (Lock *)get(lockTable_, rowId);
-  if (lock == nullptr) {
+  // Get the lock from untrusted memory and a trusted copy
+  auto [lockTrusted, lockEntry] = integrity_verified_get_locktable(rowId);
+  auto lockUntrusted = (Lock *)get(lockTable_, rowId);
+
+  if (lockTrusted == nullptr) {
     print_error("Lock does not exist");
     return;
   }
 
-  releaseLock(transaction, rowId, lockTable_);
+  // Release lock in trusted memory and update integrity hash
+  HashTable *trustedLockTable = newHashTable(lockTable_->size);
+  trustedLockTable->table[rowId] = lockEntry;
+  releaseLock(transactionTrusted, rowId, trustedLockTable);
+  update_integrity_hash_transactiontable(transactionEntry);
+  update_integrity_hash_locktable(lockEntry);
+
+  // Repeat operation in untrusted memory
+  releaseLock(transactionUntrusted, rowId, lockTable_);
 }
 
 void abort_transaction(Transaction *transaction) {
@@ -507,7 +545,7 @@ auto hash_locktable_bucket(Entry *bucket) -> sgx_sha256_hash_t * {
       size = locktable_entry_to_uint8_t(entry, data);
       ret = sgx_sha256_update(data, size, *p_sha_handle);
       if (ret != SGX_SUCCESS) {
-        print_error("Updating hash failed");
+        print_error("Updating lock table hash failed");
       }
     }
     entry = entry->next;
@@ -556,7 +594,7 @@ auto hash_transactiontable_bucket(Entry *bucket) -> sgx_sha256_hash_t * {
       size = transactiontable_entry_to_uint8_t(entry, data);
       ret = sgx_sha256_update(data, size, *p_sha_handle);
       if (ret != SGX_SUCCESS) {
-        print_error("Updating hash failed");
+        print_error("Updating transaction table hash failed");
       }
     }
     entry = entry->next;
@@ -575,7 +613,7 @@ auto hash_transactiontable_bucket(Entry *bucket) -> sgx_sha256_hash_t * {
   return p_hash;
 }
 
-auto integrity_verified_get_locktable(int key) -> Lock * {
+auto integrity_verified_get_locktable(int key) -> std::pair<Lock *, Entry *> {
   int index = hash(lockTable_->size, key);
   Entry *entry = lockTable_->table[index];
 
@@ -585,21 +623,30 @@ auto integrity_verified_get_locktable(int key) -> Lock * {
 
   // Verify the integrity of the bucket
   sgx_sha256_hash_t *recomputed_hash = hash_locktable_bucket(copy);
-  sgx_sha256_hash_t *saved_hash = transactionTableIntegrityHashes[index];
+  sgx_sha256_hash_t *saved_hash = lockTableIntegrityHashes[index];
+
   bool equal = true;
-  for (int i = 0; i < SGX_SHA256_HASH_SIZE; i++) {
-    auto a = (*recomputed_hash)[i];
-    auto b = (*saved_hash)[i];
-    if (a != b) {
-      equal = false;
+  // If both are nullptr, they are equal
+  if (!(recomputed_hash == nullptr && saved_hash == nullptr)) {
+    if (recomputed_hash == nullptr || saved_hash == nullptr) {
+      equal = false;  // if only one is nullptr they are unequal
+    } else {          // none is nullptr: compare values
+      for (int i = 0; i < SGX_SHA256_HASH_SIZE; i++) {
+        auto a = (*recomputed_hash)[i];
+        auto b = (*saved_hash)[i];
+        if (a != b) {
+          equal = false;
+        }
+      }
     }
   }
+
   if (equal) {
-    return (Lock *)get(copy, key);
+    return std::make_pair((Lock *)get(copy, key), copy);
   }
 
   // Hashes are not the same
-  return nullptr;
+  return std::make_pair(nullptr, nullptr);
 }
 
 auto integrity_verified_get_transactiontable(int key)
@@ -664,4 +711,9 @@ void update_integrity_hash_transactiontable(Entry *entry) {
   sgx_sha256_hash_t *p_hash = hash_transactiontable_bucket(entry);
   transactionTableIntegrityHashes[hash(transactionTable_->size, entry->key)] =
       p_hash;
+}
+
+void update_integrity_hash_locktable(Entry *entry) {
+  sgx_sha256_hash_t *p_hash = hash_locktable_bucket(entry);
+  lockTableIntegrityHashes[hash(lockTable_->size, entry->key)] = p_hash;
 }

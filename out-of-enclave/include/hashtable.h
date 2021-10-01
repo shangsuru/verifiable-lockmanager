@@ -84,7 +84,7 @@ void remove(HashTable* hashTable, int key);
  * @param result the serialized entry
  * @returns the size of the serialized entry
  */
-auto locktable_entry_to_uint8_t(Entry* entry, uint8_t* result) -> uint32_t;
+auto locktable_entry_to_uint8_t(Entry* entry, uint8_t*& result) -> uint32_t;
 
 /**
  * This function takes an entry of a lock table and serializes it into uint8_t*,

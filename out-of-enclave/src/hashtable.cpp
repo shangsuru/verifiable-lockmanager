@@ -95,7 +95,7 @@ void remove(HashTable* hashTable, int key) {
   }
 }
 
-auto locktable_entry_to_uint8_t(Entry* entry, uint8_t* result) -> uint32_t {
+auto locktable_entry_to_uint8_t(Entry* entry, uint8_t*& result) -> uint32_t {
   Lock* lock = (Lock*)(entry->value);
   int num_owners = lock->num_owners;
   uint32_t size = 3 + num_owners;
