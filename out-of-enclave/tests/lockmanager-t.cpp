@@ -168,7 +168,7 @@ TEST_F(LockManagerTest, abortedTransactionCanRegisterAgain) {
 }
 
 TEST_F(LockManagerTest,
-       registrationFailsAfterTransactionTableIsMaliciouslyAltered) {
+       registrationFailsAfterTransactionTableIsAlteredInUntrustedMemory) {
   LockManager lock_manager = LockManager();
   EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
 
@@ -187,4 +187,22 @@ TEST_F(LockManagerTest,
       kTransactionIdA + lock_manager.transactionTable->size;
   EXPECT_FALSE(lock_manager.registerTransaction(anotherTransactionSameBucket,
                                                 kLockBudget));
+}
+
+TEST_F(LockManagerTest,
+       acquiringLockFailsAfterLockTableIsAlteredInUntrustedMemory) {
+  LockManager lock_manager = LockManager();
+  EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
+
+  EXPECT_TRUE(lock_manager.lock(kTransactionIdA, kRowId, false).second);
+
+  // Alter lock table in untrusted memory
+  auto lock = (Lock*)get(lock_manager.lockTable, kRowId);
+  lock->exclusive = true;
+
+  // Next lock request fails because change is detected
+  int anotherLockId =
+      kRowId + lock_manager.lockTable
+                   ->size;  // make sure that lock will be in the same bucket
+  EXPECT_FALSE(lock_manager.lock(kTransactionIdA, anotherLockId, false).second);
 }
