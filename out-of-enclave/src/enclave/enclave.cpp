@@ -617,7 +617,7 @@ auto hash_transactiontable_bucket(Entry *bucket) -> sgx_sha256_hash_t * {
       if (ret != SGX_SUCCESS) {
         print_error("Updating transaction table hash failed");
       }
-      // free(data); // TODO: crashes on RID 10 (size of the lock Table is set
+      // free(data);  // TODO: crashes on RID 10 (size of the lock Table is set
       // to 10, so we hit bucket 0 again), test that fails: lockBudgetRunsOut
     }
     entry = entry->next;
