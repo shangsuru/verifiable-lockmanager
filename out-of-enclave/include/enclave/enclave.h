@@ -181,13 +181,6 @@ auto acquire_lock(void *signature, int transactionId, int rowId,
 void release_lock(int transactionId, int rowId);
 
 /**
- * Releases all locks the given transaction currently has.
- *
- * @param transaction the transaction to be aborted
- */
-void abort_transaction(Transaction *transaction);
-
-/**
  * @returns the block timeout, which resembles a future block number of the
  *          blockchain in the storage layer. The storage layer will decline
  *          any requests with a signature that has a block timeout number

@@ -204,6 +204,7 @@ void enclave_process_request() {
           // Register transaction by setting transaction ID and lock budget
           transaction->transaction_id = transactionId;
           transaction->lock_budget = lockBudget;
+          transaction->aborted = false;
           update_integrity_hash_transactiontable(entry);
 
           // Make changes in untrusted memory as well
@@ -211,6 +212,7 @@ void enclave_process_request() {
               (Transaction *)get(transactionTable_, transactionId);
           transactionUntrusted->transaction_id = transactionId;
           transactionUntrusted->lock_budget = lockBudget;
+          transactionUntrusted->aborted = false;
         }
         *cur_job.finished = true;
         transaction_count++;
@@ -404,23 +406,36 @@ auto acquire_lock(void *signature, int transactionId, int rowId,
   print_error("Request for already acquired lock");
 
 abort:
-  // Simulate transaction abort in protected memory
+  // Abort transaction in both trusted and untrusted memory
+  for (int i = 0; i < transactionTrusted->num_locked; i++) {
+    int locked_row = transactionTrusted->locked_rows[i];
+    auto [lockToReleaseTrusted, trustedBucket] =
+        integrity_verified_get_locktable(locked_row);
+    if (trustedBucket == nullptr) {
+      print_error("Integrity verification failed");
+    }
+    auto lockToReleaseUntrusted = (Lock *)get(lockTable_, locked_row);
+
+    release(lockToReleaseTrusted, transactionTrusted->transaction_id);
+    release(lockToReleaseUntrusted, transactionTrusted->transaction_id);
+    if (lockToReleaseUntrusted->num_owners == 0) {
+      remove(lockTable_, locked_row);
+    }
+    update_integrity_hash_locktable(trustedBucket);
+  }
   transactionTrusted->transaction_id = 0;
   transactionTrusted->num_locked = 0;
   transactionTrusted->aborted = true;
-  for (int i = 0; i < transactionTrusted->num_locked; i++) {
-    int locked_row = transactionTrusted->locked_rows[i];
-    Lock *lockTrustedCopyToRelease =
-        integrity_verified_get_locktable(locked_row).first;
-    release(lockTrustedCopyToRelease, transactionTrusted->transaction_id);
-  }
+
+  transactionUntrusted->transaction_id = 0;
+  transactionUntrusted->num_locked = 0;
+  transactionUntrusted->aborted = true;
 
   // Recompute the hash over the bucket in protected memory
   update_integrity_hash_transactiontable(transactionEntry);
-  update_integrity_hash_locktable(lockEntry);
 
-  // Actually abort transaction in untrusted memory
-  abort_transaction(transactionUntrusted);
+  transaction_count--;
+  remove(transactionTable_, transactionTrusted->transaction_id);
   return false;
 
 sign:
@@ -467,13 +482,6 @@ void release_lock(int transactionId, int rowId) {
 
   // Repeat operation in untrusted memory
   releaseLock(transactionUntrusted, rowId, lockTable_);
-}
-
-void abort_transaction(Transaction *transaction) {
-  transaction_count--;
-  transaction->transaction_id = 0;
-  remove(transactionTable_, transaction->transaction_id);
-  releaseAllLocks(transaction, lockTable_);
 }
 
 auto verify_signature(char *signature, int transactionId, int rowId,

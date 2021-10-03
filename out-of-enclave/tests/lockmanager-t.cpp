@@ -83,7 +83,7 @@ TEST_F(LockManagerTest, lockBudgetRunsOut) {
     EXPECT_TRUE(lock_manager.lock(kTransactionIdA, row_id, false).second);
   }
 
-  EXPECT_FALSE(lock_manager.lock(kTransactionIdA, row_id + 1, false).second);
+  EXPECT_FALSE(lock_manager.lock(kTransactionIdA, row_id, false).second);
 };
 
 // Can upgrade a lock
@@ -193,7 +193,6 @@ TEST_F(LockManagerTest,
        acquiringLockFailsAfterLockTableIsAlteredInUntrustedMemory) {
   LockManager lock_manager = LockManager();
   EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
-
   EXPECT_TRUE(lock_manager.lock(kTransactionIdA, kRowId, false).second);
 
   // Alter lock table in untrusted memory
@@ -205,4 +204,43 @@ TEST_F(LockManagerTest,
       kRowId + lock_manager.lockTable
                    ->size;  // make sure that lock will be in the same bucket
   EXPECT_FALSE(lock_manager.lock(kTransactionIdA, anotherLockId, false).second);
+}
+
+TEST_F(LockManagerTest,
+       acquiringLockFailsAfterLockTableIsAlteredInUntrustedMemory2) {
+  LockManager lock_manager = LockManager();
+  EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
+  EXPECT_TRUE(lock_manager.lock(kTransactionIdA, kRowId, false).second);
+
+  // Alter lock table in untrusted memory
+  auto lock = (Lock*)get(lock_manager.lockTable, kRowId);
+  lock->num_owners = 6;
+
+  // Next lock request fails because change is detected
+  int anotherLockId =
+      kRowId + lock_manager.lockTable
+                   ->size;  // make sure that lock will be in the same bucket
+  EXPECT_FALSE(lock_manager.lock(kTransactionIdA, anotherLockId, false).second);
+}
+
+TEST_F(LockManagerTest, integrityVerificationWorksEvenWhenTransactionAborts) {
+  LockManager lock_manager = LockManager();
+  EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
+  EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdB, kLockBudget));
+
+  // Make transaction A acquire an exclusive lock
+  EXPECT_TRUE(lock_manager.lock(kTransactionIdA, kRowId, true).second);
+
+  // Let transaction B try to acquire the same lock, which is a conflict and
+  // causes B to abort
+  EXPECT_TRUE(lock_manager.lock(kTransactionIdB, kRowId + 1, true).second);
+  EXPECT_FALSE(lock_manager.lock(kTransactionIdB, kRowId, true).second);
+
+  // A can continue making lock requests, even the one that B had an exclusive
+  // lock on, because B aborted
+  EXPECT_TRUE(lock_manager.lock(kTransactionIdA, kRowId + 1, false).second);
+
+  // B needs to register again, but afterwards can make more lock requests
+  EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdB, kLockBudget));
+  EXPECT_TRUE(lock_manager.lock(kTransactionIdB, kRowId + 1, false).second);
 }
