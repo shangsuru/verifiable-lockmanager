@@ -100,3 +100,10 @@ void releaseAllLocks(Transaction* transaction, HashTable* lockTable);
  * @return copy casted as void*
  */
 auto copy_transaction(Transaction* transaction) -> void*;
+
+/**
+ * Frees the memory allocated when calling copy_transaction()
+ *
+ * @param transaction the transaction created with copy_transaction())
+ */
+void free_transaction_copy(Transaction*& transaction);

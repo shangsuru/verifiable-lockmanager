@@ -13,17 +13,7 @@ void RunClient() {
   const unsigned int default_lock_budget = 100;
 
   client.registerTransaction(transaction_id, default_lock_budget);
-
-  int num_threads = 8;
-  unsigned int row_id = 1;
-  std::vector<std::thread> threads;
-  for (int i = 0; i < num_threads; i++) {
-    threads.push_back(std::thread(requestLocks, std::ref(client), row_id++));
-  }
-
-  for (int i = 0; i < num_threads; i++) {
-    threads[i].join();
-  }
+  client.requestExclusiveLock(transaction_id, 1);
 }
 
 auto main() -> int {

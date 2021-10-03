@@ -95,5 +95,5 @@ auto locktable_entry_to_uint8_t(Entry* entry, uint8_t*& result) -> uint32_t;
  * @param result the serialized entry
  * @returns the size of the serialized entry
  */
-auto transactiontable_entry_to_uint8_t(Entry* entry, uint8_t*& result)
+auto transactiontable_entry_to_uint8_t(Entry*& entry, uint8_t*& result)
     -> uint32_t;

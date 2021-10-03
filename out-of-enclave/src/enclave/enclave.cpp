@@ -206,6 +206,7 @@ void enclave_process_request() {
           transaction->lock_budget = lockBudget;
           transaction->aborted = false;
           update_integrity_hash_transactiontable(entry);
+          free_transaction_bucket_copy(entry);
 
           // Make changes in untrusted memory as well
           auto transactionUntrusted =
@@ -422,6 +423,7 @@ abort:
       remove(lockTable_, locked_row);
     }
     update_integrity_hash_locktable(trustedBucket);
+    free_lock_bucket_copy(trustedBucket);
   }
   transactionTrusted->transaction_id = 0;
   transactionTrusted->num_locked = 0;
@@ -436,6 +438,9 @@ abort:
 
   transaction_count--;
   remove(transactionTable_, transactionTrusted->transaction_id);
+
+  free_lock_bucket_copy(lockEntry);
+  free_transaction_bucket_copy(transactionEntry);
   return false;
 
 sign:
@@ -449,6 +454,8 @@ sign:
                  &ec256_private_key, (sgx_ec256_signature_t *)signature,
                  context);
 
+  free_lock_bucket_copy(lockEntry);
+  free_transaction_bucket_copy(transactionEntry);
   return true;
 }
 
@@ -482,6 +489,9 @@ void release_lock(int transactionId, int rowId) {
 
   // Repeat operation in untrusted memory
   releaseLock(transactionUntrusted, rowId, lockTable_);
+
+  free_lock_bucket_copy(lockEntry);
+  free_transaction_bucket_copy(transactionEntry);
 }
 
 auto verify_signature(char *signature, int transactionId, int rowId,
@@ -556,6 +566,7 @@ auto hash_locktable_bucket(Entry *bucket) -> sgx_sha256_hash_t * {
       if (ret != SGX_SUCCESS) {
         print_error("Updating lock table hash failed");
       }
+      free(data);
     }
     entry = entry->next;
   } while (entry != nullptr);
@@ -566,6 +577,7 @@ auto hash_locktable_bucket(Entry *bucket) -> sgx_sha256_hash_t * {
   }
 
   ret = sgx_sha256_close(*p_sha_handle);
+  free(p_sha_handle);
   if (ret != SGX_SUCCESS) {
     print_error("Closing SHA handle failed");
   }
@@ -605,6 +617,8 @@ auto hash_transactiontable_bucket(Entry *bucket) -> sgx_sha256_hash_t * {
       if (ret != SGX_SUCCESS) {
         print_error("Updating transaction table hash failed");
       }
+      // free(data); // TODO: crashes on RID 10 (size of the lock Table is set
+      // to 10, so we hit bucket 0 again), test that fails: lockBudgetRunsOut
     }
     entry = entry->next;
   } while (entry != nullptr);
@@ -618,7 +632,7 @@ auto hash_transactiontable_bucket(Entry *bucket) -> sgx_sha256_hash_t * {
   if (ret != SGX_SUCCESS) {
     print_error("Closing SHA handle failed");
   }
-
+  free(p_sha_handle);
   return p_hash;
 }
 
@@ -655,6 +669,7 @@ auto integrity_verified_get_locktable(int key) -> std::pair<Lock *, Entry *> {
   }
 
   // Hashes are not the same
+  free_lock_bucket_copy(copy);
   return std::make_pair(nullptr, nullptr);
 }
 
@@ -705,6 +720,16 @@ auto copy_lock_bucket(Entry *entry) -> Entry * {
   return copy;
 }
 
+void free_lock_bucket_copy(Entry *&copy) {
+  auto nextEntry = copy->next;
+  auto lock = (Lock *)copy->value;
+  free_lock_copy(lock);
+  delete copy;
+  if (nextEntry != nullptr) {
+    free_lock_bucket_copy(nextEntry);
+  }
+}
+
 auto copy_transaction_bucket(Entry *entry) -> Entry * {
   if (entry == nullptr) {
     return nullptr;
@@ -716,13 +741,35 @@ auto copy_transaction_bucket(Entry *entry) -> Entry * {
   return copy;
 }
 
+void free_transaction_bucket_copy(Entry *&copy) {
+  auto nextEntry = copy->next;
+  auto transaction = (Transaction *)copy->value;
+  // free_transaction_copy(transaction);
+  delete copy;
+  if (nextEntry != nullptr) {
+    free_transaction_bucket_copy(nextEntry);
+  }
+}
+
 void update_integrity_hash_transactiontable(Entry *entry) {
   sgx_sha256_hash_t *p_hash = hash_transactiontable_bucket(entry);
+  // Free old hash
+  if (transactionTableIntegrityHashes[hash(transactionTable_->size,
+                                           entry->key)] != nullptr) {
+    free(transactionTableIntegrityHashes[hash(transactionTable_->size,
+                                              entry->key)]);
+  }
+  // Update hash
   transactionTableIntegrityHashes[hash(transactionTable_->size, entry->key)] =
       p_hash;
 }
 
 void update_integrity_hash_locktable(Entry *entry) {
   sgx_sha256_hash_t *p_hash = hash_locktable_bucket(entry);
+  // Free old hash
+  if (lockTableIntegrityHashes[hash(lockTable_->size, entry->key)] != nullptr) {
+    free(lockTableIntegrityHashes[hash(lockTable_->size, entry->key)]);
+  }
+  // Update hash
   lockTableIntegrityHashes[hash(lockTable_->size, entry->key)] = p_hash;
 }

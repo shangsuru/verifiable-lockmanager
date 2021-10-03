@@ -100,3 +100,8 @@ auto copy_transaction(Transaction* transaction) -> void* {
 
   return (void*)copy;
 }
+
+void free_transaction_copy(Transaction*& transaction) {
+  free(transaction->locked_rows);
+  delete transaction;
+}

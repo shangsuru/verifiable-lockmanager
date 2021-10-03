@@ -62,3 +62,9 @@ auto copy_lock(Lock* lock) -> void* {
 
   return (void*)copy;
 }
+
+void free_lock_copy(Lock*& lock) {
+  // free(lock->owners);  // TODO: failing test: multipleTransactionsSharedLock,
+  // Segmentation Fault at TXID 5
+  delete lock;
+}

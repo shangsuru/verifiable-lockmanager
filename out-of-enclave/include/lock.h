@@ -69,3 +69,10 @@ auto upgrade(Lock* lock, int transactionId) -> bool;
  * @return copy casted as void*
  */
 auto copy_lock(Lock* lock) -> void*;
+
+/**
+ * Frees the memory allocated when calling copy_lock()
+ *
+ * @param lock the lock created with copy_lock()
+ */
+void free_lock_copy(Lock*& lock);

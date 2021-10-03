@@ -282,13 +282,27 @@ auto integrity_verified_get_transactiontable(int key)
 auto copy_lock_bucket(Entry *entry) -> Entry *;
 
 /**
- * Copies the whole bucket from untrusted to protected memory. The entries are
- * assumed to contain transactions.
+ * Frees the memory allocated by copy_lock_bucket()
+ *
+ * @param copy the bucket created by copy_lock_bucket()
+ */
+void free_lock_bucket_copy(Entry *&copy);
+
+/**
+ * Copies the whole bucket from untrusted to protected memory. The entries
+ * are assumed to contain transactions.
  *
  * @param entry entry from untrusted memory to copy
  * @returns copy in protected memory
  */
 auto copy_transaction_bucket(Entry *entry) -> Entry *;
+
+/**
+ * Frees the memory allocated by copy_transaction_bucket()
+ *
+ * @param copy the bucket created by copy_transaction_bucket()
+ */
+void free_transaction_bucket_copy(Entry *&copy);
 
 /**
  * Computes the hash over the given bucket from the transaction table and
