@@ -410,8 +410,9 @@ abort:
   transactionTrusted->aborted = true;
   for (int i = 0; i < transactionTrusted->num_locked; i++) {
     int locked_row = transactionTrusted->locked_rows[i];
-    auto lock = (Lock *)get(lockEntry, locked_row);
-    release(lock, transactionTrusted->transaction_id);
+    Lock *lockTrustedCopyToRelease =
+        integrity_verified_get_locktable(locked_row).first;
+    release(lockTrustedCopyToRelease, transactionTrusted->transaction_id);
   }
 
   // Recompute the hash over the bucket in protected memory
