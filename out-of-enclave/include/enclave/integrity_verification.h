@@ -1,0 +1,152 @@
+#pragma once
+
+#include <vector>
+
+#include "common.h"
+#include "enclave_t.h"
+#include "lock.h"
+#include "sgx_tcrypto.h"
+#include "sgx_trts.h"
+#include "transaction.h"
+
+/**
+ * This function takes an entry of a lock table and serializes it into uint8_t*,
+ * which is the required parameter type for the sgx_sha256_hash function.
+ *
+ * @param entry the entry that should be serialized to a uint8_t* (the
+ * entry should contain locks as values)
+ * @param result the serialized entry
+ */
+void locktable_entry_to_uint8_t(Entry *entry, uint8_t *&result);
+
+/**
+ * This function takes an entry of a lock table and serializes it into uint8_t*,
+ * which is the required parameter type for the sgx_sha256_hash function.
+ *
+ * @param entry the entry that should be serialized to a uint8_t* (the
+ * entry should contain transactions as values)
+ * @param result the serialized entry
+ */
+void transactiontable_entry_to_uint8_t(Entry *&entry, uint8_t *&result);
+
+/**
+ * Copies the whole bucket from untrusted to protected memory. The entries
+ * are assumed to contain transactions.
+ *
+ * @param entry entry from untrusted memory to copy
+ * @returns copy in protected memory
+ */
+auto copy_transaction_bucket(Entry *entry) -> Entry *;
+
+/**
+ * Frees the memory allocated by copy_transaction_bucket()
+ *
+ * @param copy the bucket created by copy_transaction_bucket()
+ */
+void free_transaction_bucket_copy(Entry *&copy);
+
+/**
+ * Computes the hash over the given bucket from the transaction table and
+ * updates the integrity hashes stored inside the enclave.
+ *
+ * @param transactionTable_ the transaction table to compute the hash over
+ * @param transactionTableIntegrityHashes where to save the newly computed hash
+ * @param entry the bucket to compute the new integrity hash over
+ */
+void update_integrity_hash_transactiontable(
+    HashTable *&transactionTable_,
+    std::vector<sgx_sha256_hash_t *> &transactionTableIntegrityHashes,
+    Entry *entry);
+
+/**
+ * Computes the hash over the given bucket from the lock table and updates the
+ * integrity hashes stored inside the enclave.
+ *
+ * @param lockTable_ the lock table to compute the hash over
+ * @param lockTableIntegrityHashes where to save the newly computed hash
+ * @param entry the bucket to compute the new integrity hash over
+ */
+void update_integrity_hash_locktable(
+    HashTable *&lockTable_,
+    std::vector<sgx_sha256_hash_t *> &lockTableIntegrityHashes, Entry *entry);
+
+/**
+ * Copies the whole bucket from untrusted to protected memory. The entries are
+ * assumed to contain locks.
+ *
+ * @param entry entry from untrusted memory to copy
+ * @returns copy in protected memory
+ */
+auto copy_lock_bucket(Entry *entry) -> Entry *;
+
+/**
+ * Frees the memory allocated by copy_lock_bucket()
+ *
+ * @param copy the bucket created by copy_lock_bucket()
+ */
+void free_lock_bucket_copy(Entry *&copy);
+
+/**
+ * Hashes a bucket of the lock table. The hash is saved by the enclave and can
+ * be used to detect if the contents of the bucket was altered, by computing
+ * the hash again and comparing it with the saved hash. If
+ * they don't match, then something inside the bucket changed. The hash does not
+ * include locks without owners.
+ *
+ * @param bucket the bucket to compute the hash over
+ * @returns the hash over the given bucket
+ */
+auto hash_locktable_bucket(Entry *bucket) -> sgx_sha256_hash_t *;
+
+/**
+ * Hashes a bucket of the transaction table. The hash is saved by the enclave
+ * and can be used to detect if the contents of the bucket was altered, by
+ * computing the hash again and comparing it with the saved hash. If they don't
+ * match, then something inside the bucket changed. The hash does not include
+ * unregistered transactions, i.e. transactions with transaction_id = 0.
+ *
+ * @param bucket the bucket to compute the hash over
+ * @returns the hash over the given bucket
+ */
+auto hash_transactiontable_bucket(Entry *bucket) -> sgx_sha256_hash_t *;
+
+/**
+ * Gets the entry from the lock table, but verifies the integrity of the
+ * corresponding bucket via integrity hashes.
+ *
+ * @param lockTable_ the lock table to get the lock from
+ * @param lockTableIntegrityhashes hash over each bucket of the transaction
+ * table
+ * @param key the row ID
+ * @returns the lock for the corresponding key, or
+ * nullptr, when the verification of the hashes failed
+ */
+auto integrity_verified_get_locktable(
+    HashTable *&lockTable_,
+    std::vector<sgx_sha256_hash_t *> &lockTableIntegrityHashes, int key)
+    -> std::pair<Lock *, Entry *>;
+
+/**
+ * Verifies the integrity hashes on a copy of the bucket in protected
+ * memory, so that no changes can be made from untrusted memory while computing
+ * the hash. Returns the bucket together with the corresponding transaction
+ * within it. The returned transaction is therefore guaranteed to be an
+ * unaltered copy from untrusted memory. Changes can be applied on it to update
+ * the verification hash afterwards, but the changes need to be redone on the
+ * corresponding transaction in untrusted memory. The returned transaction in
+ * protected memory is just a temporary copy.
+ *
+ * @param transactionTable_ the transaction table to get the transaction from
+ * @param transactionTableIntegrityHashes hash over each bucket of the
+ * transaction table
+ * @param key the transaction ID
+ * @returns the transaction for the corresponding key together with the bucket
+ * allocated in protected memory that was used to compute the integrity hash, or
+ * nullptr, when the verification of the hashes failed. The bucket is needed to
+ * recompute the integrity hash on a trusted copy when the transaction is
+ * changed later, e.g., when registering or aborting it.
+ */
+auto integrity_verified_get_transactiontable(
+    HashTable *&transactionTable_,
+    std::vector<sgx_sha256_hash_t *> transactionTableIntegrityHashes, int key)
+    -> std::pair<Transaction *, Entry *>;
