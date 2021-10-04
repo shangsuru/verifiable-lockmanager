@@ -74,26 +74,3 @@ auto contains(HashTable* hashTable, int key) -> bool;
  * @param key TXID or RID
  */
 void remove(HashTable* hashTable, int key);
-
-/**
- * This function takes an entry of a lock table and serializes it into uint8_t*,
- * which is the required parameter type for the sgx_sha256_hash function.
- *
- * @param entry the entry that should be serialized to a uint8_t* (the
- * entry should contain locks as values)
- * @param result the serialized entry
- * @returns the size of the serialized entry
- */
-auto locktable_entry_to_uint8_t(Entry* entry, uint8_t*& result) -> uint32_t;
-
-/**
- * This function takes an entry of a lock table and serializes it into uint8_t*,
- * which is the required parameter type for the sgx_sha256_hash function.
- *
- * @param entry the entry that should be serialized to a uint8_t* (the
- * entry should contain transactions as values)
- * @param result the serialized entry
- * @returns the size of the serialized entry
- */
-auto transactiontable_entry_to_uint8_t(Entry*& entry, uint8_t*& result)
-    -> uint32_t;

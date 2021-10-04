@@ -319,3 +319,23 @@ void update_integrity_hash_transactiontable(Entry *entry);
  *  * @param entry the bucket to compute the new integrity hash over
  */
 void update_integrity_hash_locktable(Entry *entry);
+
+/**
+ * This function takes an entry of a lock table and serializes it into uint8_t*,
+ * which is the required parameter type for the sgx_sha256_hash function.
+ *
+ * @param entry the entry that should be serialized to a uint8_t* (the
+ * entry should contain locks as values)
+ * @param result the serialized entry
+ */
+void locktable_entry_to_uint8_t(Entry *entry, uint8_t *&result);
+
+/**
+ * This function takes an entry of a lock table and serializes it into uint8_t*,
+ * which is the required parameter type for the sgx_sha256_hash function.
+ *
+ * @param entry the entry that should be serialized to a uint8_t* (the
+ * entry should contain transactions as values)
+ * @param result the serialized entry
+ */
+void transactiontable_entry_to_uint8_t(Entry *&entry, uint8_t *&result);

@@ -542,12 +542,9 @@ auto hash_locktable_bucket(Entry *bucket) -> sgx_sha256_hash_t * {
   }
 
   Entry *entry = bucket;
-  // TODO: 100 represents the number of transactions that can hold the lock for
-  // the lock to be correctly serialized. Is there a better upper bound then
-  // 100?
-  uint8_t *data = new uint8_t[100];  // the serialized entry with lock
-  uint32_t size;                     // size of the serialized entry
-  sgx_status_t ret;                  // status code of sgx library calls
+  uint32_t size = 3 + SGX_SHA256_HASH_SIZE;  // size of the serialized entry
+  uint8_t *data = new uint8_t[size];         // the serialized entry with lock
+  sgx_status_t ret;                          // status code of sgx library calls
 
   // To hold the hash over the entries in the bucket
   sgx_sha256_hash_t *p_hash =
@@ -564,7 +561,7 @@ auto hash_locktable_bucket(Entry *bucket) -> sgx_sha256_hash_t * {
   do {  // Update the hash with each entry in the bucket
     // Only include locks with owners into the hash
     if (((Lock *)entry->value)->num_owners != 0) {
-      size = locktable_entry_to_uint8_t(entry, data);
+      locktable_entry_to_uint8_t(entry, data);
       ret = sgx_sha256_update(data, size, *p_sha_handle);
       if (ret != SGX_SUCCESS) {
         print_error("Updating lock table hash failed");
@@ -597,11 +594,9 @@ auto hash_transactiontable_bucket(Entry *bucket) -> sgx_sha256_hash_t * {
   }
 
   Entry *entry = bucket;
-  // TODO: 100 is the number of locks the transaction is allowed to hold at max
-  // to be correctly serialized: better max value?
-  uint8_t *data = new uint8_t[100];  // the serialized entry with transaction
-  uint32_t size;                     // size of the serialized entry
-  sgx_status_t ret;                  // status code of sgx library calls
+  uint32_t size = 6 + SGX_SHA256_HASH_SIZE;  // size of the serialized entry
+  uint8_t *data = new uint8_t[size];  // the serialized entry with transaction
+  sgx_status_t ret;                   // status code of sgx library calls
 
   // To hold the hash over the entries in the bucket
   sgx_sha256_hash_t *p_hash =
@@ -618,7 +613,7 @@ auto hash_transactiontable_bucket(Entry *bucket) -> sgx_sha256_hash_t * {
   do {  // Update the hash with each entry in the bucket
     // Only include registered transactions
     if (((Transaction *)entry->value)->transaction_id != 0) {
-      size = transactiontable_entry_to_uint8_t(entry, data);
+      transactiontable_entry_to_uint8_t(entry, data);
       ret = sgx_sha256_update(data, size, *p_sha_handle);
       if (ret != SGX_SUCCESS) {
         print_error("Updating transaction table hash failed");
@@ -777,4 +772,54 @@ void update_integrity_hash_locktable(Entry *entry) {
   }
   // Update hash
   lockTableIntegrityHashes[hash(lockTable_->size, entry->key)] = p_hash;
+}
+
+void locktable_entry_to_uint8_t(Entry *entry, uint8_t *&result) {
+  Lock *lock = (Lock *)(entry->value);
+  int num_owners = lock->num_owners;
+
+  // Get the entry key and every member of the lock struct
+  result[0] = entry->key;
+  result[1] = lock->exclusive;
+  result[2] = num_owners;
+
+  sgx_sha256_hash_t *p_hash =
+      (sgx_sha256_hash_t *)malloc(sizeof(sgx_sha256_hash_t));
+  sgx_status_t ret =
+      sgx_sha256_msg((uint8_t *)lock->owners, sizeof(int) * num_owners, p_hash);
+  if (ret != SGX_SUCCESS) {
+    print_error("Error when serializing lock");
+  }
+
+  for (int i = 0; i < SGX_SHA256_HASH_SIZE; i++) {
+    result[3 + i] = (*p_hash)[i];
+  }
+  free(p_hash);
+}
+
+void transactiontable_entry_to_uint8_t(Entry *&entry, uint8_t *&result) {
+  Transaction *transaction = (Transaction *)(entry->value);
+  int num_locked = transaction->num_locked;
+
+  // Get the entry key and every member of the transaction struct
+  result[0] = entry->key;
+  result[1] = transaction->transaction_id;
+  result[2] = transaction->aborted;
+  result[3] = transaction->growing_phase;
+  result[4] = transaction->lock_budget;
+  result[5] = transaction->locked_rows_size;
+  result[6] = num_locked;
+
+  sgx_sha256_hash_t *p_hash =
+      (sgx_sha256_hash_t *)malloc(sizeof(sgx_sha256_hash_t));
+  sgx_status_t ret = sgx_sha256_msg((uint8_t *)transaction->locked_rows,
+                                    sizeof(int) * num_locked, p_hash);
+  if (ret != SGX_SUCCESS) {
+    print_error("Error when serializing transaction");
+  }
+
+  for (int i = 0; i < SGX_SHA256_HASH_SIZE; i++) {
+    result[7 + i] = (*p_hash)[i];
+  }
+  free(p_hash);
 }
