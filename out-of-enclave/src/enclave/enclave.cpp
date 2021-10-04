@@ -542,9 +542,12 @@ auto hash_locktable_bucket(Entry *bucket) -> sgx_sha256_hash_t * {
   }
 
   Entry *entry = bucket;
-  uint8_t *data;     // the serialized entry with lock
-  uint32_t size;     // size of the serialized entry
-  sgx_status_t ret;  // status code of sgx library calls
+  // TODO: 100 represents the number of transactions that can hold the lock for
+  // the lock to be correctly serialized. Is there a better upper bound then
+  // 100?
+  uint8_t *data = new uint8_t[100];  // the serialized entry with lock
+  uint32_t size;                     // size of the serialized entry
+  sgx_status_t ret;                  // status code of sgx library calls
 
   // To hold the hash over the entries in the bucket
   sgx_sha256_hash_t *p_hash =
@@ -566,10 +569,11 @@ auto hash_locktable_bucket(Entry *bucket) -> sgx_sha256_hash_t * {
       if (ret != SGX_SUCCESS) {
         print_error("Updating lock table hash failed");
       }
-      free(data);
     }
     entry = entry->next;
   } while (entry != nullptr);
+
+  delete[] data;
 
   ret = sgx_sha256_get_hash(*p_sha_handle, p_hash);
   if (ret != SGX_SUCCESS) {
@@ -593,9 +597,11 @@ auto hash_transactiontable_bucket(Entry *bucket) -> sgx_sha256_hash_t * {
   }
 
   Entry *entry = bucket;
-  uint8_t *data;     // the serialized entry with transaction
-  uint32_t size;     // size of the serialized entry
-  sgx_status_t ret;  // status code of sgx library calls
+  // TODO: 100 is the number of locks the transaction is allowed to hold at max
+  // to be correctly serialized: better max value?
+  uint8_t *data = new uint8_t[100];  // the serialized entry with transaction
+  uint32_t size;                     // size of the serialized entry
+  sgx_status_t ret;                  // status code of sgx library calls
 
   // To hold the hash over the entries in the bucket
   sgx_sha256_hash_t *p_hash =
@@ -617,12 +623,11 @@ auto hash_transactiontable_bucket(Entry *bucket) -> sgx_sha256_hash_t * {
       if (ret != SGX_SUCCESS) {
         print_error("Updating transaction table hash failed");
       }
-      // free(data);  // TODO: crashes on RID 10 (size of the lock Table is set
-      // to 10, so we hit bucket 0 again), test that fails: lockBudgetRunsOut
     }
     entry = entry->next;
   } while (entry != nullptr);
 
+  delete[] data;
   ret = sgx_sha256_get_hash(*p_sha_handle, p_hash);
   if (ret != SGX_SUCCESS) {
     print_error("Getting hash failed");

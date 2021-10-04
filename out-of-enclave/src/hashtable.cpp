@@ -101,7 +101,6 @@ auto locktable_entry_to_uint8_t(Entry* entry, uint8_t*& result) -> uint32_t {
   uint32_t size = 3 + num_owners;
 
   // Get the entry key and every member of the lock struct
-  result = (uint8_t*)malloc(sizeof(uint8_t) * size);
   result[0] = entry->key;
   result[1] = lock->exclusive;
   result[2] = num_owners;
@@ -120,7 +119,6 @@ auto transactiontable_entry_to_uint8_t(Entry*& entry, uint8_t*& result)
   uint32_t size = 6 + num_locked;
 
   // Get the entry key and every member of the transaction struct
-  result = (uint8_t*)malloc(sizeof(uint8_t) * size);
   result[0] = entry->key;
   result[1] = transaction->transaction_id;
   result[2] = transaction->aborted;
