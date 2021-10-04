@@ -14,7 +14,7 @@ target_include_directories(lock PUBLIC "${LockManager_SOURCE_DIR}/include")
 # Intel SGX
 find_package(SGX REQUIRED)
 
-set(E_SRCS enclave/enclave.cpp enclave/integrity_verification.cpp base64-encoding.cpp transaction.cpp lock.cpp hashtable.cpp)
+set(E_SRCS enclave/enclave.cpp enclave/integrity_verification.cpp enclave/lock_signatures.cpp base64-encoding.cpp transaction.cpp lock.cpp hashtable.cpp)
 set(T_SCRS "")
 set(EDL_SEARCH_PATHS enclave)
 
