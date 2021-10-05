@@ -1,15 +1,25 @@
-#include "client.h"
-
-#include <vector>
-#include <string>
 #include <fstream>
 #include <iostream>
+#include <string>
+#include <vector>
 
+#include "client.h"
+
+const size_t bigger_than_cachesize =
+    20 * 1024 * 1024;  // Checked cache size with command 'lscpu | grep cache'
+long* p = new long[bigger_than_cachesize];
+
+void flushCache() {
+  // When you want to "flush" cache.
+  for (int i = 0; i < bigger_than_cachesize; i++) {
+    p[i] = rand();
+  }
+}
 
 void writeToCSV(std::string filename, std::vector<std::vector<double>> values) {
   std::ofstream file;
   file.open(filename);
-  
+
   for (const auto& row : values) {
     for (int i = 0; i < row.size() - 1; i++) {
       file << row[i] << ",";
@@ -33,6 +43,6 @@ void RunClient() {
 }
 
 auto main() -> int {
-  //RunClient();
+  // RunClient();
   return 0;
 }
