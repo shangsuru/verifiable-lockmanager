@@ -1,5 +1,7 @@
 #include <fstream>
+#include <functional>
 #include <iostream>
+#include <numeric>
 #include <string>
 #include <vector>
 
@@ -14,6 +16,24 @@ void flushCache() {
   for (int i = 0; i < bigger_than_cachesize; i++) {
     p[i] = rand();
   }
+}
+
+auto executeNTimes(std::function<void(int)> func, int arg) -> long {
+  int n = 10000;
+  std::vector<long> durations;
+  for (int i = 0; i < n; i++) {
+    auto begin = std::chrono::high_resolution_clock::now();
+    func(arg);
+    auto end = std::chrono::high_resolution_clock::now();
+    long duration =
+        std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin)
+            .count() /
+        arg;
+    durations.push_back(duration);
+    flushCache();
+  }
+
+  return std::reduce(durations.begin(), durations.end()) / durations.size();
 }
 
 void writeToCSV(std::string filename, std::vector<std::vector<double>> values) {
@@ -42,7 +62,12 @@ void RunClient() {
   client.requestExclusiveLock(transaction_id, 1);
 }
 
+void hello(int arg) {
+  std::cout << "Hello " << std::to_string(arg) << std::endl;
+}
+
 auto main() -> int {
-  // RunClient();
+  long duration = executeNTimes(hello, 15);
+  std::cout << duration << " ns" << std::endl;
   return 0;
 }
