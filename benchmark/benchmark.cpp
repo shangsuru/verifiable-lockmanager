@@ -1,7 +1,23 @@
 #include "client.h"
 
-void requestLocks(LockingServiceClient& client, unsigned int rowId) {
-  client.requestSharedLock(1, rowId);
+#include <vector>
+#include <string>
+#include <fstream>
+#include <iostream>
+
+
+void writeToCSV(std::string filename, std::vector<std::vector<double>> values) {
+  std::ofstream file;
+  file.open(filename);
+  
+  for (const auto& row : values) {
+    for (int i = 0; i < row.size() - 1; i++) {
+      file << row[i] << ",";
+    }
+    file << row[row.size() - 1];
+    file << std::endl;
+  }
+  file.close();
 }
 
 void RunClient() {
@@ -17,7 +33,6 @@ void RunClient() {
 }
 
 auto main() -> int {
-  spdlog::info("Starting client");
-  RunClient();
+  //RunClient();
   return 0;
 }
