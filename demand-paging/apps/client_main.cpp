@@ -5,24 +5,25 @@ void requestLocks(LockingServiceClient& client, unsigned int rowId) {
 }
 
 void RunClient() {
-  std::string target_address("0.0.0.0:50051");
   LockingServiceClient client(
       grpc::CreateChannel(target_address, grpc::InsecureChannelCredentials()));
 
-  unsigned int transaction_id = 1;
-  const unsigned int default_lock_budget = 10;
-
-  client.registerTransaction(transaction_id, default_lock_budget);
-
-  int num_threads = 8;
-  unsigned int row_id = 1;
-  std::vector<std::thread> threads;
-  for (int i = 0; i < num_threads; i++) {
-    threads.push_back(std::thread(requestLocks, std::ref(client), row_id++));
+  int transactionA = 1;
+  int transactionB = 2;
+  int lockBudget = 120;
+  client.registerTransaction(transactionA, lockBudget);
+  client.registerTransaction(transactionB, lockBudget);
+  for (int rowId = 1; rowId < lockBudget; rowId++) {
+    client.requestSharedLock(transactionA, rowId);
+  }
+  for (int rowId = 1; rowId < lockBudget; rowId++) {
+    client.requestSharedLock(transactionB, rowId);
   }
 
-  for (int i = 0; i < num_threads; i++) {
-    threads[i].join();
+  // Both release the locks again
+  for (int rowId = 1; rowId < lockBudget; rowId++) {
+    client.requestUnlock(transactionA, rowId);
+    client.requestUnlock(transactionB, rowId);
   }
 }
 

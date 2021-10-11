@@ -5,12 +5,14 @@
 #include <grpcpp/server.h>
 #include <grpcpp/server_builder.h>
 #include <grpcpp/server_context.h>
-#include "spdlog/spdlog.h"
 
 #include <iostream>
 
 #include "lockmanager.grpc.pb.h"
 #include "lockmanager.h"
+#include "spdlog/spdlog.h"
+
+#define server_address "@SERVER_ADDRESS@"
 
 using grpc::Server;
 using grpc::ServerBuilder;
@@ -34,7 +36,8 @@ class LockingServiceImpl final : public LockingService::Service {
    * @param response contains if the registration was successful
    * @return the status code of the RPC call (OK or a specific error code)
    */
-  auto RegisterTransaction(ServerContext* context, const RegistrationRequest* request,
+  auto RegisterTransaction(ServerContext* context,
+                           const RegistrationRequest* request,
                            RegistrationResponse* response) -> Status override;
 
   /**

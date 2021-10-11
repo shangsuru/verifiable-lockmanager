@@ -1,12 +1,14 @@
 #pragma once
 
 #include <grpcpp/grpcpp.h>
-#include "spdlog/spdlog.h"
 
 #include <iostream>
 #include <string_view>
 
 #include "lockmanager.grpc.pb.h"
+#include "spdlog/spdlog.h"
+
+#define target_address "@SERVER_ADDRESS@"
 
 using grpc::Channel;
 using grpc::ClientContext;

@@ -4,6 +4,8 @@
 
 ### C++ ###
 build
+demand-paging/include/server/server.h
+demand-paging/include/client/client.h
 
 # Compiled Object files
 *.slo
