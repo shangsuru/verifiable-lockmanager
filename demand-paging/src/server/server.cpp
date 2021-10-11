@@ -2,9 +2,10 @@
 
 auto LockingServiceImpl::RegisterTransaction(ServerContext* context,
                                              const RegistrationRequest* request,
-                                             RegistrationResponse* response) -> Status {
-  unsigned int transaction_id = request->transaction_id();
-  unsigned int lock_budget = request->lock_budget();
+                                             RegistrationResponse* response)
+    -> Status {
+  int transaction_id = request->transaction_id();
+  int lock_budget = request->lock_budget();
 
   if (lockManager_.registerTransaction(transaction_id, lock_budget)) {
     return Status::OK;
@@ -16,8 +17,8 @@ auto LockingServiceImpl::RegisterTransaction(ServerContext* context,
 auto LockingServiceImpl::LockExclusive(ServerContext* context,
                                        const LockRequest* request,
                                        LockResponse* response) -> Status {
-  unsigned int transaction_id = request->transaction_id();
-  unsigned int row_id = request->row_id();
+  int transaction_id = request->transaction_id();
+  int row_id = request->row_id();
 
   auto [signature, ok] = lockManager_.lock(transaction_id, row_id, true);
 
@@ -32,8 +33,8 @@ auto LockingServiceImpl::LockExclusive(ServerContext* context,
 auto LockingServiceImpl::LockShared(ServerContext* context,
                                     const LockRequest* request,
                                     LockResponse* response) -> Status {
-  unsigned int transaction_id = request->transaction_id();
-  unsigned int row_id = request->row_id();
+  int transaction_id = request->transaction_id();
+  int row_id = request->row_id();
 
   auto [signature, ok] = lockManager_.lock(transaction_id, row_id, false);
 
@@ -48,8 +49,8 @@ auto LockingServiceImpl::LockShared(ServerContext* context,
 auto LockingServiceImpl::Unlock(ServerContext* context,
                                 const LockRequest* request,
                                 LockResponse* response) -> Status {
-  unsigned int transaction_id = request->transaction_id();
-  unsigned int row_id = request->row_id();
+  int transaction_id = request->transaction_id();
+  int row_id = request->row_id();
 
   lockManager_.unlock(transaction_id, row_id);
   return Status::OK;

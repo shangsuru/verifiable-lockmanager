@@ -35,7 +35,7 @@ auto LockManager::create_worker_thread(void *tmp) -> void * {
 }
 
 void LockManager::configuration_init() {
-  arg.num_threads = 8;
+  arg.num_threads = 2;
   arg.tx_thread_id = arg.num_threads - 1;
 }
 

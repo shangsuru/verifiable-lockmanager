@@ -10,6 +10,8 @@
 const size_t bigger_than_cachesize =
     20 * 1024 * 1024;  // Checked cache size with command 'lscpu | grep cache'
 long* p = new long[bigger_than_cachesize];
+int transactionA = 1;
+int transactionB = 2;
 
 void flushCache() {
   // When you want to "flush" cache.
@@ -50,24 +52,37 @@ void writeToCSV(std::string filename, std::vector<std::vector<double>> values) {
   file.close();
 }
 
-void RunClient() {
+auto getClient() -> LockingServiceClient {
   std::string target_address("0.0.0.0:50051");
   LockingServiceClient client(
       grpc::CreateChannel(target_address, grpc::InsecureChannelCredentials()));
 
-  unsigned int transaction_id = 1;
-  const unsigned int default_lock_budget = 100;
-
-  client.registerTransaction(transaction_id, default_lock_budget);
-  client.requestExclusiveLock(transaction_id, 1);
+  return client;
 }
 
-void hello(int arg) {
-  std::cout << "Hello " << std::to_string(arg) << std::endl;
+void experiment(LockingServiceClient& client, int numberOfLocks) {
+  // A acquires given number of locks in shared mode, then B acquires the same
+  // locks in shared mode. This makes A to write lock objects into the lock
+  // table and B read them again later one.
+  for (int rowId = 1; rowId < numberOfLocks; rowId++) {
+    client.requestSharedLock(transactionA, rowId);
+  }
+  for (int rowId = 1; rowId < numberOfLocks; rowId++) {
+    client.requestSharedLock(transactionB, rowId);
+  }
+
+  // Both release the locks again
+  for (int rowId = 1; rowId < numberOfLocks; rowId++) {
+    client.requestUnlock(transactionA, rowId);
+    client.requestUnlock(transactionB, rowId);
+  }
 }
 
 auto main() -> int {
-  long duration = executeNTimes(hello, 15);
-  std::cout << duration << " ns" << std::endl;
+  auto client = getClient();
+  int lockBudget = 1000;
+  client.registerTransaction(transactionA, lockBudget);
+  client.registerTransaction(transactionB, lockBudget);
+  experiment(client, lockBudget);
   return 0;
 }
