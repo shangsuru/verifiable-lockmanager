@@ -88,12 +88,11 @@ class LockManager {
    *
    * @param transactionId identifies the transaction making the request
    * @param rowId identifies the row to be locked
-   * @param requestedMode either shared for concurrent read access or exclusive
+   * @param isExclusive either shared for concurrent read access or exclusive
    * for sole write access
-   * @returns the signature for the acquired lock
-   * @throws std::domain_error, when transaction did not call
-   * RegisterTransaction before or the given lock mode is unknown or when the
-   * transaction makes a request for a look, that it already owns, makes a
+   * @returns the signature for the acquired lock and true or
+   * no signature and false, when transaction was not registered before or when
+   * the transaction makes a request for a look that it already owns, makes a
    * request for a lock while in the shrinking phase, or when the lock budget is
    * exhausted
    */
@@ -131,7 +130,9 @@ class LockManager {
   auto initialize_enclave() -> bool;
 
   /**
-   * Stores key pair for ECDSA signature inside the sealed key file.
+   * Stores key pair for ECDSA signature inside the sealed key file. This is
+   * necessary to persist the key pair that the enclave uses for signing even if
+   * it temporarily shuts down.
    *
    * @returns true if successful, else false
    */
@@ -179,7 +180,7 @@ class LockManager {
    * the pair also contains the signature as the return value
    */
   auto create_enclave_job(Command command, unsigned int transaction_id = 0,
-                  unsigned int row_id = 0, unsigned int lock_budget = 0)
+                          unsigned int row_id = 0, unsigned int lock_budget = 0)
       -> std::pair<std::string, bool>;
 
   Arg arg;  // configuration parameters for the enclave

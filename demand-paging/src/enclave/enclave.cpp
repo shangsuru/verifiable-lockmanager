@@ -95,14 +95,12 @@ void enclave_send_job(void *data) {
 
 void enclave_process_request() {
   sgx_thread_mutex_lock(&global_num_mutex);
-
   int thread_id = num;
   num += 1;
+  sgx_thread_mutex_unlock(&global_num_mutex);
 
   sgx_thread_mutex_init(&queue_mutex[thread_id], NULL);
   sgx_thread_cond_init(&job_cond[thread_id], NULL);
-
-  sgx_thread_mutex_unlock(&global_num_mutex);
 
   sgx_thread_mutex_lock(&queue_mutex[thread_id]);
 

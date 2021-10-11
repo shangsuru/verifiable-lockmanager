@@ -177,15 +177,20 @@ TEST_F(LockManagerTest, releaseLockTwice) {
   lock_manager.unlock(kTransactionIdA, kRowId);
 };
 
+// Release locks that another TX holds should not work
 TEST_F(LockManagerTest, releasingAnUnownedLock) {
-    LockManager lock_manager = LockManager();
-    EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
-    EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdB, kLockBudget));
-    EXPECT_TRUE(lock_manager.lock(kTransactionIdA, kRowId, Lock::LockMode::kExclusive).second);
-    
-    // Transaction B tries to unlock A's lock and acquire it
-    lock_manager.unlock(kTransactionIdB, kRowId);
-    EXPECT_FALSE(lock_manager.lock(kTransactionIdB, kRowId, Lock::LockMode::kExclusive).second);
+  LockManager lock_manager = LockManager();
+  EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
+  EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdB, kLockBudget));
+  EXPECT_TRUE(
+      lock_manager.lock(kTransactionIdA, kRowId, Lock::LockMode::kExclusive)
+          .second);
+
+  // Transaction B tries to unlock A's lock and acquire it
+  lock_manager.unlock(kTransactionIdB, kRowId);
+  EXPECT_FALSE(
+      lock_manager.lock(kTransactionIdB, kRowId, Lock::LockMode::kExclusive)
+          .second);
 }
 
 // Cannot acquire more locks in shrinking phase
@@ -201,6 +206,7 @@ TEST_F(LockManagerTest, noMoreLocksInShrinkingPhase) {
           .second);
 };
 
+// Checks that a valid signature is created
 TEST_F(LockManagerTest, verifySignature) {
   LockManager lock_manager = LockManager();
   EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
