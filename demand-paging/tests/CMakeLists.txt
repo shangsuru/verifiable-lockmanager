@@ -15,3 +15,6 @@ gtest_discover_tests(server_test
         WORKING_DIRECTORY ${PROJECT_DIR}
     )
 set_target_properties(server_test PROPERTIES FOLDER tests)
+
+add_executable(hashtable_test "${CMAKE_CURRENT_SOURCE_DIR}/hashtable-t.cpp")
+target_link_libraries(hashtable_test gtest gmock gtest_main hashtable lock transaction)

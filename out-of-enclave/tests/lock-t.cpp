@@ -4,8 +4,8 @@
 
 #include "lock.h"
 
-const unsigned int kTransactionIdA = 0;
-const unsigned int kTransactionIdB = 1;
+const unsigned int kTransactionIdA = 1;
+const unsigned int kTransactionIdB = 2;
 
 // Shared access works
 TEST(LockTest, sharedAccess) {

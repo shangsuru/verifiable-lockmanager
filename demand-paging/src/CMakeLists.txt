@@ -1,13 +1,20 @@
 # Intel SGX
 find_package(SGX REQUIRED)
 
+# HashTable
+add_library(hashtable hashtable.cpp)
+target_include_directories(hashtable PUBLIC "${LockManager_SOURCE_DIR}/include")
+
+# Transaction
 add_library(transaction transaction.cpp lock.cpp)
 target_include_directories(transaction PUBLIC "${LockManager_SOURCE_DIR}/include")
+target_link_libraries(transaction PUBLIC hashtable)
 
+# Lock
 add_library(lock lock.cpp)
 target_include_directories(lock PUBLIC "${LockManager_SOURCE_DIR}/include")
 
-set(E_SRCS enclave/enclave.cpp base64-encoding.cpp transaction.cpp lock.cpp)
+set(E_SRCS enclave/enclave.cpp base64-encoding.cpp transaction.cpp lock.cpp hashtable.cpp)
 set(T_SCRS "")
 set(EDL_SEARCH_PATHS enclave)
 
@@ -35,8 +42,6 @@ add_library(TrustDBle::lckMgr ALIAS lckMgr)
 
 # We need this directory, and users of our library will need it too
 target_include_directories(lckMgr PUBLIC ../include ../include/lockmanager ${FETCHCONTENT_BASE_DIR}/spdlog-src/include/ ../build/src ${SGX_INCLUDE_DIR})
-
-# add_dependencies(lckMgr enclave-sign)
 
 # All users of this library will need at least C++17
 target_compile_features(lckMgr PUBLIC cxx_std_17)

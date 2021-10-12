@@ -11,8 +11,8 @@ std::vector<std::queue<Job>> queue;  // a job queue for each worker thread
 void enclave_init_values(Arg arg) {
   // Get configuration parameters
   arg_enclave = arg;
-  transactionTableSize_ = arg.transaction_table_size;
-  lockTableSize_ = arg.lock_table_size;
+  transactionTable_ = newHashTable(arg.transaction_table_size);
+  lockTable_ = newHashTable(arg.lock_table_size);
 
   // Initialize mutex variables
   sgx_thread_mutex_init(&global_num_mutex, NULL);
@@ -56,7 +56,7 @@ void enclave_send_job(void *data) {
       new_job.error = ((Job *)data)->error;
 
       // If transaction is not registered, abort the request
-      if (transactionTable_[new_job.transaction_id] == nullptr) {
+      if (get(transactionTable_, new_job.transaction_id) == nullptr) {
         print_error("Need to register transaction before lock requests");
         *new_job.error = true;
         *new_job.finished = true;
@@ -65,8 +65,8 @@ void enclave_send_job(void *data) {
 
       // Send the requests to specific worker thread
       int thread_id =
-          (int)((new_job.row_id % lockTableSize_) /
-                ((float)lockTableSize_ / (arg_enclave.num_threads - 1)));
+          (int)((new_job.row_id % lockTable_->size) /
+                ((float)lockTable_->size / (arg_enclave.num_threads - 1)));
       sgx_thread_mutex_lock(&queue_mutex[thread_id]);
       queue[thread_id].push(new_job);
       sgx_thread_cond_signal(&job_cond[thread_id]);
@@ -177,12 +177,12 @@ void enclave_process_request() {
         print_info(("Registering transaction " + std::to_string(transactionId))
                        .c_str());
 
-        if (transactionTable_.find(transactionId) != transactionTable_.end()) {
+        if (contains(transactionTable_, transactionId)) {
           print_error("Transaction is already registered");
           *cur_job.error = true;
         } else {
-          transactionTable_[transactionId] =
-              new Transaction(transactionId, lockBudget);
+          set(transactionTable_, transactionId,
+              (void *)newTransaction(transactionId, lockBudget));
         }
         *cur_job.finished = true;
         break;
@@ -295,48 +295,42 @@ auto acquire_lock(void *signature, unsigned int transactionId,
   bool ok;
 
   // Get the transaction object for the given transaction ID
-  auto transaction = transactionTable_[transactionId];
+  auto transaction = (Transaction *)get(transactionTable_, transactionId);
   if (transaction == nullptr) {
     print_error("Transaction was not registered");
     return false;
   }
 
   // Get the lock object for the given row ID
-  auto lock = lockTable_[rowId];
+  auto lock = (Lock *)get(lockTable_, rowId);
   if (lock == nullptr) {
-    lock = new Lock();
-    lockTable_[rowId] = lock;
+    lock = newLock();
+    set(lockTable_, rowId, (void *)lock);
   }
 
   // Check if 2PL is violated
-  if (transaction->getPhase() == Transaction::Phase::kShrinking) {
+  if (!transaction->growing_phase) {
     print_error("Cannot acquire more locks according to 2PL");
     goto abort;
   }
 
   // Check if lock budget is enough
-  if (transaction->getLockBudget() < 1) {
+  if (transaction->lock_budget < 1) {
     print_error("Lock budget exhausted");
     goto abort;
   }
 
   // Check for upgrade request
-  if (transaction->hasLock(rowId) && isExclusive &&
-      lock->getMode() == Lock::LockMode::kShared) {
-    if (lock->upgrade(transactionId)) {
+  if (hasLock(transaction, rowId) && isExclusive && !lock->exclusive) {
+    if (upgrade(lock, transactionId)) {
       goto sign;
     }
     goto abort;
   }
 
   // Acquire lock in requested mode (shared, exclusive)
-  if (!transaction->hasLock(rowId)) {
-    if (isExclusive) {
-      ok = transaction->addLock(rowId, Lock::LockMode::kExclusive, lock);
-    } else {
-      ok = transaction->addLock(rowId, Lock::LockMode::kShared, lock);
-    }
-
+  if (!hasLock(transaction, rowId)) {
+    ok = addLock(transaction, rowId, isExclusive, lock);
     if (ok) {
       goto sign;
     }
@@ -350,8 +344,8 @@ abort:
   return false;
 
 sign:
-  std::string string_to_sign = lock_to_string(
-      transactionId, rowId, lock->getMode() == Lock::LockMode::kExclusive);
+  std::string string_to_sign =
+      lock_to_string(transactionId, rowId, lock->exclusive);
 
   sgx_ecc_state_handle_t context = NULL;
   sgx_ecc256_open_context(&context);
@@ -365,25 +359,25 @@ sign:
 
 void release_lock(unsigned int transactionId, unsigned int rowId) {
   // Get the transaction object
-  auto transaction = transactionTable_[transactionId];
+  auto transaction = (Transaction *)get(transactionTable_, transactionId);
   if (transaction == nullptr) {
     print_error("Transaction was not registered");
     return;
   }
 
   // Get the lock object
-  auto lock = lockTable_[rowId];
+  auto lock = (Lock *)get(lockTable_, rowId);
   if (lock == nullptr) {
     print_error("Lock does not exist");
     return;
   }
 
-  transaction->releaseLock(rowId, lockTable_);
+  releaseLock(transaction, rowId, lockTable_);
 }
 
 void abort_transaction(Transaction *transaction) {
-  transactionTable_.erase(transaction->getTransactionId());
-  transaction->releaseAllLocks(lockTable_);
+  remove(transactionTable_, transaction->transaction_id);
+  releaseAllLocks(transaction, lockTable_);
   delete transaction;
 }
 

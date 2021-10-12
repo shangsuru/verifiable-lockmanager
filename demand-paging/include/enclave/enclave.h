@@ -21,6 +21,12 @@
 #include "sgx_tseal.h"
 #include "transaction.h"
 
+// Holds the transaction objects of the currently active transactions
+HashTable *transactionTable_;
+
+// Keeps track of a lock object for each row ID
+HashTable *lockTable_;
+
 // Context and public private key pair for signing lock requests
 sgx_ecc_state_handle_t context = NULL;
 sgx_ec256_private_t ec256_private_key;
@@ -36,14 +42,6 @@ struct DataToSeal {
   sgx_ec256_private_t privateKey;
   sgx_ec256_public_t publicKey;
 };
-
-// Holds the transaction objects of the currently active transactions
-std::unordered_map<unsigned int, Transaction *> transactionTable_;
-size_t transactionTableSize_;
-
-// Keeps track of a lock object for each row ID
-std::unordered_map<unsigned int, Lock *> lockTable_;
-size_t lockTableSize_;
 
 // Contains configuration parameters
 extern Arg arg_enclave;

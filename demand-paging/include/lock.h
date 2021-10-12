@@ -1,63 +1,78 @@
 #pragma once
 
+#include <cstring>
+#include <mutex>
 #include <set>
+#include <stdexcept>
+
+using std::memcpy;
+
+const int kTransactionBudget = 200;
 
 /**
  * The internal representation of a lock for the lock manager.
  */
-class Lock {
- public:
-  /**
-   * A lock can either be shared, then it allows multiple reads
-   * or exclusive, then it allows only one write access
-   */
-  enum LockMode { kShared, kExclusive };
-
-  /**
-   * @returns the mode (shared, exclusive) the lock is in
-   */
-  auto getMode() -> LockMode;
-
-  /**
-   * Attempts to acquire shared access for a transaction.
-   *
-   * @param transactionId ID of the transaction, that wants to acquire the lock
-   * @throws std::domain_error, when the lock is exclusive
-   */
-  auto getSharedAccess(unsigned int transactionId) -> bool;
-
-  /**
-   * Attempts to acquire exclusive access for a transaction.
-   *
-   * @param transactionId ID of the transaction, that wants to acquire the lock
-   * @throws std::domain_error, if someone already has that lock
-   */
-  auto getExclusiveAccess(unsigned int transactionId) -> bool;
-
-  /**
-   * Releases the lock for the calling transaction.
-   *
-   * @param transactionId ID of the calling transaction
-   */
-  void release(unsigned int transactionId);
-
-  /**
-   * Upgrades the lock for the transaction, that currently holds the shared lock
-   * alone, to an exclusive lock.
-   *
-   * @param transactionId ID of the transaction, that wants to acquire the lock
-   * @throws std::domain_error, if some other transaction currently still has
-   * shared access to the lock
-   */
-  auto upgrade(unsigned int transactionId) -> bool;
-
-  /**
-   * @returns the set of transaction IDs that hold this lock
-   */
-  auto getOwners() -> std::set<unsigned int>;
-
- private:
-  bool exclusive_;
-  std::set<unsigned int>
-      owners_;  // IDs of the transactions that currently hold this lock
+struct Lock {
+  bool exclusive;
+  int* owners;
+  int num_owners;
 };
+typedef struct Lock Lock;
+
+/**
+ * Initializes a lock struct
+ */
+Lock* newLock();
+
+/**
+ * Attempts to acquire shared access for a transaction.
+ *
+ * @param lock the lock the operation is executed on
+ * @param transactionId ID of the transaction, that wants to acquire the lock
+ * @throws std::domain_error, when the lock is exclusive
+ */
+auto getSharedAccess(Lock* lock, int transactionId) -> bool;
+
+/**
+ * Attempts to acquire exclusive access for a transaction.
+ *
+ * @param lock the lock the operation is executed on
+ * @param transactionId ID of the transaction, that wants to acquire the lock
+ * @throws std::domain_error, if someone already has that lock
+ */
+auto getExclusiveAccess(Lock* lock, int transactionId) -> bool;
+
+/**
+ * Releases the lock for the calling transaction.
+ * @param lock the lock the operation is executed on
+ * @param transactionId ID of the calling transaction
+ */
+void release(Lock* lock, int transactionId);
+
+/**
+ * Upgrades the lock for the transaction, that currently holds the shared lock
+ * alone, to an exclusive lock.
+ *
+ * @param lock the lock the operation is executed on
+ * @param transactionId ID of the transaction, that wants to acquire the lock
+ * @throws std::domain_error, if some other transaction currently still has
+ * shared access to the lock
+ */
+auto upgrade(Lock* lock, int transactionId) -> bool;
+
+/**
+ * Creates a new lock that has the same content as the given lock. This
+ * is used to move a lock that is allocated in untrusted memory into protected
+ * memory.
+ *
+ * @param lock the lock to copy
+ * @return copy casted as void*
+ */
+auto copy_lock(Lock* lock) -> void*;
+
+/**
+ * Frees the memory allocated when calling copy_lock()
+ *
+ * @param lock the lock created with copy_lock()
+ */
+void free_lock_copy(Lock*& lock);

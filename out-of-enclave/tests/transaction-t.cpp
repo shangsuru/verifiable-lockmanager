@@ -72,7 +72,7 @@ TEST_F(TransactionTest, entersShrinkingPhase) {
 
   auto locked_rows = transactionA_->locked_rows;
   EXPECT_EQ(transactionA_->num_locked, 1);
-  EXPECT_EQ(locked_rows[0], kTransactionIdA_);
+  EXPECT_EQ(locked_rows[0], rowId_);
   EXPECT_TRUE(transactionA_->growing_phase);
 
   releaseLock(transactionA_, rowId_, lockTable_);
