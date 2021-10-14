@@ -6,7 +6,7 @@ Transaction* newTransaction(int transactionId, int lockBudget) {
   transaction->aborted = false;
   transaction->growing_phase = true;
   transaction->lock_budget = lockBudget;
-  transaction->locked_rows = new int[lockBudget];
+  transaction->locked_rows = (int*)malloc(lockBudget * sizeof(int));
   transaction->locked_rows_size = lockBudget;
   transaction->num_locked = 0;
   return transaction;
