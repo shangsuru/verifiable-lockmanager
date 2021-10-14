@@ -4,73 +4,68 @@
 
 #include "lock.h"
 
-class LockTest : public ::testing::Test {
- protected:
-  void SetUp() override { spdlog::set_level(spdlog::level::off); };
-
-  const unsigned int kTransactionIdA_ = 1;
-  const unsigned int kTransactionIdB_ = 2;
-};
+const unsigned int kTransactionIdA = 0;
+const unsigned int kTransactionIdB = 1;
 
 // Shared access works
-TEST_F(LockTest, sharedAccess) {
-  Lock lock = Lock();
-  lock.getSharedAccess(1);
-  lock.getSharedAccess(2);
-  lock.getSharedAccess(3);
-  lock.getSharedAccess(4);
+TEST(LockTest, sharedAccess) {
+  Lock* lock = newLock();
+  getSharedAccess(lock, 1);
+  getSharedAccess(lock, 2);
+  getSharedAccess(lock, 3);
+  getSharedAccess(lock, 4);
 
-  EXPECT_EQ(lock.getMode(), Lock::LockMode::kShared);
-  EXPECT_EQ(lock.getOwners().size(), 4);
+  EXPECT_FALSE(lock->exclusive);
+  EXPECT_EQ(lock->num_owners, 4);
 };
 
 // Exclusive access works
-TEST_F(LockTest, exclusiveAccess) {
-  Lock lock = Lock();
-  lock.getExclusiveAccess(kTransactionIdA_);
-  EXPECT_EQ(lock.getMode(), Lock::LockMode::kExclusive);
-  auto owners = lock.getOwners();
-  EXPECT_EQ(owners.count(kTransactionIdA_), 1);
-  EXPECT_EQ(owners.size(), 1);
+TEST(LockTest, exclusiveAccess) {
+  Lock* lock = newLock();
+  getExclusiveAccess(lock, kTransactionIdA);
+  EXPECT_TRUE(lock->exclusive);
+  EXPECT_EQ(lock->num_owners, 1);
+  EXPECT_EQ(lock->owners[0], kTransactionIdA);
 }
 
 // Cannot acquire shared access on an exclusive lock
-TEST_F(LockTest, noSharedOnExclusive) {
-  Lock lock = Lock();
-  EXPECT_TRUE(lock.getExclusiveAccess(kTransactionIdA_));
-  EXPECT_FALSE(lock.getSharedAccess(kTransactionIdB_));
+TEST(LockTest, noSharedOnExclusive) {
+  Lock* lock = newLock();
+  EXPECT_TRUE(getExclusiveAccess(lock, kTransactionIdA));
+  EXPECT_FALSE(getSharedAccess(lock, kTransactionIdB));
 };
 
 // Cannot get exclusive access on an exclusive lock
-TEST_F(LockTest, noExclusiveOnExclusive) {
-  Lock lock = Lock();
-  EXPECT_TRUE(lock.getExclusiveAccess(kTransactionIdA_));
-  EXPECT_FALSE(lock.getExclusiveAccess(kTransactionIdB_));
+TEST(LockTest, noExclusiveOnExclusive) {
+  Lock* lock = newLock();
+  EXPECT_TRUE(getExclusiveAccess(lock, kTransactionIdA));
+  EXPECT_FALSE(getExclusiveAccess(lock, kTransactionIdB));
 };
 
 // Cannot acquire exclusive access on a shared lock
-TEST_F(LockTest, noExclusiveOnShared) {
-  Lock lock = Lock();
-  EXPECT_TRUE(lock.getSharedAccess(kTransactionIdA_));
-  EXPECT_FALSE(lock.getExclusiveAccess(kTransactionIdB_));
+TEST(LockTest, noExclusiveOnShared) {
+  Lock* lock = newLock();
+  EXPECT_TRUE(getSharedAccess(lock, kTransactionIdA));
+  EXPECT_FALSE(getExclusiveAccess(lock, kTransactionIdB));
 };
 
 // Upgrade
-TEST_F(LockTest, upgrade) {
-  Lock lock = Lock();
-  lock.getSharedAccess(kTransactionIdA_);
-  lock.upgrade(kTransactionIdA_);
-  auto owners = lock.getOwners();
-  EXPECT_EQ(lock.getMode(), Lock::LockMode::kExclusive);
-  EXPECT_EQ(owners.count(kTransactionIdA_), 1);
-  EXPECT_EQ(owners.size(), 1);
+TEST(LockTest, upgrade) {
+  Lock* lock = newLock();
+  EXPECT_TRUE(getSharedAccess(lock, kTransactionIdA));
+  EXPECT_TRUE(upgrade(lock, kTransactionIdA));
+  EXPECT_TRUE(lock->exclusive);
+  EXPECT_EQ(lock->num_owners, 1);
+  EXPECT_EQ(lock->owners[0], kTransactionIdA);
 }
 
-TEST_F(LockTest, releaseUnownedLock) {
-  Lock lock = Lock();
-  lock.getExclusiveAccess(kTransactionIdA_);
-  lock.release(kTransactionIdB_);
-  EXPECT_EQ(lock.getMode(), Lock::LockMode::kExclusive);
-  EXPECT_EQ(lock.getOwners().count(kTransactionIdA_), 1);
-  EXPECT_EQ(lock.getOwners().size(), 1);
+TEST(LockTest, releaseUnownedLock) {
+  Lock* lock = newLock();
+  EXPECT_TRUE(getExclusiveAccess(lock, kTransactionIdA));
+  // B tries to release the lock of A
+  release(lock, kTransactionIdB);
+  // This has no effectg, A still owns the lock
+  EXPECT_TRUE(lock->exclusive);
+  EXPECT_EQ(lock->num_owners, 1);
+  EXPECT_EQ(lock->owners[0], kTransactionIdA);
 }

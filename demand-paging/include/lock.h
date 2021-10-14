@@ -59,20 +59,3 @@ void release(Lock* lock, int transactionId);
  * shared access to the lock
  */
 auto upgrade(Lock* lock, int transactionId) -> bool;
-
-/**
- * Creates a new lock that has the same content as the given lock. This
- * is used to move a lock that is allocated in untrusted memory into protected
- * memory.
- *
- * @param lock the lock to copy
- * @return copy casted as void*
- */
-auto copy_lock(Lock* lock) -> void*;
-
-/**
- * Frees the memory allocated when calling copy_lock()
- *
- * @param lock the lock created with copy_lock()
- */
-void free_lock_copy(Lock*& lock);

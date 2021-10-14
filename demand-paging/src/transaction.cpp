@@ -80,27 +80,3 @@ void releaseAllLocks(Transaction* transaction, HashTable* lockTable) {
   transaction->num_locked = 0;
   transaction->aborted = true;
 };
-
-auto copy_transaction(Transaction* transaction) -> void* {
-  Transaction* copy = new Transaction();
-  copy->transaction_id = transaction->transaction_id;
-  copy->aborted = transaction->aborted;
-  copy->growing_phase = transaction->growing_phase;
-  copy->lock_budget = transaction->lock_budget;
-  copy->locked_rows_size = transaction->locked_rows_size;
-
-  int num_locked = transaction->num_locked;
-  copy->num_locked = num_locked;
-
-  copy->locked_rows = new int[num_locked];
-  for (int i = 0; i < num_locked; i++) {
-    copy->locked_rows[i] = transaction->locked_rows[i];
-  }
-
-  return (void*)copy;
-}
-
-void free_transaction_copy(Transaction*& transaction) {
-  free(transaction->locked_rows);
-  delete transaction;
-}

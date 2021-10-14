@@ -5,10 +5,10 @@
 #include <queue>
 #include <stdexcept>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #include "common.h"
+#include "hashtable.h"
 #include "lock.h"
 #include "spdlog/spdlog.h"
 #include "transaction.h"
@@ -148,15 +148,15 @@ class LockManager {
       *threads;  // worker threads that execute requests inside the enclave
 
   pthread_mutex_t global_num_mutex;  // synchronizes access to num
-  pthread_mutex_t *queue_mutex;  // synchronizes access to the job queue
+  pthread_mutex_t *queue_mutex;      // synchronizes access to the job queue
   pthread_cond_t
       *job_cond;  // wakes up worker threads when a new job is available
   std::vector<std::queue<Job>> queue;  // a job queue for each worker thread
 
   // Holds the transaction objects of the currently active transactions
-  std::unordered_map<unsigned int, Transaction *> transactionTable_;
+  HashTable *transactionTable_;
 
   // Keeps track of a lock object for each row ID
-  std::unordered_map<unsigned int, Lock *> lockTable_;
+  HashTable *lockTable_;
   int num = 0;  // global variable used to give every thread a unique ID
 };

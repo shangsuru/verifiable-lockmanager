@@ -1,73 +1,82 @@
 #include "transaction.h"
 
-Transaction::Transaction(unsigned int transactionId)
-    : transactionId_(transactionId){};
+Transaction* newTransaction(int transactionId, int lockBudget) {
+  Transaction* transaction = new Transaction();
+  transaction->transaction_id = transactionId;
+  transaction->aborted = false;
+  transaction->growing_phase = true;
+  transaction->lock_budget = lockBudget;
+  transaction->locked_rows = (int*)malloc(lockBudget * sizeof(int));
+  transaction->locked_rows_size = lockBudget;
+  transaction->num_locked = 0;
+  return transaction;
+}
 
-auto Transaction::getLockedRows() -> std::set<unsigned int> {
-  return lockedRows_;
-};
-
-auto Transaction::getPhase() -> Phase { return phase_; };
-
-auto Transaction::addLock(unsigned int rowId, Lock::LockMode requestedMode,
-                          Lock* lock) -> bool {
-  const std::lock_guard<std::mutex> latch(mut_);
-  if (aborted_) {
+auto addLock(Transaction* transaction, int rowId, bool isExclusive, Lock* lock)
+    -> bool {
+  if (transaction->aborted) {
     return false;
   }
 
-  bool ok;
-  switch (requestedMode) {
-    case Lock::LockMode::kExclusive:
-      ok = lock->getExclusiveAccess(transactionId_);
-      break;
-    case Lock::LockMode::kShared:
-      ok = lock->getSharedAccess(transactionId_);
-      break;
+  bool ret;
+  if (isExclusive) {
+    ret = getExclusiveAccess(lock, transaction->transaction_id);
+  } else {
+    ret = getSharedAccess(lock, transaction->transaction_id);
   }
 
-  if (ok) {
-    lockedRows_.insert(rowId);
+  if (ret) {
+    transaction->locked_rows[transaction->num_locked++] = rowId;
+    transaction->lock_budget--;
   }
 
-  return ok;
+  return ret;
 };
 
-void Transaction::releaseLock(
-    unsigned int rowId, std::unordered_map<unsigned int, Lock*>& lockTable) {
-  const std::lock_guard<std::mutex> latch(mut_);
-  if (lockedRows_.find(rowId) != lockedRows_.end()) {
-    phase_ = Phase::kShrinking;
-    lockedRows_.erase(rowId);
-    auto lock = lockTable[rowId];
-    lock->release(transactionId_);
-    if (lock->getOwners().size() == 0) {
-      delete lock;
-      lockTable.erase(rowId);
+void releaseLock(Transaction* transaction, int rowId, HashTable* lockTable) {
+  bool wasOwner = false;
+  for (int i = 0; i < transaction->num_locked; i++) {
+    if (transaction->locked_rows[i] == rowId) {
+      memcpy((void*)&transaction->locked_rows[i],
+             (void*)&transaction->locked_rows[i + 1],
+             sizeof(int) * (transaction->num_locked - 1 - i));
+      wasOwner = true;
+    }
+    break;
+  }
+
+  if (!wasOwner) {
+    return;
+  }
+
+  transaction->num_locked--;
+  transaction->growing_phase = false;
+  auto lock = (Lock*)get(lockTable, rowId);
+  release(lock, transaction->transaction_id);
+
+  if (lock->num_owners == 0) {
+    remove(lockTable, rowId);
+  }
+};
+
+auto hasLock(Transaction* transaction, int rowId) -> bool {
+  for (int i = 0; i < transaction->num_locked; i++) {
+    if (transaction->locked_rows[i] == rowId) {
+      return true;
     }
   }
+  return false;
 };
 
-auto Transaction::hasLock(unsigned int rowId) -> bool {
-  const std::lock_guard<std::mutex> latch(mut_);
-  return lockedRows_.find(rowId) != lockedRows_.end();
-};
-
-void Transaction::releaseAllLocks(
-    std::unordered_map<unsigned int, Lock*>& lockTable) {
-  const std::lock_guard<std::mutex> latch(mut_);
-  for (auto locked_row : lockedRows_) {
-    auto lock = lockTable[locked_row];
-    lock->release(transactionId_);
-    if (lock->getOwners().size() == 0) {
-      delete lock;
-      lockTable.erase(locked_row);
+void releaseAllLocks(Transaction* transaction, HashTable* lockTable) {
+  for (int i = 0; i < transaction->num_locked; i++) {
+    int locked_row = transaction->locked_rows[i];
+    auto lock = (Lock*)get(lockTable, locked_row);
+    release(lock, transaction->transaction_id);
+    if (lock->num_owners == 0) {
+      remove(lockTable, locked_row);
     }
   }
-  lockedRows_.clear();
-  aborted_ = true;
+  transaction->num_locked = 0;
+  transaction->aborted = true;
 };
-
-auto Transaction::getTransactionId() const -> unsigned int {
-  return transactionId_;
-}

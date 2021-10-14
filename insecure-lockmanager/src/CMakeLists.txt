@@ -3,10 +3,11 @@ set(HEADER_LIST
     ${LOCK_MANAGER_INCLUDE_PATH}/lockmanager.h
     ${LOCK_MANAGER_INCLUDE_PATH}/lock.h
     ${LOCK_MANAGER_INCLUDE_PATH}/transaction.h
+    ${LOCK_MANAGER_INCLUDE_PATH}/hashtable.h
     ${LockManager_SOURCE_DIR}/include/common.h
   )
 
-set(SRCS lockmanager/lockmanager.cpp lockmanager/transaction.cpp lockmanager/lock.cpp ${HEADER_LIST})
+set(SRCS lockmanager/lockmanager.cpp lockmanager/transaction.cpp lockmanager/lock.cpp lockmanager/hashtable.cpp ${HEADER_LIST})
 add_library(lckMgr SHARED ${SRCS})
 
 # Add an alias so that library can be used inside the build tree, e.g. when testing

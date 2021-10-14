@@ -8,10 +8,10 @@ auto LockManager::create_worker_thread(void *object) -> void * {
 }
 
 void LockManager::configuration_init() {
-  arg.num_threads = 8;
+  arg.num_threads = 2;
   arg.tx_thread_id = arg.num_threads - 1;
   arg.transaction_table_size = 200;
-  arg.lock_table_size = 8;
+  arg.lock_table_size = 10000;
 }
 
 LockManager::LockManager() {
@@ -20,6 +20,9 @@ LockManager::LockManager() {
   // Get configuration parameters
   transactionTableSize_ = arg.transaction_table_size;
   lockTableSize_ = arg.lock_table_size;
+
+  transactionTable_ = newHashTable(transactionTableSize_);
+  lockTable_ = newHashTable(lockTableSize_);
 
   // Initialize mutex variables
   pthread_mutex_init(&global_num_mutex, NULL);
@@ -32,14 +35,14 @@ LockManager::LockManager() {
     queue.push_back(std::queue<Job>());
   }
 
-  // Create worker threads to serve lock requests and registrations of transactions
+  // Create worker threads to serve lock requests and registrations of
+  // transactions
   threads = (pthread_t *)malloc(sizeof(pthread_t) * (arg.num_threads));
   spdlog::info("Initializing " + std::to_string(arg.num_threads) + " threads");
   for (int i = 0; i < arg.num_threads; i++) {
     pthread_mutex_init(&queue_mutex[i], NULL);
     pthread_cond_init(&job_cond[i], NULL);
-    pthread_create(&threads[i], NULL, &LockManager::create_worker_thread,
-                   this);
+    pthread_create(&threads[i], NULL, &LockManager::create_worker_thread, this);
   }
 }
 
@@ -60,7 +63,7 @@ LockManager::~LockManager() {
 }
 
 auto LockManager::registerTransaction(unsigned int transactionId) -> bool {
-  return create_job(REGISTER, transactionId, 0);
+  return create_job(REGISTER, transactionId);
 };
 
 auto LockManager::lock(unsigned int transactionId, unsigned int rowId,
@@ -86,8 +89,9 @@ auto LockManager::create_job(Command command, unsigned int transaction_id,
 
   // Need to track, when job is finished or error has occurred
   if (command == SHARED || command == EXCLUSIVE || command == REGISTER) {
-    // Allocate dynamic memory in the untrusted part of the application, so the enclave can modify it via its pointer
-    job.finished = new bool; 
+    // Allocate dynamic memory in the untrusted part of the application, so the
+    // enclave can modify it via its pointer
+    job.finished = new bool;
     job.error = new bool;
     *job.finished = false;
     *job.error = false;
@@ -140,7 +144,7 @@ void LockManager::send_job(void *data) {
       new_job.error = ((Job *)data)->error;
 
       // If transaction is not registered, abort the request
-      if (transactionTable_[new_job.transaction_id] == nullptr) {
+      if (get(transactionTable_, new_job.transaction_id) == nullptr) {
         spdlog::error("Need to register transaction before lock requests");
         *new_job.error = true;
         *new_job.finished = true;
@@ -244,11 +248,11 @@ void LockManager::process_request() {
             ("Registering transaction " + std::to_string(transactionId))
                 .c_str());
 
-        if (transactionTable_.find(transactionId) != transactionTable_.end()) {
+        if (contains(transactionTable_, transactionId)) {
           spdlog::error("Transaction is already registered");
           *cur_job.error = true;
         } else {
-          transactionTable_[transactionId] = new Transaction(transactionId);
+          set(transactionTable_, transactionId, newTransaction(transactionId));
         }
         *cur_job.finished = true;
         break;
@@ -269,30 +273,29 @@ auto LockManager::acquire_lock(unsigned int transactionId, unsigned int rowId,
   int ret;
 
   // Get the transaction object for the given transaction ID
-  auto transaction = transactionTable_[transactionId];
+  auto transaction = (Transaction *)get(transactionTable_, transactionId);
   if (transaction == nullptr) {
     spdlog::error("Transaction was not registered");
     return false;
   }
 
   // Get the lock object for the given row ID
-  auto lock = lockTable_[rowId];
+  auto lock = (Lock *)get(lockTable_, rowId);
   if (lock == nullptr) {
-    lock = new Lock();
-    lockTable_[rowId] = lock;
+    lock = newLock();
+    set(lockTable_, rowId, (void *)lock);
   }
 
   // Check if 2PL is violated
-  if (transaction->getPhase() == Transaction::Phase::kShrinking) {
+  if (!transaction->growing_phase) {
     spdlog::error("Cannot acquire more locks according to 2PL");
     abort_transaction(transaction);
     return false;
   }
 
   // Check for upgrade request
-  if (transaction->hasLock(rowId) && isExclusive &&
-      lock->getMode() == Lock::LockMode::kShared) {
-    ret = lock->upgrade(transactionId);
+  if (hasLock(transaction, rowId) && isExclusive && !lock->exclusive) {
+    ret = upgrade(lock, transactionId);
 
     if (!ret) {
       abort_transaction(transaction);
@@ -302,12 +305,8 @@ auto LockManager::acquire_lock(unsigned int transactionId, unsigned int rowId,
   }
 
   // Acquire lock in requested mode (shared, exclusive)
-  if (!transaction->hasLock(rowId)) {
-    if (isExclusive) {
-      ret = transaction->addLock(rowId, Lock::LockMode::kExclusive, lock);
-    } else {
-      ret = transaction->addLock(rowId, Lock::LockMode::kShared, lock);
-    }
+  if (!hasLock(transaction, rowId)) {
+    ret = addLock(transaction, rowId, isExclusive, lock);
 
     if (!ret) {
       abort_transaction(transaction);
@@ -324,24 +323,24 @@ auto LockManager::acquire_lock(unsigned int transactionId, unsigned int rowId,
 
 void LockManager::release_lock(unsigned int transactionId, unsigned int rowId) {
   // Get the transaction object
-  auto transaction = transactionTable_[transactionId];
+  auto transaction = (Transaction *)get(transactionTable_, transactionId);
   if (transaction == nullptr) {
     spdlog::error("Transaction was not registered");
     return;
   }
 
   // Get the lock object
-  auto lock = lockTable_[rowId];
+  auto lock = (Lock *)get(lockTable_, rowId);
   if (lock == nullptr) {
     spdlog::error("Lock does not exist");
     return;
   }
 
-  transaction->releaseLock(rowId, lockTable_);
+  releaseLock(transaction, rowId, lockTable_);
 }
 
 void LockManager::abort_transaction(Transaction *transaction) {
-  transactionTable_.erase(transaction->getTransactionId());
-  transaction->releaseAllLocks(lockTable_);
+  remove(transactionTable_, transaction->transaction_id);
+  releaseAllLocks(transaction, lockTable_);
   delete transaction;
 }

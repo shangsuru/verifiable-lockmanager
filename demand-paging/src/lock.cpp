@@ -48,23 +48,3 @@ void release(Lock* lock, int transactionId) {
     lock->num_owners--;
   }
 }
-
-auto copy_lock(Lock* lock) -> void* {
-  Lock* copy = new Lock();
-  copy->exclusive = lock->exclusive;
-  int num_owners = lock->num_owners;
-  copy->num_owners = num_owners;
-
-  copy->owners = (int*)malloc(sizeof(int) * num_owners);
-  for (int i = 0; i < num_owners; i++) {
-    copy->owners[i] = lock->owners[i];
-  }
-
-  return (void*)copy;
-}
-
-void free_lock_copy(Lock*& lock) {
-  // free(lock->owners);  // TODO: failing test: multipleTransactionsSharedLock,
-  // Segmentation Fault at TXID 5
-  delete lock;
-}
