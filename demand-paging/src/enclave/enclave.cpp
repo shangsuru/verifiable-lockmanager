@@ -36,7 +36,7 @@ void enclave_send_job(void *data) {
     case QUIT:
       // Send exit message to all of the worker threads
       for (int i = 0; i < arg_enclave.num_threads; i++) {
-        print_info("Sending QUIT to all threads");
+        // print_debug("Sending QUIT to all threads");
 
         sgx_thread_mutex_lock(&queue_mutex[i]);
         queue[i].push(new_job);
@@ -105,13 +105,13 @@ void enclave_process_request() {
   sgx_thread_mutex_lock(&queue_mutex[thread_id]);
 
   while (1) {
-    print_info("Worker waiting for jobs");
+    // print_debug("Worker waiting for jobs");
     if (queue[thread_id].size() == 0) {
       sgx_thread_cond_wait(&job_cond[thread_id], &queue_mutex[thread_id]);
       continue;
     }
 
-    print_info("Worker got a job");
+    // print_debug("Worker got a job");
     Job cur_job = queue[thread_id].front();
     Command command = cur_job.command;
 
@@ -124,20 +124,20 @@ void enclave_process_request() {
         sgx_thread_mutex_unlock(&queue_mutex[thread_id]);
         sgx_thread_mutex_destroy(&queue_mutex[thread_id]);
         sgx_thread_cond_destroy(&job_cond[thread_id]);
-        print_info("Enclave worker quitting");
+        // print_debug("Enclave worker quitting");
         return;
       case SHARED:
       case EXCLUSIVE: {
         if (command == EXCLUSIVE) {
-          print_info(
-              ("(EXCLUSIVE) TXID: " + std::to_string(cur_job.transaction_id) +
-               ", RID: " + std::to_string(cur_job.row_id))
-                  .c_str());
+          // print_debug(
+          //    ("(EXCLUSIVE) TXID: " + std::to_string(cur_job.transaction_id) +
+          //     ", RID: " + std::to_string(cur_job.row_id))
+          //        .c_str());
         } else {
-          print_info(
-              ("(SHARED) TXID: " + std::to_string(cur_job.transaction_id) +
-               ", RID: " + std::to_string(cur_job.row_id))
-                  .c_str());
+          // print_debug(
+          //    ("(SHARED) TXID: " + std::to_string(cur_job.transaction_id) +
+          //     ", RID: " + std::to_string(cur_job.row_id))
+          //        .c_str());
         }
 
         // Acquire lock and receive signature
@@ -164,9 +164,10 @@ void enclave_process_request() {
         break;
       }
       case UNLOCK: {
-        print_info(("(UNLOCK) TXID: " + std::to_string(cur_job.transaction_id) +
-                    ", RID: " + std::to_string(cur_job.row_id))
-                       .c_str());
+        // print_debug(
+        //    ("(UNLOCK) TXID: " + std::to_string(cur_job.transaction_id) +
+        //     ", RID: " + std::to_string(cur_job.row_id))
+        //        .c_str());
         release_lock(cur_job.transaction_id, cur_job.row_id);
         break;
       }
@@ -174,8 +175,9 @@ void enclave_process_request() {
         auto transactionId = cur_job.transaction_id;
         auto lockBudget = cur_job.lock_budget;
 
-        print_info(("Registering transaction " + std::to_string(transactionId))
-                       .c_str());
+        // print_debug(("Registering transaction " +
+        // std::to_string(transactionId))
+        //                 .c_str());
 
         if (contains(transactionTable_, transactionId)) {
           print_error("Transaction is already registered");
@@ -199,7 +201,6 @@ void enclave_process_request() {
 }
 
 auto get_block_timeout() -> unsigned int {
-  print_warn("Lock timeout not yet implemented");
   // TODO: Implement getting the lock timeout
   return 0;
 };
@@ -210,7 +211,7 @@ auto get_sealed_data_size() -> uint32_t {
 }
 
 auto seal_keys(uint8_t *sealed_blob, uint32_t sealed_size) -> sgx_status_t {
-  print_info("Sealing keys");
+  // print_debug("Sealing keys");
   sgx_status_t ret = SGX_ERROR_INVALID_PARAMETER;
   sgx_sealed_data_t *sealed_data = NULL;
   DataToSeal data;
@@ -232,7 +233,7 @@ auto seal_keys(uint8_t *sealed_blob, uint32_t sealed_size) -> sgx_status_t {
 
 auto unseal_keys(const uint8_t *sealed_blob, size_t sealed_size)
     -> sgx_status_t {
-  print_info("Unsealing keys");
+  // print_debug("Unsealing keys");
   sgx_status_t ret = SGX_ERROR_INVALID_PARAMETER;
   DataToSeal *unsealed_data = NULL;
 
@@ -258,7 +259,7 @@ error:
 }
 
 auto generate_key_pair() -> int {
-  print_info("Creating new key pair");
+  // print_debug("Creating new key pair");
   if (context == NULL) sgx_ecc256_open_context(&context);
   sgx_status_t ret = sgx_ecc256_create_key_pair(&ec256_private_key,
                                                 &ec256_public_key, context);
@@ -398,7 +399,7 @@ auto verify_signature(char *signature, int transactionId, int rowId,
   if (ret != SGX_SUCCESS) {
     print_error("Failed to verify signature");
   } else {
-    print_info("Signature successfully verified");
+    // print_debug("Signature successfully verified");
   }
   return ret;
 }

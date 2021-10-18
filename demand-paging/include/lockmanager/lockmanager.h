@@ -45,6 +45,13 @@ void print_error(const char *str);
  * @param str characters to be printed
  */
 void print_warn(const char *str);
+
+/**
+ * Logs a debug message from inside the enclave to the terminal
+ *
+ * @param str characters to be printed
+ */
+void print_debug(const char *str);
 //================================================================
 
 /**

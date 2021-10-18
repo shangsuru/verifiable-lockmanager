@@ -11,3 +11,7 @@ void print_error(const char *str) {
 void print_warn(const char *str) {
   spdlog::warn("Enclave: " + std::string{str});
 }
+
+void print_debug(const char *str) {
+  spdlog::debug("Enclave: " + std::string{str});
+}
