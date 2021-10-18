@@ -94,3 +94,9 @@ The hooks are installed by running `git config core.hookspath .githooks`.
 Use `git push/commit --dry-run` to run the hooks without actually executing the git command. Alternatively, run the hook script directly, e.g., `.githooks/pre-push.d/01_doxygen.sh` (Note some hook script might require you to stage files (`git add`) or use an additional flag).​
 
 Use `git push/commit --no-verify` to skip the execution of hooks and only perform the corresponding git command (only do this if you know what are you doing).
+
+## Errors
+
+If any error, e.g. "error while loading shared libraries" occurs during the compilation step, running the command 
+`source /opt/intel/sgxsdk/environment` 
+(the exact path can differ) may solve the issue.
