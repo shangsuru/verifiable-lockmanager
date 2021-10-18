@@ -16,7 +16,7 @@ TEST(LockTest, sharedAccess) {
   getSharedAccess(lock, 4);
 
   EXPECT_FALSE(lock->exclusive);
-  EXPECT_EQ(lock->num_owners, 4);
+  EXPECT_EQ(lock->owners.size(), 4);
 };
 
 // Exclusive access works
@@ -24,8 +24,8 @@ TEST(LockTest, exclusiveAccess) {
   Lock* lock = newLock();
   getExclusiveAccess(lock, kTransactionIdA);
   EXPECT_TRUE(lock->exclusive);
-  EXPECT_EQ(lock->num_owners, 1);
-  EXPECT_EQ(lock->owners[0], kTransactionIdA);
+  EXPECT_EQ(lock->owners.size(), 1);
+  EXPECT_TRUE(lock->owners.find(kTransactionIdA) != lock->owners.end());
 }
 
 // Cannot acquire shared access on an exclusive lock
@@ -55,8 +55,8 @@ TEST(LockTest, upgrade) {
   EXPECT_TRUE(getSharedAccess(lock, kTransactionIdA));
   EXPECT_TRUE(upgrade(lock, kTransactionIdA));
   EXPECT_TRUE(lock->exclusive);
-  EXPECT_EQ(lock->num_owners, 1);
-  EXPECT_EQ(lock->owners[0], kTransactionIdA);
+  EXPECT_EQ(lock->owners.size(), 1);
+  EXPECT_TRUE(lock->owners.find(kTransactionIdA) != lock->owners.end());
 }
 
 TEST(LockTest, releaseUnownedLock) {
@@ -64,8 +64,8 @@ TEST(LockTest, releaseUnownedLock) {
   EXPECT_TRUE(getExclusiveAccess(lock, kTransactionIdA));
   // B tries to release the lock of A
   release(lock, kTransactionIdB);
-  // This has no effectg, A still owns the lock
+  // This has no effect, A still owns the lock
   EXPECT_TRUE(lock->exclusive);
-  EXPECT_EQ(lock->num_owners, 1);
-  EXPECT_EQ(lock->owners[0], kTransactionIdA);
+  EXPECT_EQ(lock->owners.size(), 1);
+  EXPECT_TRUE(lock->owners.find(kTransactionIdA) != lock->owners.end());
 }

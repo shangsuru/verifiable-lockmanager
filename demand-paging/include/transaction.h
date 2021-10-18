@@ -30,9 +30,7 @@ struct Transaction {
    */
   bool growing_phase;
   int lock_budget;
-  int* locked_rows;
-  int locked_rows_size;
-  int num_locked;
+  std::set<int> locked_rows;
 };
 typedef struct Transaction Transaction;
 

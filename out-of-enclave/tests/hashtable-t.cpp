@@ -130,6 +130,7 @@ TEST(HashTableTest, removeBeginningOfList) {
 
   remove(hashTable, 12);
 
+  EXPECT_FALSE(contains(hashTable, 12));
   EXPECT_TRUE(contains(hashTable, 22));
   EXPECT_TRUE(contains(hashTable, 32));
   EXPECT_TRUE(contains(hashTable, 32));

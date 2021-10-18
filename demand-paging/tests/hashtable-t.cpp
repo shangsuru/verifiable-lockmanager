@@ -13,7 +13,7 @@ TEST(HashTableTest, getListNotEmptyKeyExists) {
   HashTable* hashTable = newHashTable(10);
   Lock* lock = newLock();
   lock->exclusive = true;
-  lock->num_owners = 4;
+  lock->owners.insert(4);
 
   set(hashTable, 12, (void*)newLock());
   set(hashTable, 22, (void*)newLock());
@@ -22,7 +22,9 @@ TEST(HashTableTest, getListNotEmptyKeyExists) {
 
   Lock* value = (Lock*)get(hashTable, 32);
   EXPECT_EQ(value->exclusive, lock->exclusive);
-  EXPECT_EQ(value->num_owners, lock->num_owners);
+  EXPECT_EQ(value->owners.size(), lock->owners.size());
+  EXPECT_EQ(value->owners.find(4) != value->owners.end(),
+            lock->owners.find(4) != lock->owners.end());
 };
 
 TEST(HashTableTest, getElementNotFound) {
@@ -40,11 +42,10 @@ TEST(HashTableTest, setWhenKeyAlreadyExists) {
   HashTable* hashTable = newHashTable(10);
   Lock* lock = newLock();
   lock->exclusive = true;
-  lock->num_owners = 4;
+  lock->owners.insert(4);
 
   Lock* anotherLock = new Lock();
   anotherLock->exclusive = false;
-  anotherLock->num_owners = 6;
 
   set(hashTable, 32, (void*)lock);
   // Because lock for that key already exists, it should ignore this set
@@ -53,7 +54,7 @@ TEST(HashTableTest, setWhenKeyAlreadyExists) {
 
   Lock* value = (Lock*)get(hashTable, 32);
   EXPECT_EQ(value->exclusive, lock->exclusive);
-  EXPECT_EQ(value->num_owners, lock->num_owners);
+  EXPECT_EQ(value->owners.size(), lock->owners.size());
 };
 
 TEST(HashTableTest, containsListEmpty) {
@@ -130,6 +131,7 @@ TEST(HashTableTest, removeBeginningOfList) {
 
   remove(hashTable, 12);
 
+  EXPECT_FALSE(contains(hashTable, 12));
   EXPECT_TRUE(contains(hashTable, 22));
   EXPECT_TRUE(contains(hashTable, 32));
   EXPECT_TRUE(contains(hashTable, 32));
@@ -179,7 +181,7 @@ TEST(HashTableTest, changeValue) {
   HashTable* hashTable = newHashTable(10);
   Lock* lock = newLock();
   lock->exclusive = true;
-  lock->num_owners = 4;
+  lock->owners.insert(1);
 
   set(hashTable, 12, (void*)newLock());
   set(hashTable, 22, (void*)newLock());
@@ -187,11 +189,22 @@ TEST(HashTableTest, changeValue) {
   set(hashTable, 42, (void*)newLock());
 
   // Change value
-  lock->num_owners = 6;
+  lock->owners.insert(2);
   lock->exclusive = false;
 
   // Check that the values also changed within the table
   Lock* value = (Lock*)get(hashTable, 32);
-  EXPECT_EQ(value->num_owners, 6);
+  EXPECT_EQ(value->owners.size(), 2);
   EXPECT_EQ(value->exclusive, false);
 };
+
+TEST(HashTableTest, keyBiggerThanSize) {
+  HashTable* hashTable = newHashTable(2);
+  set(hashTable, 1, (void*)newLock());
+  set(hashTable, 2, (void*)newLock());
+  set(hashTable, 3, (void*)newLock());
+
+  EXPECT_TRUE(get(hashTable, 1) != nullptr);
+  EXPECT_TRUE(get(hashTable, 2) != nullptr);
+  EXPECT_TRUE(get(hashTable, 3) != nullptr);
+}

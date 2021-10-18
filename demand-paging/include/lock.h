@@ -14,8 +14,7 @@ const int kTransactionBudget = 200;
  */
 struct Lock {
   bool exclusive;
-  int* owners;
-  int num_owners;
+  std::set<int> owners;
 };
 typedef struct Lock Lock;
 

@@ -8,11 +8,12 @@ void RunClient() {
   LockingServiceClient client(
       grpc::CreateChannel(target_address, grpc::InsecureChannelCredentials()));
 
-  int transactionA = 10;
+  int transactionA = 1;
   int transactionB = 2;
-  int lockBudget = 500000;
+  int lockBudget = 100000;
   client.registerTransaction(transactionA, lockBudget);
   client.registerTransaction(transactionB, lockBudget);
+
   for (int rowId = 1; rowId < lockBudget; rowId++) {
     client.requestSharedLock(transactionA, rowId);
   }
@@ -28,6 +29,7 @@ void RunClient() {
 }
 
 auto main() -> int {
+  spdlog::set_level(spdlog::level::off);
   spdlog::info("Starting client");
   RunClient();
   return 0;

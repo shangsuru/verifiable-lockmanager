@@ -3,30 +3,29 @@
 Lock* newLock() {
   Lock* lock = new Lock();
   lock->exclusive = false;
-  lock->owners = (int*)malloc(sizeof(int) * kTransactionBudget);
-  lock->num_owners = 0;
   return lock;
 }
 
 auto getSharedAccess(Lock* lock, int transactionId) -> bool {
   if (!lock->exclusive) {
-    lock->owners[lock->num_owners++] = transactionId;
+    lock->owners.insert(transactionId);
     return true;
   }
   return false;
 };
 
 auto getExclusiveAccess(Lock* lock, int transactionId) -> bool {
-  if (lock->num_owners == 0) {
+  if (lock->owners.size() == 0) {
     lock->exclusive = true;
-    lock->owners[lock->num_owners++] = transactionId;
+    lock->owners.insert(transactionId);
     return true;
   }
   return false;
 };
 
 auto upgrade(Lock* lock, int transactionId) -> bool {
-  if (lock->num_owners == 1 && lock->owners[0] == transactionId) {
+  if (lock->owners.size() == 1 &&
+      lock->owners.find(transactionId) != lock->owners.end()) {
     lock->exclusive = true;
     return true;
   }
@@ -34,17 +33,10 @@ auto upgrade(Lock* lock, int transactionId) -> bool {
 };
 
 void release(Lock* lock, int transactionId) {
-  bool wasOwner = false;  // only release when the transactionId was actually
-                          // within the set of owners of that lock
-  for (int i = 0; i < lock->num_owners; i++) {
-    if (lock->owners[i] == transactionId) {
-      memcpy((void*)&lock->owners[i], (void*)&lock->owners[i + 1],
-             sizeof(int) * (lock->num_owners - 1 - i));
-      wasOwner = true;
-    }
-  }
-  if (wasOwner) {
+  const bool transactionOwnsLock =
+      lock->owners.find(transactionId) != lock->owners.end();
+  if (transactionOwnsLock) {
+    lock->owners.erase(transactionId);
     lock->exclusive = false;
-    lock->num_owners--;
   }
 }
