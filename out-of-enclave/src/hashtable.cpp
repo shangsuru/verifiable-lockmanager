@@ -79,7 +79,7 @@ void remove(HashTable* hashTable, int key) {
   }
 
   if (entry->key == key) {
-    // hashTable->table[hash(hashTable->size, key)] = nullptr;
+    hashTable->table[hash(hashTable->size, key)] = entry->next;
     return;
   }
 
