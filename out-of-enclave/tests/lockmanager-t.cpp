@@ -244,3 +244,15 @@ TEST_F(LockManagerTest, integrityVerificationWorksEvenWhenTransactionAborts) {
   EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdB, kLockBudget));
   EXPECT_TRUE(lock_manager.lock(kTransactionIdB, kRowId + 1, false).second);
 }
+
+// After the last lock is released, the transaction gets deleted and it can
+// register again
+TEST_F(LockManagerTest, transactionGetsDeletedAfterReleasingLastLock) {
+  LockManager lock_manager = LockManager();
+  EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
+  EXPECT_TRUE(lock_manager.lock(kTransactionIdA, kRowId, false).second);
+  lock_manager.unlock(kTransactionIdA, kRowId);
+  std::this_thread::sleep_for(std::chrono::seconds(
+      1));  // need to wait here because unlock is asynchronous
+  EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
+}

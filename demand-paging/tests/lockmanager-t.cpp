@@ -27,6 +27,16 @@ TEST_F(LockManagerTest, cannotRegisterTwice) {
   EXPECT_FALSE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
 };
 
+// After the last lock is released, the transaction gets deleted and it can register again
+TEST_F(LockManagerTest, transactionGetsDeletedAfterReleasingLastLock) {
+  LockManager lock_manager = LockManager();
+  EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
+  EXPECT_TRUE(lock_manager.lock(kTransactionIdA, kRowId, false).second);
+  lock_manager.unlock(kTransactionIdA, kRowId);
+  std::this_thread::sleep_for(std::chrono::seconds(1)); // need to wait here because unlock is asynchronous
+  EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
+}
+
 // Acquiring non-conflicting shared and exclusive locks works
 TEST_F(LockManagerTest, acquiringLocks) {
   LockManager lock_manager = LockManager();

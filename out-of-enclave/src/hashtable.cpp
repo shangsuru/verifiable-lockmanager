@@ -80,6 +80,7 @@ void remove(HashTable* hashTable, int key) {
 
   if (entry->key == key) {
     hashTable->table[hash(hashTable->size, key)] = entry->next;
+    delete entry;
     return;
   }
 
@@ -88,6 +89,7 @@ void remove(HashTable* hashTable, int key) {
     if (next->key == key) {
       // delete it and return
       entry->next = next->next;
+      delete next;
       return;
     }
     entry = next;

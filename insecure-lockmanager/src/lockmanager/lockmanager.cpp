@@ -341,6 +341,7 @@ void LockManager::release_lock(unsigned int transactionId, unsigned int rowId) {
   // If the transaction released its last lock, delete it
   if (transaction->locked_rows.size() == 0) {
     remove(transactionTable_, transactionId);
+    delete transaction;
   }
 }
 

@@ -1,3 +1,16 @@
+# HashTable
+add_library(hashtable lockmanager/hashtable.cpp)
+target_include_directories(hashtable PUBLIC "${LockManager_SOURCE_DIR}/include" "${LockManager_SOURCE_DIR}/include/lockmanager")
+
+# Transaction
+add_library(transaction lockmanager/transaction.cpp lockmanager/lock.cpp)
+target_include_directories(transaction PUBLIC "${LockManager_SOURCE_DIR}/include" "${LockManager_SOURCE_DIR}/include/lockmanager")
+target_link_libraries(transaction PUBLIC hashtable)
+
+# Lock
+add_library(lock lockmanager/lock.cpp)
+target_include_directories(lock PUBLIC "${LockManager_SOURCE_DIR}/include" "${LockManager_SOURCE_DIR}/include/lockmanager")
+
 set(LOCK_MANAGER_INCLUDE_PATH "${LockManager_SOURCE_DIR}/include/lockmanager")
 set(HEADER_LIST 
     ${LOCK_MANAGER_INCLUDE_PATH}/lockmanager.h

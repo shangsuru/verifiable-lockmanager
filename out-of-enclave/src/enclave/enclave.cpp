@@ -412,4 +412,10 @@ void release_lock(int transactionId, int rowId) {
 
   free_lock_bucket_copy(lockEntry);
   free_transaction_bucket_copy(transactionEntry);
+
+  // If the transaction released its last lock, delete it
+  if (transactionTrusted->num_locked == 0) {
+    remove(transactionTable_, transactionId);
+    delete transactionTrusted;
+  }
 }
