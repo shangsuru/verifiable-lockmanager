@@ -118,13 +118,13 @@ TEST_F(LockManagerTest, releaseLockTwice) {
 };
 
 TEST_F(LockManagerTest, releasingAnUnownedLock) {
-    EXPECT_TRUE(lockManager_->registerTransaction(kTransactionIdA));
-    EXPECT_TRUE(lockManager_->registerTransaction(kTransactionIdB));
-    EXPECT_TRUE(lockManager_->lock(kTransactionIdA, kRowId, true));
-    
-    // Transaction B tries to unlock A's lock and acquire it
-    lockManager_->unlock(kTransactionIdB, kRowId);
-    EXPECT_FALSE(lockManager_->lock(kTransactionIdB, kRowId, true));
+  EXPECT_TRUE(lockManager_->registerTransaction(kTransactionIdA));
+  EXPECT_TRUE(lockManager_->registerTransaction(kTransactionIdB));
+  EXPECT_TRUE(lockManager_->lock(kTransactionIdA, kRowId, true));
+
+  // Transaction B tries to unlock A's lock and acquire it
+  lockManager_->unlock(kTransactionIdB, kRowId);
+  EXPECT_FALSE(lockManager_->lock(kTransactionIdB, kRowId, true));
 }
 
 // Cannot acquire more locks in shrinking phase
@@ -137,7 +137,8 @@ TEST_F(LockManagerTest, noMoreLocksInShrinkingPhase) {
   EXPECT_FALSE(lockManager_->lock(kTransactionIdA, kRowId, true));
 };
 
-// Lets two transaction request the same 2 shared locks and one of the transactions another exclusive lock
+// Lets two transaction request the same 2 shared locks and one of the
+// transactions another exclusive lock
 TEST_F(LockManagerTest, concurrentLockRequests) {
   EXPECT_TRUE(lockManager_->registerTransaction(kTransactionIdA));
   EXPECT_TRUE(lockManager_->registerTransaction(kTransactionIdB));
@@ -161,4 +162,16 @@ TEST_F(LockManagerTest, concurrentLockRequests) {
   t7.join();
   t8.join();
   t9.join();
+}
+
+// After the last lock is released, the transaction gets deleted and it can
+// register again
+TEST_F(LockManagerTest, transactionGetsDeletedAfterReleasingLastLock) {
+  LockManager lock_manager = LockManager();
+  EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA));
+  EXPECT_TRUE(lock_manager.lock(kTransactionIdA, kRowId, false));
+  lock_manager.unlock(kTransactionIdA, kRowId);
+  std::this_thread::sleep_for(std::chrono::seconds(
+      1));  // need to wait here because unlock is asynchronous
+  EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA));
 }

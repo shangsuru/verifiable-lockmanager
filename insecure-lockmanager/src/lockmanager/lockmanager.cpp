@@ -337,6 +337,11 @@ void LockManager::release_lock(unsigned int transactionId, unsigned int rowId) {
   }
 
   releaseLock(transaction, rowId, lockTable_);
+
+  // If the transaction released its last lock, delete it
+  if (transaction->locked_rows.size() == 0) {
+    remove(transactionTable_, transactionId);
+  }
 }
 
 void LockManager::abort_transaction(Transaction *transaction) {

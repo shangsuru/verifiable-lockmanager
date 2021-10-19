@@ -6,9 +6,6 @@ Transaction* newTransaction(int transactionId, int lockBudget) {
   transaction->aborted = false;
   transaction->growing_phase = true;
   transaction->lock_budget = lockBudget;
-  transaction->locked_rows = (int*)malloc(lockBudget * sizeof(int));
-  transaction->locked_rows_size = lockBudget;
-  transaction->num_locked = 0;
   return transaction;
 }
 
@@ -26,7 +23,7 @@ auto addLock(Transaction* transaction, int rowId, bool isExclusive, Lock* lock)
   }
 
   if (ret) {
-    transaction->locked_rows[transaction->num_locked++] = rowId;
+    transaction->locked_rows.insert(rowId);
     transaction->lock_budget--;
   }
 
@@ -34,49 +31,30 @@ auto addLock(Transaction* transaction, int rowId, bool isExclusive, Lock* lock)
 };
 
 void releaseLock(Transaction* transaction, int rowId, HashTable* lockTable) {
-  bool wasOwner = false;
-  for (int i = 0; i < transaction->num_locked; i++) {
-    if (transaction->locked_rows[i] == rowId) {
-      memcpy((void*)&transaction->locked_rows[i],
-             (void*)&transaction->locked_rows[i + 1],
-             sizeof(int) * (transaction->num_locked - 1 - i));
-      wasOwner = true;
+  if (hasLock(transaction, rowId)) {
+    transaction->locked_rows.erase(rowId);
+    transaction->growing_phase = false;
+    auto lock = (Lock*)get(lockTable, rowId);
+    release(lock, transaction->transaction_id);
+
+    if (lock->owners.size() == 0) {
+      remove(lockTable, rowId);
     }
-    break;
-  }
-
-  if (!wasOwner) {
-    return;
-  }
-
-  transaction->num_locked--;
-  transaction->growing_phase = false;
-  auto lock = (Lock*)get(lockTable, rowId);
-  release(lock, transaction->transaction_id);
-
-  if (lock->num_owners == 0) {
-    remove(lockTable, rowId);
   }
 };
 
 auto hasLock(Transaction* transaction, int rowId) -> bool {
-  for (int i = 0; i < transaction->num_locked; i++) {
-    if (transaction->locked_rows[i] == rowId) {
-      return true;
-    }
-  }
-  return false;
+  return transaction->locked_rows.find(rowId) != transaction->locked_rows.end();
 };
 
 void releaseAllLocks(Transaction* transaction, HashTable* lockTable) {
-  for (int i = 0; i < transaction->num_locked; i++) {
-    int locked_row = transaction->locked_rows[i];
+  for (auto locked_row : transaction->locked_rows) {
     auto lock = (Lock*)get(lockTable, locked_row);
     release(lock, transaction->transaction_id);
-    if (lock->num_owners == 0) {
+    if (lock->owners.size() == 0) {
       remove(lockTable, locked_row);
     }
   }
-  transaction->num_locked = 0;
+  transaction->locked_rows.clear();
   transaction->aborted = true;
 };
