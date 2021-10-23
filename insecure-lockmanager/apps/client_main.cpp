@@ -29,6 +29,7 @@ void RunClient() {
 
 auto main() -> int {
   spdlog::info("Starting client");
+  spdlog::set_level(spdlog::level::err);
   RunClient();
   return 0;
 }

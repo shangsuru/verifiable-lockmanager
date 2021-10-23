@@ -130,13 +130,6 @@ class LockManager {
 
  private:
   /**
-   * Initializes the enclave (in DEBUG mode).
-   *
-   * @returns true if successful, else false
-   */
-  auto initialize_enclave() -> bool;
-
-  /**
    * Stores key pair for ECDSA signature inside the sealed key file. This is
    * necessary to persist the key pair that the enclave uses for signing even if
    * it temporarily shuts down.

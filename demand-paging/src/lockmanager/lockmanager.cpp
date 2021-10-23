@@ -105,17 +105,6 @@ void LockManager::unlock(unsigned int transactionId, unsigned int rowId) {
   create_enclave_job(UNLOCK, transactionId, rowId);
 };
 
-auto LockManager::initialize_enclave() -> bool {
-  sgx_status_t ret = SGX_ERROR_UNEXPECTED;
-  ret = sgx_create_enclave(ENCLAVE_FILENAME, SGX_DEBUG_FLAG, NULL, NULL,
-                           &global_eid, NULL);
-  if (ret != SGX_SUCCESS) {
-    ret_error_support(ret);
-    return false;
-  }
-  return true;
-}
-
 auto LockManager::seal_and_save_keys() -> bool {
   uint32_t sealed_data_size = 0;
   sgx_status_t ret = get_sealed_data_size(global_eid, &sealed_data_size);

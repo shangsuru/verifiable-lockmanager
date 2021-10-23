@@ -11,7 +11,7 @@ SGX_ErrorList sgx_errlist[] = {
     {SGX_ERROR_OUT_OF_EPC, "Out of EPC memory."},
     {SGX_ERROR_NO_DEVICE, "Invalid SGX device."},
     {SGX_ERROR_MEMORY_MAP_CONFLICT, "Memory map conflicted."},
-    {SGX_ERROR_INVALID_METADATA, "Invalid encalve metadata."},
+    {SGX_ERROR_INVALID_METADATA, "Invalid enclave metadata."},
     {SGX_ERROR_DEVICE_BUSY, "SGX device is busy."},
     {SGX_ERROR_INVALID_VERSION, "Enclave metadata version is invalid."},
     {SGX_ERROR_ENCLAVE_FILE_ACCESS, "Can't open enclave file."},
@@ -20,7 +20,7 @@ SGX_ErrorList sgx_errlist[] = {
     {SGX_ERROR_OUT_OF_TCS, "Out of TCS."},
     {SGX_ERROR_ENCLAVE_CRASHED, "The enclave is crashed."},
 
-    {SGX_ERROR_MAC_MISMATCH, "Report varification error occurred."},
+    {SGX_ERROR_MAC_MISMATCH, "Report verification error occurred."},
     {SGX_ERROR_INVALID_ATTRIBUTE, "The enclave is not authorized."},
     {SGX_ERROR_INVALID_CPUSVN, "Invalid CPUSVN."},
     {SGX_ERROR_INVALID_ISVSVN, "Invalid ISVSVN."},

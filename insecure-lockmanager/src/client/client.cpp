@@ -5,7 +5,8 @@ LockingServiceClient::LockingServiceClient(
   stub_ = LockingService::NewStub(channel);
 }
 
-auto LockingServiceClient::registerTransaction(unsigned int transactionId)
+auto LockingServiceClient::registerTransaction(unsigned int transactionId,
+                                               unsigned int lockBudget)
     -> bool {
   RegistrationRequest registration;
   registration.set_transaction_id(transactionId);

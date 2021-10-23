@@ -15,6 +15,7 @@ void RunServer() {
 }
 
 auto main(int argc, char** argv) -> int {
+  spdlog::set_level(spdlog::level::err);
   RunServer();
   return 0;
 }

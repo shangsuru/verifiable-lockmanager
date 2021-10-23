@@ -30,9 +30,12 @@ class LockingServiceClient {
    * Registers the transaction at the lock manager.
    *
    * @param transactionId identifies the transaction
+   * @param lockBudget this parameter is ignored and only here so evaluation
+   * code from the experiments that expects this can be reused here
    * @returns if the registration was successful
    */
-  auto registerTransaction(unsigned int transactionId) -> bool;
+  auto registerTransaction(unsigned int transactionId,
+                           unsigned int lockBudget = 0) -> bool;
 
   /**
    * Requests a shared lock for read-only access to a row.
