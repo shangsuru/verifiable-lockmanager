@@ -7,6 +7,13 @@
 
 #include "client.h"
 
+using std::chrono::duration_cast;
+using std::chrono::high_resolution_clock;
+using std::chrono::nanoseconds;
+using std::this_thread::sleep_for;
+
+using namespace std;
+
 const size_t bigger_than_cachesize =
     20 * 1024 * 1024;  // Checked cache size with command 'lscpu | grep cache'
 long* p = new long[bigger_than_cachesize];
@@ -20,27 +27,15 @@ void flushCache() {
   }
 }
 
-auto executeNTimes(std::function<void(int)> func, int arg) -> long {
-  int n = 10000;
-  std::vector<long> durations;
-  for (int i = 0; i < n; i++) {
-    auto begin = std::chrono::high_resolution_clock::now();
-    func(arg);
-    auto end = std::chrono::high_resolution_clock::now();
-    long duration =
-        std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin)
-            .count() /
-        arg;
-    durations.push_back(duration);
-    flushCache();
-  }
-
-  return std::reduce(durations.begin(), durations.end()) / durations.size();
-}
-
-void writeToCSV(std::string filename, std::vector<std::vector<double>> values) {
-  std::ofstream file;
-  file.open(filename);
+/**
+ * Writes the data all in one into a CSV file
+ * @param filename the name of the csv file
+ * @param values the outer vector contains the rows and the inner vector
+ * resembles a row with its column values
+ */
+void writeToCSV(string filename, vector<vector<long>> values) {
+  ofstream file;
+  file.open(filename + ".csv");
 
   for (const auto& row : values) {
     for (int i = 0; i < row.size() - 1; i++) {
@@ -53,7 +48,7 @@ void writeToCSV(std::string filename, std::vector<std::vector<double>> values) {
 }
 
 auto getClient() -> LockingServiceClient {
-  std::string target_address("0.0.0.0:50051");
+  string target_address("0.0.0.0:50051");
   LockingServiceClient client(
       grpc::CreateChannel(target_address, grpc::InsecureChannelCredentials()));
 
@@ -64,25 +59,58 @@ void experiment(LockingServiceClient& client, int numberOfLocks) {
   // A acquires given number of locks in shared mode, then B acquires the same
   // locks in shared mode. This makes A to write lock objects into the lock
   // table and B read them again later one.
-  for (int rowId = 1; rowId < numberOfLocks; rowId++) {
+  for (int rowId = 1; rowId <= numberOfLocks; rowId++) {
     client.requestSharedLock(transactionA, rowId);
   }
-  for (int rowId = 1; rowId < numberOfLocks; rowId++) {
+  for (int rowId = 1; rowId <= numberOfLocks; rowId++) {
     client.requestSharedLock(transactionB, rowId);
   }
 
   // Both release the locks again
-  for (int rowId = 1; rowId < numberOfLocks; rowId++) {
+  for (int rowId = 1; rowId <= numberOfLocks; rowId++) {
     client.requestUnlock(transactionA, rowId);
     client.requestUnlock(transactionB, rowId);
   }
 }
 
 auto main() -> int {
+  vector<vector<long>> contentCSVFile;
+  // vector<int> lockBudgets = {5000,   10000,  20000, 50000,
+  //                            100000, 150000, 200000};
+  vector<int> lockBudgets = {500000};  // how many locks to acquire
+  const int repetitions = 25;  // repeats the same experiments several times
+  const int numWorkerThreads =
+      2;  // this is just written to the CSV file and has no influence on the
+          // actual number of worker threads. These need to be adapted
+          // separately in the respective lockmanager.cpp file (search for
+          // "arg.num_threads")
+  spdlog::set_level(spdlog::level::err);
   auto client = getClient();
-  int lockBudget = 1000;
-  client.registerTransaction(transactionA, lockBudget);
-  client.registerTransaction(transactionB, lockBudget);
-  experiment(client, lockBudget);
+
+  for (int lockBudget :
+       lockBudgets) {  // Show effect of increasing number of locks
+    vector<long> durations;
+    for (int i = 0; i < repetitions; i++) {  // To make result more stable
+      client.registerTransaction(transactionA, lockBudget);
+      client.registerTransaction(transactionB, lockBudget);
+      auto begin = high_resolution_clock::now();
+
+      experiment(client, lockBudget);
+
+      auto end = high_resolution_clock::now();
+      long duration = duration_cast<nanoseconds>(end - begin).count();
+      durations.push_back(duration);
+
+      vector<long> rowInCSVFile = {numWorkerThreads, lockBudget, duration};
+      contentCSVFile.push_back(rowInCSVFile);
+
+      sleep_for(nanoseconds(10000));  // because unlock is asynchronous
+      flushCache();
+    }
+
+    long time = reduce(durations.begin(), durations.end()) / durations.size();
+    cout << "The time for " << lockBudget << ": " << time << endl;
+  }
+  writeToCSV("out", contentCSVFile);
   return 0;
 }
