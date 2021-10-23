@@ -6,6 +6,14 @@
 #include "lock.h"
 #include "transaction.h"
 
+/*
+C++ classes currently don't work when we need to transfer them from the
+untrusted to the trusted part by passing pointers via ECALLS, so that the memory
+is allocated in the untrusted part, but the trusted part can still manipulate
+the memory via the pointer. That is the reason we are using C-style structs and
+methods here.
+*/
+
 HashTable* newHashTable(int size);
 
 Entry* newEntry(int key, void* value);
@@ -23,7 +31,7 @@ int hash(int size, int key);
  *
  * @param hashTable either the lock or transaction table to execute the
  * operation on
- * @param key idedentifies the value, i.e. TXID or RID
+ * @param key identifies the value, i.e. TXID or RID
  * @returns value for the given key. Needs to be casted to the appropriate
  * pointer type, i.e. Transaction or Lock. Or nullptr, when the corresponding
  * key could not be found.

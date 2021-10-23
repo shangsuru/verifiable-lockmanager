@@ -5,7 +5,7 @@
 
 class LockManagerTest : public ::testing::Test {
  protected:
-  void SetUp() override { spdlog::set_level(spdlog::level::off); };
+  void SetUp() override { spdlog::set_level(spdlog::level::info); };
 
   const unsigned int kTransactionIdA = 1;
   const unsigned int kTransactionIdB = 2;
@@ -102,6 +102,8 @@ TEST_F(LockManagerTest, unlock) {
 
   EXPECT_TRUE(lock_manager.lock(kTransactionIdA, kRowId, false).second);
   lock_manager.unlock(kTransactionIdA, kRowId);
+  std::this_thread::sleep_for(
+      std::chrono::seconds(1));  // unlock is asynchronous
   EXPECT_TRUE(lock_manager.lock(kTransactionIdB, kRowId, true).second);
 };
 

@@ -11,9 +11,12 @@ auto hash_locktable_bucket(Entry *bucket) -> sgx_sha256_hash_t * {
   }
 
   Entry *entry = bucket;
-  uint32_t size = 3 + SGX_SHA256_HASH_SIZE;  // size of the serialized entry
-  uint8_t *data = new uint8_t[size];         // the serialized entry with lock
-  sgx_status_t ret;                          // status code of sgx library calls
+  const int numLockEntryFields = 3;
+  uint32_t size = numLockEntryFields +
+                  SGX_SHA256_HASH_SIZE;  // size of the serialized entry, see
+                                         // locktabletable_entry_to_uint8_t
+  uint8_t *data = new uint8_t[size];     // the serialized entry with lock
+  sgx_status_t ret;                      // status code of sgx library calls
 
   // To hold the hash over the entries in the bucket
   sgx_sha256_hash_t *p_hash =
@@ -63,7 +66,11 @@ auto hash_transactiontable_bucket(Entry *bucket) -> sgx_sha256_hash_t * {
   }
 
   Entry *entry = bucket;
-  uint32_t size = 6 + SGX_SHA256_HASH_SIZE;  // size of the serialized entry
+  const int numTransactionEntryFields = 6;
+  uint32_t size =
+      numTransactionEntryFields +
+      SGX_SHA256_HASH_SIZE;  // size of the serialized entry, see function
+                             // transactiontable_entry_to_uint8_t
   uint8_t *data = new uint8_t[size];  // the serialized entry with transaction
   sgx_status_t ret;                   // status code of sgx library calls
 

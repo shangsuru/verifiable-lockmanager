@@ -105,6 +105,7 @@ TEST(HashTableTest, removeEndOfList) {
   EXPECT_TRUE(contains(hashTable, 12));
   EXPECT_TRUE(contains(hashTable, 22));
   EXPECT_TRUE(contains(hashTable, 32));
+  EXPECT_FALSE(contains(hashTable, 42));
 };
 
 TEST(HashTableTest, removeListJustHasOneElement) {
@@ -133,7 +134,7 @@ TEST(HashTableTest, removeBeginningOfList) {
   EXPECT_FALSE(contains(hashTable, 12));
   EXPECT_TRUE(contains(hashTable, 22));
   EXPECT_TRUE(contains(hashTable, 32));
-  EXPECT_TRUE(contains(hashTable, 32));
+  EXPECT_TRUE(contains(hashTable, 42));
 };
 
 TEST(HashTableTest, removeMiddleOfList) {
@@ -152,6 +153,7 @@ TEST(HashTableTest, removeMiddleOfList) {
   remove(hashTable, 22);
 
   EXPECT_TRUE(contains(hashTable, 12));
+  EXPECT_FALSE(contains(hashTable, 22));
   EXPECT_TRUE(contains(hashTable, 32));
   EXPECT_TRUE(contains(hashTable, 42));
 };
