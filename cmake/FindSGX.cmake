@@ -129,7 +129,7 @@ if(SGX_FOUND)
 
         target_link_libraries(${target} "${SGX_COMMON_CFLAGS} \
             -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L${SGX_LIBRARY_PATH} \
-            -Wl,--start-group -lsgx_tstdc -lsgx_tcxx -lsgx_tkey_exchange -lsgx_tcrypto -l${SGX_TSVC_LIB} -Wl,--end-group \
+            -Wl,--start-group -lsgx_tstdc -lsgx_tcxx -lsgx_tkey_exchange -lsgx_tcrypto -l${SGX_TSVC_LIB} -lsgx_tswitchless -Wl,--end-group \
             -Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined \
             -Wl,-pie,-eenclave_entry -Wl,--export-dynamic \
             ${LDSCRIPT_FLAG} \
@@ -168,7 +168,7 @@ if(SGX_FOUND)
         target_link_libraries(${target} "${SGX_COMMON_CFLAGS} \
             -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L${SGX_LIBRARY_PATH} \
             -Wl,--whole-archive -l${SGX_TRTS_LIB} -Wl,--no-whole-archive \
-            -Wl,--start-group ${TLIB_LIST} -lsgx_tstdc -lsgx_tcxx -lsgx_tkey_exchange -lsgx_tcrypto -l${SGX_TSVC_LIB} -Wl,--end-group \
+            -Wl,--start-group ${TLIB_LIST} -lsgx_tstdc -lsgx_tcxx -lsgx_tkey_exchange -lsgx_tcrypto -l${SGX_TSVC_LIB} -lsgx_tswitchless -Wl,--end-group \
             -Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined \
             -Wl,-pie,-eenclave_entry -Wl,--export-dynamic \
             ${LDSCRIPT_FLAG} \
@@ -275,6 +275,7 @@ if(SGX_FOUND)
                                          -l${SGX_URTS_LIB} \
                                          -l${SGX_USVC_LIB} \
                                          -lsgx_ukey_exchange \
+                                         -lsgx_tswitchless \
                                          -lpthread")
 
         set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES "${CMAKE_CURRENT_BINARY_DIR}/${EDL_NAME}_u.h")
@@ -324,6 +325,7 @@ if(SGX_FOUND)
                                          -l${SGX_URTS_LIB} \
                                          -l${SGX_USVC_LIB} \
                                          -lsgx_ukey_exchange \
+                                         -lsgx_tswitchless \
                                          -lpthread")
         set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES ${EDL_U_HDRS})
     endfunction()
