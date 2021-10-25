@@ -275,7 +275,7 @@ if(SGX_FOUND)
                                          -l${SGX_URTS_LIB} \
                                          -l${SGX_USVC_LIB} \
                                          -lsgx_ukey_exchange \
-                                         -lsgx_tswitchless \
+                                         -lsgx_uswitchless \
                                          -lpthread")
 
         set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES "${CMAKE_CURRENT_BINARY_DIR}/${EDL_NAME}_u.h")
@@ -325,7 +325,7 @@ if(SGX_FOUND)
                                          -l${SGX_URTS_LIB} \
                                          -l${SGX_USVC_LIB} \
                                          -lsgx_ukey_exchange \
-                                         -lsgx_tswitchless \
+                                         -lsgx_uswitchless \
                                          -lpthread")
         set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES ${EDL_U_HDRS})
     endfunction()
