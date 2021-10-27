@@ -26,13 +26,15 @@ auto LockingServiceClient::registerTransaction(unsigned int transactionId,
 };
 
 auto LockingServiceClient::requestSharedLock(unsigned int transactionId,
-                                             unsigned int rowId) -> bool {
+                                             unsigned int rowId,
+                                             bool waitForSignature) -> bool {
   spdlog::info(
       "Requesting shared lock (TXID: " + std::to_string(transactionId) +
       ", RID: " + std::to_string(rowId) + ")");
   LockRequest request;
   request.set_transaction_id(transactionId);
   request.set_row_id(rowId);
+  request.set_wait_for_signature(waitForSignature);
 
   LockResponse response;
   ClientContext context;
@@ -49,13 +51,15 @@ auto LockingServiceClient::requestSharedLock(unsigned int transactionId,
 }
 
 auto LockingServiceClient::requestExclusiveLock(unsigned int transactionId,
-                                                unsigned int rowId) -> bool {
+                                                unsigned int rowId,
+                                                bool waitForSignature) -> bool {
   spdlog::info(
       "Requesting exclusive lock (TXID: " + std::to_string(transactionId) +
       ", RID: " + std::to_string(rowId) + ")");
   LockRequest request;
   request.set_transaction_id(transactionId);
   request.set_row_id(rowId);
+  request.set_wait_for_signature(waitForSignature);
 
   LockResponse response;
   ClientContext context;

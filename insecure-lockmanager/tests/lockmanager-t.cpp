@@ -143,15 +143,24 @@ TEST_F(LockManagerTest, concurrentLockRequests) {
   EXPECT_TRUE(lockManager_->registerTransaction(kTransactionIdA));
   EXPECT_TRUE(lockManager_->registerTransaction(kTransactionIdB));
 
-  std::thread t1{&LockManager::lock, lockManager_, kTransactionIdA, 0, false};
-  std::thread t2{&LockManager::lock, lockManager_, kTransactionIdB, 0, false};
-  std::thread t3{&LockManager::lock, lockManager_, kTransactionIdA, 1, false};
-  std::thread t4{&LockManager::lock, lockManager_, kTransactionIdB, 1, false};
-  std::thread t5{&LockManager::lock, lockManager_, kTransactionIdA, 2, false};
-  std::thread t6{&LockManager::lock, lockManager_, kTransactionIdB, 2, false};
-  std::thread t7{&LockManager::lock, lockManager_, kTransactionIdA, 3, false};
-  std::thread t8{&LockManager::lock, lockManager_, kTransactionIdB, 3, false};
-  std::thread t9{&LockManager::lock, lockManager_, kTransactionIdB, 4, true};
+  std::thread t1{
+      &LockManager::lock, lockManager_, kTransactionIdA, 0, false, true};
+  std::thread t2{
+      &LockManager::lock, lockManager_, kTransactionIdB, 0, false, true};
+  std::thread t3{
+      &LockManager::lock, lockManager_, kTransactionIdA, 1, false, true};
+  std::thread t4{
+      &LockManager::lock, lockManager_, kTransactionIdB, 1, false, true};
+  std::thread t5{
+      &LockManager::lock, lockManager_, kTransactionIdA, 2, false, true};
+  std::thread t6{
+      &LockManager::lock, lockManager_, kTransactionIdB, 2, false, true};
+  std::thread t7{
+      &LockManager::lock, lockManager_, kTransactionIdA, 3, false, true};
+  std::thread t8{
+      &LockManager::lock, lockManager_, kTransactionIdB, 3, false, true};
+  std::thread t9{
+      &LockManager::lock, lockManager_, kTransactionIdB, 4, true, true};
 
   t1.join();
   t2.join();

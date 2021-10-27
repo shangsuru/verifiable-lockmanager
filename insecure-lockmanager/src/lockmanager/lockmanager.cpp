@@ -67,11 +67,11 @@ auto LockManager::registerTransaction(unsigned int transactionId) -> bool {
 };
 
 auto LockManager::lock(unsigned int transactionId, unsigned int rowId,
-                       bool isExclusive) -> bool {
+                       bool isExclusive, bool waitForResult) -> bool {
   if (isExclusive) {
-    return create_job(EXCLUSIVE, transactionId, rowId);
+    return create_job(EXCLUSIVE, transactionId, rowId, waitForResult);
   }
-  return create_job(SHARED, transactionId, rowId);
+  return create_job(SHARED, transactionId, rowId, waitForResult);
 };
 
 void LockManager::unlock(unsigned int transactionId, unsigned int rowId) {
@@ -79,7 +79,7 @@ void LockManager::unlock(unsigned int transactionId, unsigned int rowId) {
 };
 
 auto LockManager::create_job(Command command, unsigned int transaction_id,
-                             unsigned int row_id) -> bool {
+                             unsigned int row_id, bool waitForResult) -> bool {
   // Set job parameters
   Job job;
   job.command = command;
@@ -88,7 +88,8 @@ auto LockManager::create_job(Command command, unsigned int transaction_id,
   job.row_id = row_id;
 
   // Need to track, when job is finished or error has occurred
-  if (command == SHARED || command == EXCLUSIVE || command == REGISTER) {
+  if (waitForResult && command == SHARED || command == EXCLUSIVE ||
+      command == REGISTER) {
     // Allocate dynamic memory in the untrusted part of the application, so the
     // enclave can modify it via its pointer
     job.finished = new bool;
@@ -98,7 +99,9 @@ auto LockManager::create_job(Command command, unsigned int transaction_id,
   }
 
   send_job(&job);
-  if (command == SHARED || command == EXCLUSIVE || command == REGISTER) {
+  if (waitForResult && command == SHARED || command == EXCLUSIVE ||
+      command == REGISTER) {
+    spdlog::warn("Wait for it to be finished");
     // Need to wait until job is finished because we need to be registered for
     // subsequent requests or because we need to wait for the return value
     while (!*job.finished) {

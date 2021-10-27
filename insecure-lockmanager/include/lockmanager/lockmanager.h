@@ -49,13 +49,14 @@ class LockManager {
    * @param rowId identifies the row to be locked
    * @param requestedMode either shared for concurrent read access or exclusive
    * for sole write access
+   * @param waitForResult parameter forwarded to create_job function
    * @returns if successful or not. E.g., when the transaction did not call
    * RegisterTransaction before or the given lock mode is unknown or when the
    * transaction makes a request for a look, that it already owns or makes a
    * request for a lock while in the shrinking phase, the request will fail.
    */
-  auto lock(unsigned int transactionId, unsigned int rowId, bool isExclusive)
-      -> bool;
+  auto lock(unsigned int transactionId, unsigned int rowId, bool isExclusive,
+            bool waitForResult = true) -> bool;
 
   /**
    * Releases a lock for the specified row
@@ -88,9 +89,11 @@ class LockManager {
    * @param transaction_id optional parameter for SHARED, EXCLUSIVE, UNLOCK or
    * REGISTER
    * @param row_id optional parameter for SHARED, EXCLUSIVE or UNLOCK
+   * @param waitForResult if the function should wait for return values to be
+   * set or immediately return
    */
   auto create_job(Command command, unsigned int transaction_id = 0,
-                  unsigned int row_id = 0) -> bool;
+                  unsigned int row_id = 0, bool waitForResult = true) -> bool;
 
   /**
    * Function that is run by the worker threads inside the enclave. It pulls a
