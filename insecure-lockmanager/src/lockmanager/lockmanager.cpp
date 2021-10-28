@@ -8,7 +8,7 @@ auto LockManager::create_worker_thread(void *object) -> void * {
 }
 
 void LockManager::configuration_init() {
-  arg.num_threads = 2;
+  arg.num_threads = 8;
   arg.tx_thread_id = arg.num_threads - 1;
   arg.transaction_table_size = 200;
   arg.lock_table_size = 10000;
@@ -322,12 +322,10 @@ auto LockManager::acquire_lock(unsigned int transactionId, unsigned int rowId,
   // Acquire lock in requested mode (shared, exclusive)
   if (!hasLock(transaction, rowId)) {
     ret = addLock(transaction, rowId, isExclusive, lock);
-
     if (!ret) {
       abort_transaction(transaction);
       return false;
     }
-
     return ret;
   }
 

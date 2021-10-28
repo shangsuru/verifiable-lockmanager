@@ -13,12 +13,15 @@ void RunClient() {
   int lockBudget = 11000;
   client.registerTransaction(transactionA);
   client.registerTransaction(transactionB);
-  for (int rowId = 1; rowId < lockBudget; rowId++) {
+  for (int rowId = 1; rowId < lockBudget - 1; rowId++) {
     client.requestSharedLock(transactionA, rowId, false);
   }
-  for (int rowId = 1; rowId < lockBudget; rowId++) {
+  for (int rowId = 1; rowId < lockBudget - 1; rowId++) {
     client.requestSharedLock(transactionB, rowId, false);
   }
+
+  client.requestSharedLock(transactionA, lockBudget - 1, true);
+  client.requestSharedLock(transactionB, lockBudget - 1, true);
 
   // Both release the locks again
   for (int rowId = 1; rowId < lockBudget - 1; rowId++) {

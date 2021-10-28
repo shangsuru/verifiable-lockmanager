@@ -23,8 +23,10 @@ auto addLock(Transaction* transaction, int rowId, bool isExclusive, Lock* lock)
   }
 
   if (ret) {
+    transaction->mut.lock();
     transaction->locked_rows.insert(rowId);
     transaction->lock_budget--;
+    transaction->mut.unlock();
   }
 
   return ret;
@@ -32,8 +34,11 @@ auto addLock(Transaction* transaction, int rowId, bool isExclusive, Lock* lock)
 
 void releaseLock(Transaction* transaction, int rowId, HashTable* lockTable) {
   if (hasLock(transaction, rowId)) {
+    transaction->mut.lock();
     transaction->locked_rows.erase(rowId);
     transaction->growing_phase = false;
+    transaction->mut.unlock();
+
     auto lock = (Lock*)get(lockTable, rowId);
     release(lock, transaction->transaction_id);
 

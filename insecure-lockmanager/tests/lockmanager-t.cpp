@@ -181,7 +181,7 @@ TEST_F(LockManagerTest, transactionGetsDeletedAfterReleasingLastLock) {
   EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA));
   EXPECT_TRUE(lock_manager.lock(kTransactionIdA, kRowId, false));
   lock_manager.unlock(kTransactionIdA, kRowId);
-  std::this_thread::sleep_for(std::chrono::seconds(
+  std::this_thread::sleep_for(std::chrono::milliseconds(
       1));  // need to wait here because unlock is asynchronous
   EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA));
 }
