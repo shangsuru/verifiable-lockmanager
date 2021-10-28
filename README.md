@@ -53,6 +53,8 @@ cmake --build build
 cmake --build build --target test | docs
 ```
 
+You can use e.g. `--gtest_filter=*unlock` or `--gtest_repeat=100` when running test executables to filter for specific tests or run tests multiple times to test for concurrency related errors.
+
 ## Developing and debugging inside a Docker container
 
 To be able to run the SGX code in simulation mode without special hardware, 
