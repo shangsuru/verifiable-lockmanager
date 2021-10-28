@@ -143,24 +143,25 @@ TEST_F(LockManagerTest, concurrentLockRequests) {
   EXPECT_TRUE(lockManager_->registerTransaction(kTransactionIdA));
   EXPECT_TRUE(lockManager_->registerTransaction(kTransactionIdB));
 
+  // Row IDs have to be selected so that they are served by different threads
   std::thread t1{
       &LockManager::lock, lockManager_, kTransactionIdA, 0, false, true};
   std::thread t2{
       &LockManager::lock, lockManager_, kTransactionIdB, 0, false, true};
   std::thread t3{
-      &LockManager::lock, lockManager_, kTransactionIdA, 1, false, true};
+      &LockManager::lock, lockManager_, kTransactionIdA, 9000, false, true};
   std::thread t4{
-      &LockManager::lock, lockManager_, kTransactionIdB, 1, false, true};
+      &LockManager::lock, lockManager_, kTransactionIdB, 9000, false, true};
   std::thread t5{
-      &LockManager::lock, lockManager_, kTransactionIdA, 2, false, true};
+      &LockManager::lock, lockManager_, kTransactionIdA, 5000, false, true};
   std::thread t6{
-      &LockManager::lock, lockManager_, kTransactionIdB, 2, false, true};
+      &LockManager::lock, lockManager_, kTransactionIdB, 5000, false, true};
   std::thread t7{
-      &LockManager::lock, lockManager_, kTransactionIdA, 3, false, true};
+      &LockManager::lock, lockManager_, kTransactionIdA, 2000, false, true};
   std::thread t8{
-      &LockManager::lock, lockManager_, kTransactionIdB, 3, false, true};
+      &LockManager::lock, lockManager_, kTransactionIdB, 2000, false, true};
   std::thread t9{
-      &LockManager::lock, lockManager_, kTransactionIdB, 4, true, true};
+      &LockManager::lock, lockManager_, kTransactionIdB, 10000, true, true};
 
   t1.join();
   t2.join();
@@ -183,4 +184,16 @@ TEST_F(LockManagerTest, transactionGetsDeletedAfterReleasingLastLock) {
   std::this_thread::sleep_for(std::chrono::seconds(
       1));  // need to wait here because unlock is asynchronous
   EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA));
+}
+
+TEST_F(LockManagerTest, notWaitingForSignature) {
+  LockManager lock_manager = LockManager();
+  EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA));
+  for (int i = 1; i < 10000; i++) {
+    lock_manager.lock(kTransactionIdA, i, false,
+                      false);  // not waiting for signature return value
+  }
+  EXPECT_TRUE(lock_manager.lock(
+      kTransactionIdA, 10000, false,
+      true));  // waitung for signature return value at the end
 }
