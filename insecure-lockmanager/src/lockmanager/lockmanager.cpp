@@ -74,8 +74,9 @@ auto LockManager::lock(unsigned int transactionId, unsigned int rowId,
   return create_job(SHARED, transactionId, rowId, waitForResult);
 };
 
-void LockManager::unlock(unsigned int transactionId, unsigned int rowId) {
-  create_job(UNLOCK, transactionId, rowId);
+void LockManager::unlock(unsigned int transactionId, unsigned int rowId,
+                         bool waitForResult) {
+  create_job(UNLOCK, transactionId, rowId, waitForResult);
 };
 
 auto LockManager::create_job(Command command, unsigned int transaction_id,
@@ -88,8 +89,8 @@ auto LockManager::create_job(Command command, unsigned int transaction_id,
   job.row_id = row_id;
 
   // Need to track, when job is finished or error has occurred
-  if (waitForResult && command == SHARED || command == EXCLUSIVE ||
-      command == REGISTER) {
+  if (waitForResult && (command == SHARED || command == EXCLUSIVE ||
+                        command == REGISTER || command == UNLOCK)) {
     // Allocate dynamic memory in the untrusted part of the application, so the
     // enclave can modify it via its pointer
     job.finished = new bool;
@@ -98,10 +99,10 @@ auto LockManager::create_job(Command command, unsigned int transaction_id,
     *job.error = false;
   }
 
+  job.wait_for_result = waitForResult;
   send_job(&job);
-  if (waitForResult && command == SHARED || command == EXCLUSIVE ||
-      command == REGISTER) {
-    spdlog::warn("Wait for it to be finished");
+  if (waitForResult && (command == SHARED || command == EXCLUSIVE ||
+                        command == REGISTER || command == UNLOCK)) {
     // Need to wait until job is finished because we need to be registered for
     // subsequent requests or because we need to wait for the return value
     while (!*job.finished) {
@@ -141,16 +142,22 @@ void LockManager::send_job(void *data) {
     case EXCLUSIVE:
     case UNLOCK: {
       // Copy job parameters
+
       new_job.transaction_id = ((Job *)data)->transaction_id;
       new_job.row_id = ((Job *)data)->row_id;
-      new_job.finished = ((Job *)data)->finished;
-      new_job.error = ((Job *)data)->error;
+      new_job.wait_for_result = ((Job *)data)->wait_for_result;
 
+      if (new_job.wait_for_result) {
+        new_job.finished = ((Job *)data)->finished;
+        new_job.error = ((Job *)data)->error;
+      }
       // If transaction is not registered, abort the request
       if (get(transactionTable_, new_job.transaction_id) == nullptr) {
         spdlog::error("Need to register transaction before lock requests");
-        *new_job.error = true;
-        *new_job.finished = true;
+        if (new_job.wait_for_result) {
+          *new_job.error = true;
+          *new_job.finished = true;
+        }
         return;
       }
 
@@ -229,11 +236,13 @@ void LockManager::process_request() {
         bool ok = acquire_lock(cur_job.transaction_id, cur_job.row_id,
                                command == EXCLUSIVE);
 
-        if (!ok) {
-          *cur_job.error = true;
-        }
+        if (cur_job.wait_for_result) {
+          if (!ok) {
+            *cur_job.error = true;
+          }
 
-        *cur_job.finished = true;
+          *cur_job.finished = true;
+        }
         break;
       }
       case UNLOCK: {
@@ -242,6 +251,9 @@ void LockManager::process_request() {
              ", RID: " + std::to_string(cur_job.row_id))
                 .c_str());
         release_lock(cur_job.transaction_id, cur_job.row_id);
+        if (cur_job.wait_for_result) {
+          *cur_job.finished = true;
+        }
         break;
       }
       case REGISTER: {

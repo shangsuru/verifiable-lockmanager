@@ -55,10 +55,12 @@ auto getClient() -> LockingServiceClient {
   return client;
 }
 
+/**
+ * A acquires given number of locks in shared mode, then B acquires the same
+ * locks in shared mode. This makes A to write lock objects into the lock table
+ * and B read them again later one.
+ */
 void experiment(LockingServiceClient& client, int numberOfLocks) {
-  // A acquires given number of locks in shared mode, then B acquires the same
-  // locks in shared mode. This makes A to write lock objects into the lock
-  // table and B read them again later one.
   for (int rowId = 1; rowId <= numberOfLocks; rowId++) {
     client.requestSharedLock(transactionA, rowId);
   }
@@ -73,18 +75,46 @@ void experiment(LockingServiceClient& client, int numberOfLocks) {
   }
 }
 
+/**
+ * Since previously, clients waited until their lock request returns the
+ * signature, all requests from a single client ended up being synchronous, so
+ * there was never more than one request in the queue. Therefore we added an
+ * additional mode of operation for all lock requests where we are not waiting
+ * for the result. Therefore the client issues new requests when the former
+ * aren't finished yet and requests have a chance to queue up and being operated
+ * on concurrently.
+ */
+void experiment2(LockingServiceClient& client, int lockBudget) {
+  for (int rowId = 1; rowId < lockBudget; rowId++) {
+    client.requestSharedLock(transactionA, rowId, false);
+  }
+  for (int rowId = 1; rowId < lockBudget; rowId++) {
+    client.requestSharedLock(transactionB, rowId, false);
+  }
+
+  // Both release the locks again
+  for (int rowId = 1; rowId < lockBudget - 1; rowId++) {
+    client.requestUnlock(transactionA, rowId, false);
+    client.requestUnlock(transactionB, rowId, false);
+  }
+
+  client.requestUnlock(transactionA, lockBudget - 1, false);
+  client.requestUnlock(transactionB, lockBudget - 1, true);
+}
+
 auto main() -> int {
   vector<vector<long>> contentCSVFile;
-  // vector<int> lockBudgets = {5000,   10000,  20000, 50000,
-  //                            100000, 150000, 200000};
-  vector<int> lockBudgets = {500000};  // how many locks to acquire
-  const int repetitions = 25;  // repeats the same experiments several times
+  // vector<int> lockBudgets = {10, 100, 500, 1000, 2500, 5000, 10000,  20000,
+  // 50000, 100000, 150000, 200000};
+  vector<int> lockBudgets = {
+      100000};                 //, 100, 500};  // how many locks to acquire
+  const int repetitions = 50;  // repeats the same experiments several times
   const int numWorkerThreads =
       2;  // this is just written to the CSV file and has no influence on the
           // actual number of worker threads. These need to be adapted
           // separately in the respective lockmanager.cpp file (search for
           // "arg.num_threads")
-  spdlog::set_level(spdlog::level::err);
+  spdlog::set_level(spdlog::level::info);
   auto client = getClient();
 
   for (int lockBudget :
@@ -95,7 +125,7 @@ auto main() -> int {
       client.registerTransaction(transactionB, lockBudget);
       auto begin = high_resolution_clock::now();
 
-      experiment(client, lockBudget);
+      experiment2(client, lockBudget);
 
       auto end = high_resolution_clock::now();
       long duration = duration_cast<nanoseconds>(end - begin).count();

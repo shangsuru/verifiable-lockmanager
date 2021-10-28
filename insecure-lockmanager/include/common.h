@@ -25,6 +25,7 @@ struct Job {
   enum Command command;
   unsigned int transaction_id;
   unsigned int row_id;
+  bool wait_for_result;
   volatile bool* finished;
   volatile bool* error;
 };

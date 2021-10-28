@@ -44,7 +44,8 @@ auto LockingServiceImpl::Unlock(ServerContext* context,
                                 LockResponse* response) -> Status {
   unsigned int transaction_id = request->transaction_id();
   unsigned int row_id = request->row_id();
+  bool wait_for_signature = request->wait_for_signature();
 
-  lockManager_.unlock(transaction_id, row_id);
+  lockManager_.unlock(transaction_id, row_id, wait_for_signature);
   return Status::OK;
 }

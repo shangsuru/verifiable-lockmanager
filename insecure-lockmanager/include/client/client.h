@@ -68,9 +68,12 @@ class LockingServiceClient {
    *
    * @param transactionId identifies the transaction that makes the request
    * @param rowId identifies the row, the transaction wants to unlock
+   * @param waitForSignature if true the client waits for the operation to be
+   * finished
    * @returns if the lock got released successfully
    */
-  auto requestUnlock(unsigned int transactionId, unsigned int rowId) -> bool;
+  auto requestUnlock(unsigned int transactionId, unsigned int rowId,
+                     bool waitForSignature = false) -> bool;
 
  private:
   std::unique_ptr<LockingService::Stub> stub_;

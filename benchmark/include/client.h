@@ -1,12 +1,12 @@
 #pragma once
 
 #include <grpcpp/grpcpp.h>
-#include "spdlog/spdlog.h"
 
 #include <iostream>
 #include <string_view>
 
 #include "lockmanager.grpc.pb.h"
+#include "spdlog/spdlog.h"
 
 using grpc::Channel;
 using grpc::ClientContext;
@@ -41,31 +41,37 @@ class LockingServiceClient {
    *
    * @param transactionId identifies the transaction that makes the request
    * @param rowId identifies the row, the transaction wants to access
+   * @param waitForSignature if the request should wait for the signature
+   * return
    * @returns the signature of the lock
    * @throws std::domain_error, if the lock couldn't get acquired
    */
-  auto requestSharedLock(unsigned int transactionId, unsigned int rowId)
-      -> std::string;
+  auto requestSharedLock(unsigned int transactionId, unsigned int rowId,
+                         bool waitForSignature = true) -> std::string;
 
   /**
    * Requests an exclusive lock for sole write access to a row.
    *
    * @param transactionId identifies the transaction that makes the request
    * @param rowId identifies the row, the transaction wants to access
+   * @param waitForSignature if the request should wait for the signature return
    * @returns the signature of the lock
    * @throws std::domain_error, if the lock couldn't get acquired
    */
-  auto requestExclusiveLock(unsigned int transactionId, unsigned int rowId)
-      -> std::string;
+  auto requestExclusiveLock(unsigned int transactionId, unsigned int rowId,
+                            bool waitForSignature = true) -> std::string;
 
   /**
    * Requests to release a lock acquired by the transaction.
    *
    * @param transactionId identifies the transaction that makes the request
    * @param rowId identifies the row, the transaction wants to unlock
+   * @param waitForSignature if true the client waits for the operation to be
+   * finished
    * @returns if the lock got released successfully
    */
-  auto requestUnlock(unsigned int transactionId, unsigned int rowId) -> bool;
+  auto requestUnlock(unsigned int transactionId, unsigned int rowId,
+                     bool waitForSignature = false) -> bool;
 
  private:
   std::unique_ptr<LockingService::Stub> stub_;

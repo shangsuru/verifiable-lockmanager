@@ -18,6 +18,8 @@ class ServerTest : public ::testing::Test {
   auto getSharedLock(LockingServiceImpl &server) -> bool {
     request_.set_transaction_id(transactionId_);
     request_.set_row_id(rowId_);
+    request_.set_wait_for_signature(
+        true);  // so that we can assert the return value
 
     Status status = server.LockShared(&context_, &request_, &response_);
     return status.ok();
@@ -26,6 +28,8 @@ class ServerTest : public ::testing::Test {
   auto getExclusiveLock(LockingServiceImpl &server) -> bool {
     request_.set_transaction_id(transactionId_);
     request_.set_row_id(rowId_);
+    request_.set_wait_for_signature(
+        true);  // so that we can assert the return value
 
     Status status = server.LockExclusive(&context_, &request_, &response_);
     return status.ok();
@@ -34,12 +38,13 @@ class ServerTest : public ::testing::Test {
   auto unlock(LockingServiceImpl &server) -> bool {
     request_.set_transaction_id(transactionId_);
     request_.set_row_id(rowId_);
+    request_.set_wait_for_signature(false);
 
     Status status = server.Unlock(&context_, &request_, &response_);
     return status.ok();
   }
 
-  // Mocks for the gRPC call parameters
+  // gRPC call parameters
   ServerContext context_;
   LockRequest request_;
   LockResponse response_;

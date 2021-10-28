@@ -63,8 +63,11 @@ class LockManager {
    *
    * @param transactionId identifies the transaction making the request
    * @param rowId identifies the row to be released
+   * @param waitForResult if true makes unlock a synchronous operation, else
+   * asynchronous (no waiting for operation to be finished)
    */
-  void unlock(unsigned int transactionId, unsigned int rowId);
+  void unlock(unsigned int transactionId, unsigned int rowId,
+              bool waitForResult = false);
 
  private:
   /**
