@@ -69,10 +69,14 @@ void experiment(LockingServiceClient& client, int numberOfLocks) {
   }
 
   // Both release the locks again
-  for (int rowId = 1; rowId <= numberOfLocks; rowId++) {
+  for (int rowId = 1; rowId <= numberOfLocks - 1; rowId++) {
     client.requestUnlock(transactionA, rowId);
     client.requestUnlock(transactionB, rowId);
   }
+
+  client.requestUnlock(transactionA, numberOfLocks);
+  client.requestUnlock(transactionB, numberOfLocks,
+                       true);  // wait on last unlock
 }
 
 /**
@@ -84,37 +88,136 @@ void experiment(LockingServiceClient& client, int numberOfLocks) {
  * aren't finished yet and requests have a chance to queue up and being operated
  * on concurrently.
  */
-void experiment2(LockingServiceClient& client, int lockBudget) {
-  for (int rowId = 1; rowId < lockBudget; rowId++) {
+void experiment1Thread(LockingServiceClient& client, int lockBudget = 60000) {
+  for (int rowId = 1; rowId <= lockBudget; rowId++) {
     client.requestSharedLock(transactionA, rowId, false);
   }
-  for (int rowId = 1; rowId < lockBudget; rowId++) {
-    client.requestSharedLock(transactionB, rowId, false);
+
+  for (int rowId = 1; rowId <= lockBudget; rowId++) {
+    if (rowId == 60000) {  // last RIDs for each thread to wait on
+      client.requestSharedLock(transactionB, rowId, true);
+    } else {
+      client.requestSharedLock(transactionB, rowId, false);
+    }
   }
 
-  // Both release the locks again
-  for (int rowId = 1; rowId < lockBudget - 1; rowId++) {
+  for (int rowId = 1; rowId <= lockBudget; rowId++) {
     client.requestUnlock(transactionA, rowId, false);
-    client.requestUnlock(transactionB, rowId, false);
   }
 
-  client.requestUnlock(transactionA, lockBudget - 1, false);
-  client.requestUnlock(transactionB, lockBudget - 1, true);
+  for (int rowId = 1; rowId <= lockBudget; rowId++) {
+    if (rowId == 60000) {  // last RIDs for each thread to wait on
+      client.requestUnlock(transactionB, rowId, true);
+    } else {
+      client.requestUnlock(transactionB, rowId, false);
+    }
+  }
+}
+
+/**
+ * For multiple client multiple thread scenario, we have to make sure that we
+ * wait on the last request for each thread, e.g. when there are two threads we
+ * need to make the last two requests synchronous so that we wait on everything
+ * to be finished.
+ */
+void experiment2Threads(LockingServiceClient& client, int lockBudget = 60000) {
+  for (int rowId = 1; rowId <= lockBudget; rowId++) {
+    client.requestSharedLock(transactionA, rowId, false);
+  }
+
+  for (int rowId = 1; rowId <= lockBudget; rowId++) {
+    if (rowId == 60000 ||
+        rowId == 59999) {  // last RIDs for each thread to wait on
+      client.requestSharedLock(transactionB, rowId, true);
+    } else {
+      client.requestSharedLock(transactionB, rowId, false);
+    }
+  }
+
+  for (int rowId = 1; rowId <= lockBudget; rowId++) {
+    client.requestUnlock(transactionA, rowId, false);
+  }
+
+  for (int rowId = 1; rowId <= lockBudget; rowId++) {
+    if (rowId == 60000 ||
+        rowId == 59999) {  // last RIDs for each thread to wait on
+      client.requestUnlock(transactionB, rowId, true);
+    } else {
+      client.requestUnlock(transactionB, rowId, false);
+    }
+  }
+}
+
+void experiment4Threads(LockingServiceClient& client, int lockBudget = 60000) {
+  for (int rowId = 1; rowId <= lockBudget; rowId++) {
+    client.requestSharedLock(transactionA, rowId, false);
+  }
+
+  for (int rowId = 1; rowId <= lockBudget; rowId++) {
+    if (rowId == 60000 || rowId == 59999 || rowId == 57499 ||
+        rowId == 54999) {  // last RIDs for each thread to wait on
+      client.requestSharedLock(transactionB, rowId, true);
+    } else {
+      client.requestSharedLock(transactionB, rowId, false);
+    }
+  }
+
+  for (int rowId = 1; rowId <= lockBudget; rowId++) {
+    client.requestUnlock(transactionA, rowId, false);
+  }
+
+  for (int rowId = 1; rowId <= lockBudget; rowId++) {
+    if (rowId == 60000 || rowId == 59999 || rowId == 57499 ||
+        rowId == 54999) {  // last RIDs for each thread to wait on
+      client.requestUnlock(transactionB, rowId, true);
+    } else {
+      client.requestUnlock(transactionB, rowId, false);
+    }
+  }
+}
+
+void experiment8Threads(LockingServiceClient& client, int lockBudget = 60000) {
+  for (int rowId = 1; rowId <= lockBudget; rowId++) {
+    client.requestSharedLock(transactionA, rowId, false);
+  }
+
+  for (int rowId = 1; rowId <= lockBudget; rowId++) {
+    if (rowId == 60000 || rowId == 59999 || rowId == 58749 || rowId == 57499 ||
+        rowId == 56249 || rowId == 54999 || rowId == 53749 ||
+        rowId == 52499) {  // last RIDs for each thread to wait on
+      client.requestSharedLock(transactionB, rowId, true);
+    } else {
+      client.requestSharedLock(transactionB, rowId, false);
+    }
+  }
+
+  for (int rowId = 1; rowId <= lockBudget; rowId++) {
+    client.requestUnlock(transactionA, rowId, false);
+  }
+
+  for (int rowId = 1; rowId <= lockBudget; rowId++) {
+    if (rowId == 60000 || rowId == 59999 || rowId == 58749 || rowId == 57499 ||
+        rowId == 56249 || rowId == 54999 || rowId == 53749 ||
+        rowId == 52499) {  // last RIDs for each thread to wait on
+      client.requestUnlock(transactionB, rowId, true);
+    } else {
+      client.requestUnlock(transactionB, rowId, false);
+    }
+  }
 }
 
 auto main() -> int {
   vector<vector<long>> contentCSVFile;
   // vector<int> lockBudgets = {10, 100, 500, 1000, 2500, 5000, 10000,  20000,
   // 50000, 100000, 150000, 200000};
-  vector<int> lockBudgets = {
-      100000};                 //, 100, 500};  // how many locks to acquire
-  const int repetitions = 50;  // repeats the same experiments several times
+  vector<int> lockBudgets = {60000};  // how many locks to acquire
+  const int repetitions = 25;  // repeats the same experiments several times
   const int numWorkerThreads =
-      2;  // this is just written to the CSV file and has no influence on the
+      8;  // this is just written to the CSV file and has no influence on the
           // actual number of worker threads. These need to be adapted
           // separately in the respective lockmanager.cpp file (search for
           // "arg.num_threads")
-  spdlog::set_level(spdlog::level::info);
+  spdlog::set_level(spdlog::level::err);
   auto client = getClient();
 
   for (int lockBudget :
@@ -125,7 +228,7 @@ auto main() -> int {
       client.registerTransaction(transactionB, lockBudget);
       auto begin = high_resolution_clock::now();
 
-      experiment2(client, lockBudget);
+      experiment8Threads(client, lockBudget);
 
       auto end = high_resolution_clock::now();
       long duration = duration_cast<nanoseconds>(end - begin).count();
