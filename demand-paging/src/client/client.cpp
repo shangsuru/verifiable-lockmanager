@@ -27,7 +27,8 @@ auto LockingServiceClient::registerTransaction(unsigned int transactionId,
 };
 
 auto LockingServiceClient::requestSharedLock(unsigned int transactionId,
-                                             unsigned int rowId)
+                                             unsigned int rowId,
+                                             bool waitForSignature)
     -> std::string {
   if (transactionId == 0 || rowId == 0) {
     spdlog::error("Cannot acquire lock for TXID 0 or RID 0");
@@ -40,6 +41,7 @@ auto LockingServiceClient::requestSharedLock(unsigned int transactionId,
   LockRequest request;
   request.set_transaction_id(transactionId);
   request.set_row_id(rowId);
+  request.set_wait_for_signature(waitForSignature);
 
   LockResponse response;
   ClientContext context;
@@ -58,7 +60,8 @@ auto LockingServiceClient::requestSharedLock(unsigned int transactionId,
 }
 
 auto LockingServiceClient::requestExclusiveLock(unsigned int transactionId,
-                                                unsigned int rowId)
+                                                unsigned int rowId,
+                                                bool waitForSignature)
     -> std::string {
   if (transactionId == 0 || rowId == 0) {
     spdlog::error("Cannot acquire lock for TXID 0 or RID 0");
@@ -71,6 +74,7 @@ auto LockingServiceClient::requestExclusiveLock(unsigned int transactionId,
   LockRequest request;
   request.set_transaction_id(transactionId);
   request.set_row_id(rowId);
+  request.set_wait_for_signature(waitForSignature);
 
   LockResponse response;
   ClientContext context;
@@ -89,7 +93,8 @@ auto LockingServiceClient::requestExclusiveLock(unsigned int transactionId,
 }
 
 auto LockingServiceClient::requestUnlock(unsigned int transactionId,
-                                         unsigned int rowId) -> bool {
+                                         unsigned int rowId,
+                                         bool waitForSignature) -> bool {
   if (transactionId == 0 || rowId == 0) {
     spdlog::error("Cannot unlock for TXID 0 or RID 0");
     return false;
@@ -101,6 +106,7 @@ auto LockingServiceClient::requestUnlock(unsigned int transactionId,
   LockRequest request;
   request.set_transaction_id(transactionId);
   request.set_row_id(rowId);
+  request.set_wait_for_signature(waitForSignature);
 
   LockResponse response;
   ClientContext context;

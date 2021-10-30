@@ -19,8 +19,10 @@ auto LockingServiceImpl::LockExclusive(ServerContext* context,
                                        LockResponse* response) -> Status {
   int transaction_id = request->transaction_id();
   int row_id = request->row_id();
+  bool wait_for_signature = request->wait_for_signature();
 
-  auto [signature, ok] = lockManager_.lock(transaction_id, row_id, true);
+  auto [signature, ok] =
+      lockManager_.lock(transaction_id, row_id, true, wait_for_signature);
 
   response->set_signature(
       signature);  // If not ok, signature contains an error message instead
@@ -35,8 +37,10 @@ auto LockingServiceImpl::LockShared(ServerContext* context,
                                     LockResponse* response) -> Status {
   int transaction_id = request->transaction_id();
   int row_id = request->row_id();
+  bool wait_for_signature = request->wait_for_signature();
 
-  auto [signature, ok] = lockManager_.lock(transaction_id, row_id, false);
+  auto [signature, ok] =
+      lockManager_.lock(transaction_id, row_id, false, wait_for_signature);
 
   response->set_signature(
       signature);  // If not ok, signature contains an error message instead
@@ -51,7 +55,8 @@ auto LockingServiceImpl::Unlock(ServerContext* context,
                                 LockResponse* response) -> Status {
   int transaction_id = request->transaction_id();
   int row_id = request->row_id();
+  bool wait_for_signature = request->wait_for_signature();
 
-  lockManager_.unlock(transaction_id, row_id);
+  lockManager_.unlock(transaction_id, row_id, wait_for_signature);
   return Status::OK;
 }

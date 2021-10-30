@@ -97,22 +97,26 @@ class LockManager {
    * @param rowId identifies the row to be locked
    * @param isExclusive either shared for concurrent read access or exclusive
    * for sole write access
+   * @param waitForResult parameter forwarded to create_job function
    * @returns the signature for the acquired lock and true or
    * no signature and false, when transaction was not registered before or when
    * the transaction makes a request for a look that it already owns, makes a
    * request for a lock while in the shrinking phase, or when the lock budget is
    * exhausted
    */
-  auto lock(unsigned int transactionId, unsigned int rowId, bool isExclusive)
-      -> std::pair<std::string, bool>;
+  auto lock(unsigned int transactionId, unsigned int rowId, bool isExclusive,
+            bool waitForResult = true) -> std::pair<std::string, bool>;
 
   /**
    * Releases a lock for the specified row
    *
    * @param transactionId identifies the transaction making the request
    * @param rowId identifies the row to be released
+   * @param waitForResult if true makes unlock a synchronous operation, else
+   * asynchronous (no waiting for operation to be finished)
    */
-  void unlock(unsigned int transactionId, unsigned int rowId);
+  void unlock(unsigned int transactionId, unsigned int rowId,
+              bool waitForResult = false);
 
   /**
    * This function is just for testing, to demonstrate that signatures created
@@ -175,12 +179,15 @@ class LockManager {
    * @param transaction_id additional argument for SHARED, EXCLUSIVE or REGISTER
    * @param row_id additional argument for SHARED or EXCLUSIVE
    * @param lock_budget additional argument for REGISTER
+   * @param waitForResult if the function should wait for return values to be
+   * set or immediately return
    * @returns a pair containing a boolean, that is true when the job was
    * executed successfully and if true and the command was for a lock request,
    * the pair also contains the signature as the return value
    */
   auto create_enclave_job(Command command, unsigned int transaction_id = 0,
-                          unsigned int row_id = 0, unsigned int lock_budget = 0)
+                          unsigned int row_id = 0, unsigned int lock_budget = 0,
+                          bool waitForResult = true)
       -> std::pair<std::string, bool>;
 
   Arg arg;  // configuration parameters for the enclave

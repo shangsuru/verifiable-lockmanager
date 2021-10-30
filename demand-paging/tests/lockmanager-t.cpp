@@ -27,13 +27,15 @@ TEST_F(LockManagerTest, cannotRegisterTwice) {
   EXPECT_FALSE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
 };
 
-// After the last lock is released, the transaction gets deleted and it can register again
+// After the last lock is released, the transaction gets deleted and it can
+// register again
 TEST_F(LockManagerTest, transactionGetsDeletedAfterReleasingLastLock) {
   LockManager lock_manager = LockManager();
   EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
   EXPECT_TRUE(lock_manager.lock(kTransactionIdA, kRowId, false).second);
   lock_manager.unlock(kTransactionIdA, kRowId);
-  std::this_thread::sleep_for(std::chrono::seconds(1)); // need to wait here because unlock is asynchronous
+  std::this_thread::sleep_for(std::chrono::milliseconds(
+      10));  // need to wait here because unlock is asynchronous
   EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
 }
 
@@ -175,4 +177,17 @@ TEST_F(LockManagerTest, abortedTransactionCanRegisterAgain) {
   EXPECT_FALSE(lock_manager.lock(kTransactionIdA, kRowId, true)
                    .second);  // makes A abort
   EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
+}
+
+TEST_F(LockManagerTest, notWaitingForSignature) {
+  LockManager lock_manager = LockManager();
+  int lockBudget = 100;
+  EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, lockBudget));
+  for (int i = 1; i < lockBudget; i++) {
+    lock_manager.lock(kTransactionIdA, i, false,
+                      true);  // not waiting for signature return value
+  }
+  EXPECT_TRUE(lock_manager.lock(kTransactionIdA, lockBudget, false,
+                                true)
+                  .second);  // waitung for signature return value at the end
 }

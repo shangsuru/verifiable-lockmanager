@@ -4,8 +4,10 @@
    <!-- Bigger heap and stack size needed to be able to hold more locks, but increases compile and startup time
   <StackMaxSize>0xE0000000</StackMaxSize>
   <HeapMaxSize>0x100000000</HeapMaxSize>
+   <StackMaxSize>0x40000</StackMaxSize>
+  <HeapMaxSize>0x100000</HeapMaxSize>
   -->
-  <StackMaxSize>0xE0000000</StackMaxSize>
+ <StackMaxSize>0xE0000000</StackMaxSize>
   <HeapMaxSize>0x100000000</HeapMaxSize>
   <TCSNum>3</TCSNum> <!-- Main thread + number of worker threads -->
   <TCSPolicy>1</TCSPolicy>

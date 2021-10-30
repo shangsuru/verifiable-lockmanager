@@ -26,6 +26,7 @@ struct Job {
   unsigned int transaction_id;
   unsigned int row_id;
   unsigned int lock_budget;
+  bool wait_for_result;
   volatile char* return_value;
   volatile bool* finished;
   volatile bool* error;

@@ -51,15 +51,21 @@ void enclave_send_job(void *data) {
       // Copy job parameters
       new_job.transaction_id = ((Job *)data)->transaction_id;
       new_job.row_id = ((Job *)data)->row_id;
-      new_job.return_value = ((Job *)data)->return_value;
-      new_job.finished = ((Job *)data)->finished;
-      new_job.error = ((Job *)data)->error;
+      new_job.wait_for_result = ((Job *)data)->wait_for_result;
+
+      if (new_job.wait_for_result) {
+        new_job.return_value = ((Job *)data)->return_value;
+        new_job.finished = ((Job *)data)->finished;
+        new_job.error = ((Job *)data)->error;
+      }
 
       // If transaction is not registered, abort the request
       if (get(transactionTable_, new_job.transaction_id) == nullptr) {
         print_error("Need to register transaction before lock requests");
-        *new_job.error = true;
-        *new_job.finished = true;
+        if (new_job.wait_for_result) {
+          *new_job.error = true;
+          *new_job.finished = true;
+        }
         return;
       }
 
@@ -142,25 +148,26 @@ void enclave_process_request() {
 
         // Acquire lock and receive signature
         sgx_ec256_signature_t sig;
+        bool ok = acquire_lock((void *)&sig, cur_job.transaction_id,
+                               cur_job.row_id, command == EXCLUSIVE);
+        if (cur_job.wait_for_result) {
+          if (!ok) {
+            *cur_job.error = true;
+          } else {
+            // Write base64 encoded signature into the return value of the job
+            // struct
+            std::string encoded_signature =
+                base64_encode((unsigned char *)sig.x, sizeof(sig.x)) + "-" +
+                base64_encode((unsigned char *)sig.y, sizeof(sig.y));
 
-        if (!acquire_lock((void *)&sig, cur_job.transaction_id, cur_job.row_id,
-                          command == EXCLUSIVE)) {
-          *cur_job.error = true;
-        } else {
-          // Write base64 encoded signature into the return value of the job
-          // struct
-          std::string encoded_signature =
-              base64_encode((unsigned char *)sig.x, sizeof(sig.x)) + "-" +
-              base64_encode((unsigned char *)sig.y, sizeof(sig.y));
-
-          volatile char *p = cur_job.return_value;
-          size_t signature_size = 89;
-          for (int i = 0; i < signature_size; i++) {
-            *p++ = encoded_signature.c_str()[i];
+            volatile char *p = cur_job.return_value;
+            size_t signature_size = 89;
+            for (int i = 0; i < signature_size; i++) {
+              *p++ = encoded_signature.c_str()[i];
+            }
           }
+          *cur_job.finished = true;
         }
-
-        *cur_job.finished = true;
         break;
       }
       case UNLOCK: {
@@ -169,6 +176,9 @@ void enclave_process_request() {
         //     ", RID: " + std::to_string(cur_job.row_id))
         //        .c_str());
         release_lock(cur_job.transaction_id, cur_job.row_id);
+        if (cur_job.wait_for_result) {
+          *cur_job.finished = true;
+        }
         break;
       }
       case REGISTER: {

@@ -15,7 +15,7 @@
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",
-            "miDebuggerPath":"/opt/intel/sgxsdk/bin/sgx-gdb",
+            "miDebuggerPath": "/opt/intel/sgxsdk/bin/sgx-gdb",
             "setupCommands": [
                 {
                     "description": "Enable pretty-printing for gdb",
@@ -35,7 +35,7 @@
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",
-            "miDebuggerPath":"/opt/intel/sgxsdk/bin/sgx-gdb",
+            "miDebuggerPath": "/opt/intel/sgxsdk/bin/sgx-gdb",
             "setupCommands": [
                 {
                     "description": "Enable pretty-printing for gdb",
@@ -43,7 +43,7 @@
                     "ignoreFailures": true
                 }
             ]
-        },  
+        },
         {
             "name": "lockmanager_test",
             "type": "cppdbg",
@@ -55,7 +55,27 @@
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",
-            "miDebuggerPath":"/opt/intel/sgxsdk/bin/sgx-gdb",
+            "miDebuggerPath": "/opt/intel/sgxsdk/bin/sgx-gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "server_test",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/tests/server_test",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceRoot}/build/tests",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerPath": "/opt/intel/sgxsdk/bin/sgx-gdb",
             "setupCommands": [
                 {
                     "description": "Enable pretty-printing for gdb",

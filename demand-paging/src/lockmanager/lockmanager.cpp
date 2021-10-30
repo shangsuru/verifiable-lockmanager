@@ -74,7 +74,7 @@ LockManager::LockManager() {
 LockManager::~LockManager() {
   // TODO: Destructor never called (esp. on CTRL+C shutdown)!
   // Send QUIT to worker threads
-  create_enclave_job(QUIT);
+  create_enclave_job(QUIT, 0, 0, 0, false);
 
   spdlog::info("Waiting for thread to stop");
   for (int i = 0; i < arg.num_threads; i++) {
@@ -94,15 +94,18 @@ auto LockManager::registerTransaction(unsigned int transactionId,
 };
 
 auto LockManager::lock(unsigned int transactionId, unsigned int rowId,
-                       bool isExclusive) -> std::pair<std::string, bool> {
+                       bool isExclusive, bool waitForResult)
+    -> std::pair<std::string, bool> {
   if (isExclusive) {
-    return create_enclave_job(EXCLUSIVE, transactionId, rowId);
+    return create_enclave_job(EXCLUSIVE, transactionId, rowId, 0,
+                              waitForResult);
   }
-  return create_enclave_job(SHARED, transactionId, rowId);
+  return create_enclave_job(SHARED, transactionId, rowId, 0, waitForResult);
 };
 
-void LockManager::unlock(unsigned int transactionId, unsigned int rowId) {
-  create_enclave_job(UNLOCK, transactionId, rowId);
+void LockManager::unlock(unsigned int transactionId, unsigned int rowId,
+                         bool waitForResult) {
+  create_enclave_job(UNLOCK, transactionId, rowId, 0, waitForResult);
 };
 
 auto LockManager::seal_and_save_keys() -> bool {
@@ -189,7 +192,8 @@ auto LockManager::read_and_unseal_keys() -> bool {
 auto LockManager::create_enclave_job(Command command,
                                      unsigned int transaction_id,
                                      unsigned int row_id,
-                                     unsigned int lock_budget)
+                                     unsigned int lock_budget,
+                                     bool waitForResult)
     -> std::pair<std::string, bool> {
   // Set job parameters
   Job job;
@@ -199,8 +203,8 @@ auto LockManager::create_enclave_job(Command command,
   job.row_id = row_id;
   job.lock_budget = lock_budget;
 
-  // Need to track, when job is finished or error has occurred
-  if (command == SHARED || command == EXCLUSIVE || command == REGISTER) {
+  if (waitForResult) {  // Need to track, when job is finished or error has
+                        // occurred
     // Allocate dynamic memory in the untrusted part of the application, so the
     // enclave can modify it via its pointer
     job.finished = new bool;
@@ -213,10 +217,10 @@ auto LockManager::create_enclave_job(Command command,
     // These requests return a signature
     job.return_value = new char[SIGNATURE_SIZE];
   }
-
+  job.wait_for_result = waitForResult;
   enclave_send_job(global_eid, &job);
 
-  if (command == SHARED || command == EXCLUSIVE || command == REGISTER) {
+  if (waitForResult) {
     // Need to wait until job is finished because we need to be registered for
     // subsequent requests or because we need to wait for the return value
     while (!*job.finished) {
@@ -229,17 +233,17 @@ auto LockManager::create_enclave_job(Command command,
       return std::make_pair(NO_SIGNATURE, false);
     }
     delete job.error;
-  }
 
-  // Get the signature return value
-  if (command == SHARED || command == EXCLUSIVE) {
-    std::string signature;
-    for (int i = 0; i < SIGNATURE_SIZE; i++) {
-      signature += job.return_value[i];
+    // Get the signature return value
+    if (command == SHARED || command == EXCLUSIVE) {
+      std::string signature;
+      for (int i = 0; i < SIGNATURE_SIZE; i++) {
+        signature += job.return_value[i];
+      }
+      delete[] job.return_value;
+
+      return std::make_pair(signature, true);
     }
-    delete[] job.return_value;
-
-    return std::make_pair(signature, true);
   }
 
   return std::make_pair(NO_SIGNATURE, true);
