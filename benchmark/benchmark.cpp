@@ -56,149 +56,112 @@ auto getClient() -> LockingServiceClient {
 }
 
 /**
+ * Highlevel description of the experiment:
  * A acquires given number of locks in shared mode, then B acquires the same
  * locks in shared mode. This makes A to write lock objects into the lock table
- * and B read them again later one.
+ * and B read them again later on. This is an attempt to show the overhead of
+ * paging in Intel SGX enclaves.
+ *
+ * With multiple concurrent requests (we achieve this by having the client not
+ * wait on the result of its requests), we have to make sure that we do wait on
+ * the last request for each thread, e.g. when there are two threads we need to
+ * make the last request that each of these threads serves wait for its result,
+ * so that we wait on all requests to be finished.
  */
-void experiment(LockingServiceClient& client, int numberOfLocks) {
-  for (int rowId = 1; rowId <= numberOfLocks; rowId++) {
-    client.requestSharedLock(transactionA, rowId);
-  }
-  for (int rowId = 1; rowId <= numberOfLocks; rowId++) {
-    client.requestSharedLock(transactionB, rowId);
+void experiment(LockingServiceClient& client, int numLocks, int numThreads) {
+  /** Compute RIDs to wait on depending on number of locks and number of
+   threads. The size of the lock table is 10000. Remember, each RID is assigned
+   to a thread ID via
+   *
+   * ===========================================================================
+   * int thread_id = (int)((new_job.row_id % lockTableSize_) /
+                            ((float)lockTableSize_ / (arg.num_threads - 1)));
+   * ===========================================================================
+   *
+   * which is explained in more detail below. We want to find the latest request
+   * (i.e. request with the largest RID) for
+   * each thread, which needs to be synchronous, so that each thread completes
+   * all requests before we stop the time measurement.
+   *
+   * As you see from the formula above, a
+   * set of RIDs less than the lockTableSize_ = 10000 doesn't distribute over
+   * all threads. I.e., when the range is only between 1-5000 and we have 4
+   * threads, the fourth thread, who has the range of 7500 - 9999, never
+   * receives a request. This can be a disadvantage when RIDs are skewed.
+   */
+  std::set<int> waitOn;
+  const int lockTableSize = 10000;
+
+  // The maximum RID is in any case one of the last requests.
+  waitOn.insert(numLocks);
+
+  /**
+   * As you see in the second line of the formula, the lock table ranging from 0
+   * to 9999 (10000 entries) is divided evenly among the worker threads, which
+   * is the number of threads in the enclave - 1 (which is the single thread
+   * responsible for the transaction table). As for the partitions, e.g. for 4
+   * threads, thread 0 takes RIDs 0 - 2499, thread 1 takes RID 2500 - 4999
+   * a.s.o.
+   *
+   * If the RID is 10000 and bigger, the RID is projected into the range of the
+   * lock table from 0 to 9999 using modulo (see line 1 of the formula). When we
+   * want to find the largest ID to wait on, we first compute the "base", which
+   * for numLocks 1 - 60000 would be 50000. That means the largest RID for each
+   * thread will be in the range 50000 - 60000. The RIDs to wait on for 4
+   * threads would be 60000, 54999, a.s.o, compare with the ranges
+   * computed in the above paragraph and it should get clear.
+   */
+  int base = ((numLocks / lockTableSize) - 1) * lockTableSize;
+  if (numLocks < lockTableSize) {
+    base = 0;
   }
 
-  // Both release the locks again
-  for (int rowId = 1; rowId <= numberOfLocks - 1; rowId++) {
-    client.requestUnlock(transactionA, rowId);
-    client.requestUnlock(transactionB, rowId);
+  /**
+   * E.g. with the lockTableSize being fixed to 10000, a partition (i.e. the
+   * range that is assigned to a thread) is 2500 when we have 4 threads
+   * */
+  int partitionSize = lockTableSize / numThreads;
+
+  for (int i = 1; i < numThreads;
+       i++) {  // Note that when numThreads = 1, only
+               // wait on numLocks (see on previous insert)
+    waitOn.insert(base + partitionSize * i - 1);
   }
 
-  client.requestUnlock(transactionA, numberOfLocks);
-  client.requestUnlock(transactionB, numberOfLocks,
-                       true);  // wait on last unlock
-}
-
-/**
- * Since previously, clients waited until their lock request returns the
- * signature, all requests from a single client ended up being synchronous, so
- * there was never more than one request in the queue. Therefore we added an
- * additional mode of operation for all lock requests where we are not waiting
- * for the result. Therefore the client issues new requests when the former
- * aren't finished yet and requests have a chance to queue up and being operated
- * on concurrently.
- */
-void experiment1Thread(LockingServiceClient& client, int lockBudget = 60000) {
-  for (int rowId = 1; rowId <= lockBudget; rowId++) {
+  // Now the experiment starts: Transaction A acquires all locks in its lock
+  // budget.
+  for (int rowId = 1; rowId <= numLocks; rowId++) {
+    /**
+     * Usually clients waited until their lock request returns the
+     * signature, so all requests from a single client would end up being
+     * synchronous, so that never more than one request is in the job queue.
+     * Therefore we added an additional mode of operation for all lock requests
+     * where we are not waiting for the result. Therefore the client will issue
+     * new requests when the former ones aren't finished yet and requests have a
+     * chance to queue up and being operated on concurrently.
+     */
     client.requestSharedLock(transactionA, rowId, false);
   }
 
-  for (int rowId = 1; rowId <= lockBudget; rowId++) {
-    if (rowId == 60000) {  // last RIDs for each thread to wait on
+  // So does B, as B is last we wait on the specific RIDs computed previously. B
+  // acquires the same locks as A, so locks that are potentially paged out, are
+  // paged in again. We does this in an attempt to show the paging overhead in
+  // Intel SGX enclaves.
+  for (int rowId = 1; rowId <= numLocks; rowId++) {
+    if (waitOn.find(rowId) != waitOn.end()) {
       client.requestSharedLock(transactionB, rowId, true);
     } else {
       client.requestSharedLock(transactionB, rowId, false);
     }
   }
 
-  for (int rowId = 1; rowId <= lockBudget; rowId++) {
+  // Locks are released in the same manner as they are acquired.
+  for (int rowId = 1; rowId <= numLocks; rowId++) {
     client.requestUnlock(transactionA, rowId, false);
   }
 
-  for (int rowId = 1; rowId <= lockBudget; rowId++) {
-    if (rowId == 60000) {  // last RIDs for each thread to wait on
-      client.requestUnlock(transactionB, rowId, true);
-    } else {
-      client.requestUnlock(transactionB, rowId, false);
-    }
-  }
-}
-
-/**
- * For multiple client multiple thread scenario, we have to make sure that we
- * wait on the last request for each thread, e.g. when there are two threads we
- * need to make the last two requests synchronous so that we wait on everything
- * to be finished.
- */
-void experiment2Threads(LockingServiceClient& client, int lockBudget = 60000) {
-  for (int rowId = 1; rowId <= lockBudget; rowId++) {
-    client.requestSharedLock(transactionA, rowId, false);
-  }
-
-  for (int rowId = 1; rowId <= lockBudget; rowId++) {
-    if (rowId == 60000 ||
-        rowId == 59999) {  // last RIDs for each thread to wait on
-      client.requestSharedLock(transactionB, rowId, true);
-    } else {
-      client.requestSharedLock(transactionB, rowId, false);
-    }
-  }
-
-  for (int rowId = 1; rowId <= lockBudget; rowId++) {
-    client.requestUnlock(transactionA, rowId, false);
-  }
-
-  for (int rowId = 1; rowId <= lockBudget; rowId++) {
-    if (rowId == 60000 ||
-        rowId == 59999) {  // last RIDs for each thread to wait on
-      client.requestUnlock(transactionB, rowId, true);
-    } else {
-      client.requestUnlock(transactionB, rowId, false);
-    }
-  }
-}
-
-void experiment4Threads(LockingServiceClient& client, int lockBudget = 60000) {
-  for (int rowId = 1; rowId <= lockBudget; rowId++) {
-    client.requestSharedLock(transactionA, rowId, false);
-  }
-
-  for (int rowId = 1; rowId <= lockBudget; rowId++) {
-    if (rowId == 60000 || rowId == 59999 || rowId == 57499 ||
-        rowId == 54999) {  // last RIDs for each thread to wait on
-      client.requestSharedLock(transactionB, rowId, true);
-    } else {
-      client.requestSharedLock(transactionB, rowId, false);
-    }
-  }
-
-  for (int rowId = 1; rowId <= lockBudget; rowId++) {
-    client.requestUnlock(transactionA, rowId, false);
-  }
-
-  for (int rowId = 1; rowId <= lockBudget; rowId++) {
-    if (rowId == 60000 || rowId == 59999 || rowId == 57499 ||
-        rowId == 54999) {  // last RIDs for each thread to wait on
-      client.requestUnlock(transactionB, rowId, true);
-    } else {
-      client.requestUnlock(transactionB, rowId, false);
-    }
-  }
-}
-
-void experiment8Threads(LockingServiceClient& client, int lockBudget = 60000) {
-  for (int rowId = 1; rowId <= lockBudget; rowId++) {
-    client.requestSharedLock(transactionA, rowId, false);
-  }
-
-  for (int rowId = 1; rowId <= lockBudget; rowId++) {
-    if (rowId == 60000 || rowId == 59999 || rowId == 58749 || rowId == 57499 ||
-        rowId == 56249 || rowId == 54999 || rowId == 53749 ||
-        rowId == 52499) {  // last RIDs for each thread to wait on
-      client.requestSharedLock(transactionB, rowId, true);
-    } else {
-      client.requestSharedLock(transactionB, rowId, false);
-    }
-  }
-
-  for (int rowId = 1; rowId <= lockBudget; rowId++) {
-    client.requestUnlock(transactionA, rowId, false);
-  }
-
-  for (int rowId = 1; rowId <= lockBudget; rowId++) {
-    if (rowId == 60000 || rowId == 59999 || rowId == 58749 || rowId == 57499 ||
-        rowId == 56249 || rowId == 54999 || rowId == 53749 ||
-        rowId == 52499) {  // last RIDs for each thread to wait on
+  for (int rowId = 1; rowId <= numLocks; rowId++) {
+    if (waitOn.find(rowId) != waitOn.end()) {
       client.requestUnlock(transactionB, rowId, true);
     } else {
       client.requestUnlock(transactionB, rowId, false);
@@ -207,17 +170,18 @@ void experiment8Threads(LockingServiceClient& client, int lockBudget = 60000) {
 }
 
 auto main() -> int {
+  spdlog::set_level(spdlog::level::err);
+
   vector<vector<long>> contentCSVFile;
-  // vector<int> lockBudgets = {10, 100, 500, 1000, 2500, 5000, 10000,  20000,
-  // 50000, 100000, 150000, 200000};
-  vector<int> lockBudgets = {60000};  // how many locks to acquire
-  const int repetitions = 25;  // repeats the same experiments several times
-  const int numWorkerThreads =
-      8;  // this is just written to the CSV file and has no influence on the
+  vector<int> lockBudgets = {
+      10,    100,   500,    1000,   2500,  5000, 10000,
+      20000, 50000, 100000, 150000, 200000};  // how many locks to acquire
+  const int repetitions = 20;   // repeats the same experiments several times
+  const int numWorkerThreads =  // 1, 2, 4 and 8
+      1;  // this is just written to the CSV file and has no influence on the
           // actual number of worker threads. These need to be adapted
           // separately in the respective lockmanager.cpp file (search for
           // "arg.num_threads")
-  spdlog::set_level(spdlog::level::err);
   auto client = getClient();
 
   for (int lockBudget :
@@ -228,7 +192,7 @@ auto main() -> int {
       client.registerTransaction(transactionB, lockBudget);
       auto begin = high_resolution_clock::now();
 
-      experiment8Threads(client, lockBudget);
+      experiment(client, lockBudget, numWorkerThreads);
 
       auto end = high_resolution_clock::now();
       long duration = duration_cast<nanoseconds>(end - begin).count();
@@ -242,7 +206,7 @@ auto main() -> int {
     }
 
     long time = reduce(durations.begin(), durations.end()) / durations.size();
-    cout << "The time for " << lockBudget << ": " << time << endl;
+    std::cout << "Finished experiment for lock budget " << lockBudget << endl;
   }
   writeToCSV("out", contentCSVFile);
   return 0;
