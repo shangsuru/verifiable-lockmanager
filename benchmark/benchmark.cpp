@@ -7,12 +7,14 @@
 
 #include "client.h"
 
+using std::ofstream;
+using std::reduce;
+using std::string;
+using std::vector;
 using std::chrono::duration_cast;
 using std::chrono::high_resolution_clock;
 using std::chrono::nanoseconds;
 using std::this_thread::sleep_for;
-
-using namespace std;
 
 const size_t bigger_than_cachesize =
     20 * 1024 * 1024;  // Checked cache size with command 'lscpu | grep cache'
@@ -128,57 +130,99 @@ void experiment(LockingServiceClient& client, int numLocks, int numThreads) {
     waitOn.insert(base + partitionSize * i - 1);
   }
 
-  // Now the experiment starts: Transaction A acquires all locks in its lock
-  // budget.
-  for (int rowId = 1; rowId <= numLocks; rowId++) {
-    /**
-     * Usually clients waited until their lock request returns the
-     * signature, so all requests from a single client would end up being
-     * synchronous, so that never more than one request is in the job queue.
-     * Therefore we added an additional mode of operation for all lock requests
-     * where we are not waiting for the result. Therefore the client will issue
-     * new requests when the former ones aren't finished yet and requests have a
-     * chance to queue up and being operated on concurrently.
-     */
-    client.requestSharedLock(transactionA, rowId, false);
+  /**
+   *  Now the experiment starts: Transaction A acquires all locks in its lock
+   * budget.
+   *
+   * We iterate over the range of locks in a specific way, because as you know
+   * each thread gets assigned one partition of the lock table, one sequential
+   * range of IDs, iterating over the IDs sequentially wouldn't equally
+   * distribute the requests over the threads.
+   */
+  for (int base = 0; base < numLocks;
+       base +=
+       lockTableSize) {  // iterate over the multiples of the lock table size
+    for (int i = 1; i <= partitionSize; i++) {
+      for (int threadId = 0; threadId < numThreads;
+           threadId++) {  // iterate over the thread partitions
+        int rowId = base + threadId * partitionSize + i;
+
+        /**
+         * Usually clients waited until their lock request returns the
+         * signature, so all requests from a single client would end up being
+         * synchronous, so that never more than one request is in the job queue.
+         * Therefore we added an additional mode of operation for all lock
+         * requests where we are not waiting for the result. Therefore the
+         * client will issue new requests when the former ones aren't finished
+         * yet and requests have a chance to queue up and being operated on
+         * concurrently.
+         */
+        if (waitOn.find(rowId) != waitOn.end()) {
+          client.requestSharedLock(transactionA, rowId, true);
+        } else {
+          client.requestSharedLock(transactionA, rowId, false);
+        }
+      }
+    }
   }
 
-  // So does B, as B is last we wait on the specific RIDs computed previously. B
-  // acquires the same locks as A, so locks that are potentially paged out, are
-  // paged in again. We does this in an attempt to show the paging overhead in
-  // Intel SGX enclaves.
-  for (int rowId = 1; rowId <= numLocks; rowId++) {
-    if (waitOn.find(rowId) != waitOn.end()) {
-      client.requestSharedLock(transactionB, rowId, true);
-    } else {
-      client.requestSharedLock(transactionB, rowId, false);
+  /**
+   * So does B, as B is last we wait on the specific RIDs computed previously. B
+   * acquires the same locks as A, so locks that are potentially paged out, are
+   * paged in again. We does this in an attempt to show the paging overhead in
+   * Intel SGX enclaves.
+   */
+  for (int base = 0; base < numLocks;
+       base +=
+       lockTableSize) {  // iterate over the multiples of the lock table size
+    for (int i = 1; i <= partitionSize; i++) {
+      for (int threadId = 0; threadId < numThreads;
+           threadId++) {  // iterate over the thread partitions
+        int rowId = base + threadId * partitionSize + i;
+
+        if (waitOn.find(rowId) != waitOn.end()) {
+          client.requestSharedLock(transactionB, rowId, true);
+        } else {
+          client.requestSharedLock(transactionB, rowId, false);
+        }
+      }
     }
   }
 
   // Locks are released in the same manner as they are acquired.
-  for (int rowId = 1; rowId <= numLocks; rowId++) {
-    client.requestUnlock(transactionA, rowId, false);
-  }
+  for (int base = 0; base < numLocks;
+       base +=
+       lockTableSize) {  // iterate over the multiples of the lock table size
+    for (int i = 1; i <= partitionSize; i++) {
+      for (int threadId = 0; threadId < numThreads;
+           threadId++) {  // iterate over the thread partitions
+        int rowId = base + threadId * partitionSize + i;
 
-  for (int rowId = 1; rowId <= numLocks; rowId++) {
-    if (waitOn.find(rowId) != waitOn.end()) {
-      client.requestUnlock(transactionB, rowId, true);
-    } else {
-      client.requestUnlock(transactionB, rowId, false);
+        if (waitOn.find(rowId) != waitOn.end()) {
+          client.requestUnlock(transactionA, rowId, true);
+          client.requestUnlock(transactionB, rowId, true);
+        } else {
+          client.requestUnlock(transactionA, rowId, false);
+          client.requestUnlock(transactionB, rowId, false);
+        }
+      }
     }
   }
 }
 
 auto main() -> int {
   spdlog::set_level(spdlog::level::err);
+  spdlog::error("TEST");
 
   vector<vector<long>> contentCSVFile;
   vector<int> lockBudgets = {
-      10,    100,   500,    1000,   2500,  5000, 10000,
-      20000, 50000, 100000, 150000, 200000};  // how many locks to acquire
-  const int repetitions = 20;   // repeats the same experiments several times
+      10,    100,   500,   1000,   2500,   5000,
+      10000, 20000, 50000, 100000, 150000, 200000};  // how many locks to
+  //  acquire
+  // vector<int> lockBudgets = {10000};
+  const int repetitions = 10;   // repeats the same experiments several times
   const int numWorkerThreads =  // 1, 2, 4 and 8
-      1;  // this is just written to the CSV file and has no influence on the
+      8;  // this is just written to the CSV file and has no influence on the
           // actual number of worker threads. These need to be adapted
           // separately in the respective lockmanager.cpp file (search for
           // "arg.num_threads")
@@ -206,7 +250,8 @@ auto main() -> int {
     }
 
     long time = reduce(durations.begin(), durations.end()) / durations.size();
-    std::cout << "Finished experiment for lock budget " << lockBudget << endl;
+    spdlog::error("Finished experiment for lock budget " +
+                  std::to_string(lockBudget));
   }
   writeToCSV("out", contentCSVFile);
   return 0;
