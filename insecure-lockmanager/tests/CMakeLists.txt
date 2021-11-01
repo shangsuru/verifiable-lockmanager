@@ -1,7 +1,6 @@
 # Macro to add test files to gtest
 include(test_macros)
 
-
 package_add_test_with_libraries(lockmanager_test "${CMAKE_CURRENT_SOURCE_DIR}/lockmanager-t.cpp" lckMgr "${PROJECT_DIR}")
 package_add_test_with_libraries(transaction_test "${CMAKE_CURRENT_SOURCE_DIR}/transaction-t.cpp" lckMgr "${PROJECT_DIR}")
 package_add_test_with_libraries(lock_test "${CMAKE_CURRENT_SOURCE_DIR}/lock-t.cpp" lckMgr "${PROJECT_DIR}")

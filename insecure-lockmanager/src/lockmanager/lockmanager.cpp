@@ -7,8 +7,8 @@ auto LockManager::create_worker_thread(void *object) -> void * {
   return 0;
 }
 
-void LockManager::configuration_init() {
-  const int numLocktableWorkerThreads = 8;
+void LockManager::configuration_init(int numWorkerThreads) {
+  const int numLocktableWorkerThreads = numWorkerThreads;
   arg.num_threads =
       numLocktableWorkerThreads + 1;  // + 1 thread for transaction table;
   arg.tx_thread_id = arg.num_threads - 1;
@@ -16,8 +16,8 @@ void LockManager::configuration_init() {
   arg.lock_table_size = 10000;
 }
 
-LockManager::LockManager() {
-  configuration_init();
+LockManager::LockManager(int numWorkerThreads) {
+  configuration_init(numWorkerThreads);
 
   // Get configuration parameters
   transactionTableSize_ = arg.transaction_table_size;
@@ -50,6 +50,7 @@ LockManager::LockManager() {
 
 // TODO: Destructor never called (esp. on CTRL+C shutdown)!
 LockManager::~LockManager() {
+  /*
   // Send QUIT to worker threads
   create_job(QUIT);
 
@@ -62,6 +63,7 @@ LockManager::~LockManager() {
 
   spdlog::info("Freeing threads");
   free(threads);
+  */
 }
 
 auto LockManager::registerTransaction(unsigned int transactionId) -> bool {
@@ -303,12 +305,12 @@ auto LockManager::acquire_lock(unsigned int transactionId, unsigned int rowId,
     set(lockTable_, rowId, (void *)lock);
   }
 
-  // Check if 2PL is violated
+  /*// Check if 2PL is violated // TODO: Uncomment
   if (!transaction->growing_phase) {
     spdlog::error("Cannot acquire more locks according to 2PL");
     abort_transaction(transaction);
     return false;
-  }
+  }*/
 
   // Check for upgrade request
   if (hasLock(transaction, rowId) && isExclusive && !lock->exclusive) {
