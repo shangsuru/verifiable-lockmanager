@@ -25,8 +25,10 @@ class LockManager {
  public:
   /**
    * Initializes the job queue, mutexes and the configuration parameters.
+   *
+   * @param numWorkerThreads the number of threads that work on the lock table
    */
-  LockManager();
+  LockManager(int numWorkerThreads = 1);
 
   /**
    * Shuts down the worker threads.
@@ -81,8 +83,10 @@ class LockManager {
 
   /**
    * Initializes configuration parameters.
+   *
+   * @param numWorkerThreads the number of threads that work on the lock table
    */
-  void configuration_init();
+  void configuration_init(int numWorkerThreads);
 
   /**
    * Sends a job to the job queue.
