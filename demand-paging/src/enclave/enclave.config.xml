@@ -7,9 +7,9 @@
    <StackMaxSize>0x40000</StackMaxSize>
   <HeapMaxSize>0x100000</HeapMaxSize>
   -->
- <StackMaxSize>0xE0000000</StackMaxSize>
-  <HeapMaxSize>0x100000000</HeapMaxSize>
-  <TCSNum>3</TCSNum> <!-- Main thread + number of worker threads -->
+  <StackMaxSize>0x40000</StackMaxSize>
+  <HeapMaxSize>0x200000000</HeapMaxSize>
+  <TCSNum>3</TCSNum> <!-- 1x main thread + threads for lock table + 1x thread for transaction table -->
   <TCSPolicy>1</TCSPolicy>
   <!-- Recommend changing 'DisableDebug' to 1 to make the enclave undebuggable for enclave release -->
   <DisableDebug>0</DisableDebug>

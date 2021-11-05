@@ -69,8 +69,10 @@ class LockManager {
  public:
   /**
    * Initializes the enclave and seals the public and private key for signing.
+   *
+   * @param numWorkerThreads the number of threads that work on the lock table
    */
-  LockManager();
+  LockManager(int numWorkerThreads = 1);
 
   /**
    * Destroys the enclave.
@@ -168,8 +170,10 @@ class LockManager {
 
   /**
    * Initializes the configuration parameters for the enclave
+   *
+   * @param numWorkerThreads the number of threads that work on the lock table
    */
-  void configuration_init();
+  void configuration_init(int numWorkerThreads);
 
   /**
    * Creates a job and sends it to the enclave to get it processed by an enclave

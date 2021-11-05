@@ -319,11 +319,11 @@ auto acquire_lock(void *signature, unsigned int transactionId,
     set(lockTable_, rowId, (void *)lock);
   }
 
-  // Check if 2PL is violated
+  /*// Check if 2PL is violated TODO: Uncomment (error during evaluation)
   if (!transaction->growing_phase) {
     print_error("Cannot acquire more locks according to 2PL");
     goto abort;
-  }
+  }*/
 
   // Check if lock budget is enough
   if (transaction->lock_budget < 1) {

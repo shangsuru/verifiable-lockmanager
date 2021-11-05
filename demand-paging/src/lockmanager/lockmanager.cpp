@@ -34,15 +34,17 @@ auto LockManager::create_worker_thread(void *tmp) -> void * {
   return 0;
 }
 
-void LockManager::configuration_init() {
-  arg.num_threads = 2;
+void LockManager::configuration_init(int numWorkerThreads) {
+  const int numLocktableWorkerThreads = numWorkerThreads;
+  arg.num_threads =
+      numLocktableWorkerThreads + 1;  // one single thread for transaction table
   arg.tx_thread_id = arg.num_threads - 1;
   arg.lock_table_size = 10000;
   arg.transaction_table_size = 200;
 }
 
-LockManager::LockManager() {
-  configuration_init();
+LockManager::LockManager(int numWorkerThreads) {
+  configuration_init(numWorkerThreads);
 
   // Load and initialize the signed enclave
   sgx_status_t ret = load_and_initialize_enclave(&global_eid);
