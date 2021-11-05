@@ -97,8 +97,10 @@ Use `git push/commit --dry-run` to run the hooks without actually executing the 
 
 Use `git push/commit --no-verify` to skip the execution of hooks and only perform the corresponding git command (only do this if you know what are you doing).
 
-## Errors
+## Troubleshooting
 
-If any error, e.g. "error while loading shared libraries" occurs during the compilation step, running the command 
+- If any error, e.g. "error while loading shared libraries" occurs during the compilation step, running the command 
 `source /opt/intel/sgxsdk/environment` 
 (the exact path can differ) may solve the issue.
+
+- If it can't open the enclave file, make sure it can find the file enclave.signed.so and maybe copy it in the same directory. 
