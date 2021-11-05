@@ -2,11 +2,12 @@
 
 Arg arg_enclave;  // configuration parameters for the enclave
 int num = 0;      // global variable used to give every thread a unique ID
-sgx_thread_mutex_t global_num_mutex;  // synchronizes access to num
-sgx_thread_mutex_t *queue_mutex;      // synchronizes access to the job queue
-sgx_thread_cond_t
-    *job_cond;  // wakes up worker threads when a new job is available
-std::vector<std::queue<Job>> queue;  // a job queue for each worker thread
+sgx_thread_mutex_t global_num_mutex;    // synchronizes access to num
+sgx_thread_mutex_t *queue_mutex;        // synchronizes access to the job queue
+sgx_thread_mutex_t *transaction_mutex;  // synchronizes access to transactions
+sgx_thread_cond_t *job_cond;            // wakes up worker threads when a
+                                        // new job is available
+std::vector<std::queue<Job>> queue;     // a job queue for each worker thread
 
 void enclave_init_values(Arg arg) {
   // Get configuration parameters
@@ -20,6 +21,14 @@ void enclave_init_values(Arg arg) {
                                              arg_enclave.num_threads);
   job_cond = (sgx_thread_cond_t *)malloc(sizeof(sgx_thread_cond_t) *
                                          arg_enclave.num_threads);
+  transaction_mutex = (sgx_thread_mutex_t *)malloc(sizeof(sgx_thread_mutex_t) *
+                                                   kTransactionBudget);
+
+  for (int i = 0; i < kTransactionBudget; i++) {
+    sgx_thread_mutex_init(&transaction_mutex[i],
+                          NULL);  // assumes the transaction IDs to be in the
+                                  // range 1 - kTransactionBudget
+  }
 
   // Initialize job queues
   for (int i = 0; i < arg_enclave.num_threads; i++) {
@@ -270,9 +279,11 @@ error:
 
 auto generate_key_pair() -> int {
   // print_debug("Creating new key pair");
-  if (context == NULL) sgx_ecc256_open_context(&context);
+  sgx_ecc_state_handle_t context = NULL;
+  sgx_ecc256_open_context(&context);
   sgx_status_t ret = sgx_ecc256_create_key_pair(&ec256_private_key,
                                                 &ec256_public_key, context);
+  sgx_ecc256_close_context(context);
   encoded_public_key = base64_encode((unsigned char *)&ec256_public_key,
                                      sizeof(ec256_public_key));
 
@@ -292,13 +303,8 @@ auto verify(const char *message, void *signature, size_t sig_len) -> int {
   sgx_status_t ret = sgx_ecdsa_verify((uint8_t *)message,
                                       strnlen(message, MAX_SIGNATURE_LENGTH),
                                       &ec256_public_key, sig, &res, context);
+  sgx_ecc256_close_context(context);
   return res;
-}
-
-// Closes the ECDSA context
-auto ecdsa_close() -> int {
-  if (context == NULL) sgx_ecc256_open_context(&context);
-  return sgx_ecc256_close_context(context);
 }
 
 auto acquire_lock(void *signature, unsigned int transactionId,
@@ -341,7 +347,10 @@ auto acquire_lock(void *signature, unsigned int transactionId,
 
   // Acquire lock in requested mode (shared, exclusive)
   if (!hasLock(transaction, rowId)) {
+    sgx_thread_mutex_lock(&transaction_mutex[transaction->transaction_id]);
     ok = addLock(transaction, rowId, isExclusive, lock);
+    sgx_thread_mutex_unlock(&transaction_mutex[transaction->transaction_id]);
+
     if (ok) {
       goto sign;
     }
@@ -364,6 +373,7 @@ sign:
                  strnlen(string_to_sign.c_str(), MAX_SIGNATURE_LENGTH),
                  &ec256_private_key, (sgx_ec256_signature_t *)signature,
                  context);
+  sgx_ecc256_close_context(context);
 
   return true;
 }
@@ -383,7 +393,9 @@ void release_lock(unsigned int transactionId, unsigned int rowId) {
     return;
   }
 
+  sgx_thread_mutex_lock(&transaction_mutex[transaction->transaction_id]);
   releaseLock(transaction, rowId, lockTable_);
+  sgx_thread_mutex_unlock(&transaction_mutex[transaction->transaction_id]);
 
   // If the transaction released its last lock, delete it
   if (transaction->locked_rows.size() == 0) {

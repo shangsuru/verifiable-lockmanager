@@ -148,6 +148,7 @@ void experiment(LockManager& lockManager, int numLocks, int numThreads) {
       for (int threadId = 0; threadId < numThreads;
            threadId++) {  // iterate over the thread partitions
         int rowId = base + threadId * partitionSize + i;
+        if (rowId > numLocks) continue;
 
         /**
          * Usually clients waited until their lock request returns the
@@ -181,6 +182,7 @@ void experiment(LockManager& lockManager, int numLocks, int numThreads) {
       for (int threadId = 0; threadId < numThreads;
            threadId++) {  // iterate over the thread partitions
         int rowId = base + threadId * partitionSize + i;
+        if (rowId > numLocks) continue;
 
         if (waitOn.find(rowId) != waitOn.end()) {
           lockManager.lock(transactionB, rowId, false, true);
@@ -199,6 +201,7 @@ void experiment(LockManager& lockManager, int numLocks, int numThreads) {
       for (int threadId = 0; threadId < numThreads;
            threadId++) {  // iterate over the thread partitions
         int rowId = base + threadId * partitionSize + i;
+        if (rowId > numLocks) continue;
 
         if (waitOn.find(rowId) != waitOn.end()) {
           lockManager.unlock(transactionA, rowId, true);

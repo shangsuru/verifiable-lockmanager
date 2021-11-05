@@ -27,8 +27,7 @@ HashTable *transactionTable_;
 // Keeps track of a lock object for each row ID
 HashTable *lockTable_;
 
-// Context and public private key pair for signing lock requests
-sgx_ecc_state_handle_t context = NULL;
+// Public private key pair for signing lock requests
 sgx_ec256_private_t ec256_private_key;
 sgx_ec256_public_t ec256_public_key;
 

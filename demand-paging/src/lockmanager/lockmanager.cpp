@@ -74,9 +74,9 @@ LockManager::LockManager(int numWorkerThreads) {
 }
 
 LockManager::~LockManager() {
-  // TODO: Destructor never called (esp. on CTRL+C shutdown)!
-  // Send QUIT to worker threads
-  create_enclave_job(QUIT, 0, 0, 0, false);
+  // TODO: Destructor never called (esp. on CTRL+C shutdown), but error during
+  // evaluation Send QUIT to worker threads
+  /*create_enclave_job(QUIT, 0, 0, 0, false);
 
   spdlog::info("Waiting for thread to stop");
   for (int i = 0; i < arg.num_threads; i++) {
@@ -84,7 +84,7 @@ LockManager::~LockManager() {
   }
 
   spdlog::info("Freeing threads");
-  free(threads);
+  free(threads);*/
 
   spdlog::info("Destroying enclave");
   sgx_destroy_enclave(global_eid);

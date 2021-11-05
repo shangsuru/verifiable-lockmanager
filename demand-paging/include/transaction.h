@@ -31,7 +31,6 @@ struct Transaction {
   bool growing_phase;
   int lock_budget;
   std::set<int> locked_rows;
-  std::mutex mut;  // access on locked_rows and lock_budget
 };
 typedef struct Transaction Transaction;
 

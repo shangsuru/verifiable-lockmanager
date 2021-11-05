@@ -7,8 +7,6 @@ enclave {
     trusted {
         public int generate_key_pair();
 
-		public int ecdsa_close();
-
         public sgx_status_t unseal_keys([in, size=sealed_size] const uint8_t *sealed_blob, size_t sealed_size);
 
         public uint32_t get_sealed_data_size();

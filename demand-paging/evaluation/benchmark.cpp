@@ -148,7 +148,7 @@ void experiment(LockManager& lockManager, int numLocks, int numThreads) {
       for (int threadId = 0; threadId < numThreads;
            threadId++) {  // iterate over the thread partitions
         int rowId = base + threadId * partitionSize + i;
-
+        if (rowId > numLocks) continue;
         /**
          * Usually clients waited until their lock request returns the
          * signature, so all requests from a single client would end up being
@@ -181,6 +181,7 @@ void experiment(LockManager& lockManager, int numLocks, int numThreads) {
       for (int threadId = 0; threadId < numThreads;
            threadId++) {  // iterate over the thread partitions
         int rowId = base + threadId * partitionSize + i;
+        if (rowId > numLocks) continue;
 
         if (waitOn.find(rowId) != waitOn.end()) {
           lockManager.lock(transactionB, rowId, false, true);
@@ -199,6 +200,7 @@ void experiment(LockManager& lockManager, int numLocks, int numThreads) {
       for (int threadId = 0; threadId < numThreads;
            threadId++) {  // iterate over the thread partitions
         int rowId = base + threadId * partitionSize + i;
+        if (rowId > numLocks) continue;
 
         if (waitOn.find(rowId) != waitOn.end()) {
           lockManager.unlock(transactionA, rowId, true);
@@ -214,6 +216,9 @@ void experiment(LockManager& lockManager, int numLocks, int numThreads) {
 
 auto main() -> int {
   spdlog::set_level(spdlog::level::err);
+  spdlog::error(
+      "Don't forget to copy most recent enclave.signed.so into the current "
+      "folder");
 
   vector<vector<long>> contentCSVFile;
   for (int lockBudget :
