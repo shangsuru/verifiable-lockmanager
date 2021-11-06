@@ -38,9 +38,11 @@ void release(Lock* lock, int transactionId) {
                           // within the set of owners of that lock
   for (int i = 0; i < lock->num_owners; i++) {
     if (lock->owners[i] == transactionId) {
-      memcpy((void*)&lock->owners[i], (void*)&lock->owners[i + 1],
-             sizeof(int) * (lock->num_owners - 1 - i));
+      for (int j = i; j < lock->num_owners - 1; j++) {
+        lock->owners[j] = lock->owners[j + 1];
+      }
       wasOwner = true;
+      break;
     }
   }
   if (wasOwner) {

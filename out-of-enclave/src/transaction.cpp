@@ -44,7 +44,6 @@ void releaseLock(Transaction* transaction, int rowId, HashTable* lockTable) {
       wasOwner = true;
       break;
     }
-    break;
   }
 
   if (!wasOwner) {

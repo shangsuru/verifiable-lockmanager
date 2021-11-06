@@ -414,7 +414,7 @@ void release_lock(int transactionId, int rowId) {
 
   // Release lock in trusted memory and update integrity hash
   HashTable *trustedLockTable = newHashTable(lockTable_->size);
-  trustedLockTable->table[rowId] = lockEntry;
+  trustedLockTable->table[hash(trustedLockTable->size, rowId)] = lockEntry;
   releaseLock(transactionTrusted, rowId, trustedLockTable);
   update_integrity_hash_transactiontable(
       transactionTable_, transactionTableIntegrityHashes, transactionEntry);
