@@ -149,6 +149,8 @@ int register_transaction(unsigned int transactionId, unsigned int lockBudget);
  * @param rowId identifies the row to be locked
  * @param requestedMode either shared for concurrent read access or exclusive
  * for sole write access
+ * @param threadId the context for signing locks is exclusive for each thread,
+ * therefore we need to know the calling thread's ID
  * @returns SGX_ERROR_UNEXPCTED, when transaction did not call
  * RegisterTransaction before or the given lock mode is unknown or when the
  * transaction makes a request for a look, that it already owns, makes a
@@ -156,7 +158,7 @@ int register_transaction(unsigned int transactionId, unsigned int lockBudget);
  * exhausted
  */
 auto acquire_lock(void *signature, unsigned int transactionId,
-                  unsigned int rowId, bool isExclusive) -> bool;
+                  unsigned int rowId, bool isExclusive, int threadId) -> bool;
 
 /**
  * Releases a lock for the specified row.

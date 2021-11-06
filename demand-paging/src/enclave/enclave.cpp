@@ -8,6 +8,7 @@ sgx_thread_mutex_t *transaction_mutex;  // synchronizes access to transactions
 sgx_thread_cond_t *job_cond;            // wakes up worker threads when a
                                         // new job is available
 std::vector<std::queue<Job>> queue;     // a job queue for each worker thread
+sgx_ecc_state_handle_t *contexts;       // context for signing for each thread
 
 void enclave_init_values(Arg arg) {
   // Get configuration parameters
@@ -30,9 +31,12 @@ void enclave_init_values(Arg arg) {
                                   // range 1 - kTransactionBudget
   }
 
-  // Initialize job queues
+  // Initialize job queues and signing context
+  contexts = (sgx_ecc_state_handle_t *)malloc(arg_enclave.num_threads *
+                                              sizeof(sgx_ecc_state_handle_t));
   for (int i = 0; i < arg_enclave.num_threads; i++) {
     queue.push_back(std::queue<Job>());
+    sgx_ecc256_open_context(&contexts[i]);
   }
 }
 
@@ -139,6 +143,7 @@ void enclave_process_request() {
         sgx_thread_mutex_unlock(&queue_mutex[thread_id]);
         sgx_thread_mutex_destroy(&queue_mutex[thread_id]);
         sgx_thread_cond_destroy(&job_cond[thread_id]);
+        sgx_ecc256_close_context(contexts[thread_id]);
         // print_debug("Enclave worker quitting");
         return;
       case SHARED:
@@ -158,7 +163,7 @@ void enclave_process_request() {
         // Acquire lock and receive signature
         sgx_ec256_signature_t sig;
         bool ok = acquire_lock((void *)&sig, cur_job.transaction_id,
-                               cur_job.row_id, command == EXCLUSIVE);
+                               cur_job.row_id, command == EXCLUSIVE, thread_id);
         if (cur_job.wait_for_result) {
           if (!ok) {
             *cur_job.error = true;
@@ -308,7 +313,7 @@ auto verify(const char *message, void *signature, size_t sig_len) -> int {
 }
 
 auto acquire_lock(void *signature, unsigned int transactionId,
-                  unsigned int rowId, bool isExclusive) -> bool {
+                  unsigned int rowId, bool isExclusive, int threadId) -> bool {
   bool ok;
 
   // Get the transaction object for the given transaction ID
@@ -367,13 +372,10 @@ sign:
   std::string string_to_sign =
       lock_to_string(transactionId, rowId, lock->exclusive);
 
-  sgx_ecc_state_handle_t context = NULL;
-  sgx_ecc256_open_context(&context);
   sgx_ecdsa_sign((uint8_t *)string_to_sign.c_str(),
                  strnlen(string_to_sign.c_str(), MAX_SIGNATURE_LENGTH),
                  &ec256_private_key, (sgx_ec256_signature_t *)signature,
-                 context);
-  sgx_ecc256_close_context(context);
+                 contexts[threadId]);
 
   return true;
 }
