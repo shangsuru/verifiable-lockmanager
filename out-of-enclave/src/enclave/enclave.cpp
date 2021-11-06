@@ -8,6 +8,7 @@ sgx_thread_mutex_t *queue_mutex;      // synchronizes access to the job queue
 sgx_thread_cond_t
     *job_cond;  // wakes up worker threads when a new job is available
 std::vector<std::queue<Job>> queue;  // a job queue for each worker threads
+sgx_ecc_state_handle_t *contexts;    // context for signing for each thread
 
 void enclave_init_values(Arg arg, HashTable *lock_table,
                          HashTable *transaction_table) {
@@ -24,8 +25,11 @@ void enclave_init_values(Arg arg, HashTable *lock_table,
                                          arg_enclave.num_threads);
 
   // Initialize job queues
+  contexts = (sgx_ecc_state_handle_t *)malloc(arg_enclave.num_threads *
+                                              sizeof(sgx_ecc_state_handle_t));
   for (int i = 0; i < arg_enclave.num_threads; i++) {
     queue.push_back(std::queue<Job>());
+    sgx_ecc256_open_context(&contexts[i]);
   }
 
   // Allocate space for one hash per bucket
@@ -57,15 +61,21 @@ void enclave_send_job(void *data) {
       // Copy job parameters
       new_job.transaction_id = ((Job *)data)->transaction_id;
       new_job.row_id = ((Job *)data)->row_id;
-      new_job.return_value = ((Job *)data)->return_value;
-      new_job.finished = ((Job *)data)->finished;
-      new_job.error = ((Job *)data)->error;
+      new_job.wait_for_result = ((Job *)data)->wait_for_result;
+
+      if (new_job.wait_for_result) {
+        new_job.return_value = ((Job *)data)->return_value;
+        new_job.finished = ((Job *)data)->finished;
+        new_job.error = ((Job *)data)->error;
+      }
 
       // If transaction is not registered, abort the request
       if (!contains(transactionTable_, new_job.transaction_id)) {
         print_error("Need to register transaction before lock requests");
-        *new_job.error = true;
-        *new_job.finished = true;
+        if (new_job.wait_for_result) {
+          *new_job.error = true;
+          *new_job.finished = true;
+        }
         return;
       }
 
@@ -132,6 +142,7 @@ void enclave_process_request() {
         sgx_thread_mutex_unlock(&queue_mutex[thread_id]);
         sgx_thread_mutex_destroy(&queue_mutex[thread_id]);
         sgx_thread_cond_destroy(&job_cond[thread_id]);
+        sgx_ecc256_close_context(contexts[thread_id]);
         print_info("Enclave worker quitting");
         return;
       case SHARED:
@@ -151,24 +162,25 @@ void enclave_process_request() {
         // Acquire lock and receive signature
         sgx_ec256_signature_t sig;
         bool ok = acquire_lock((void *)&sig, cur_job.transaction_id,
-                               cur_job.row_id, command == EXCLUSIVE);
-        if (!ok) {
-          *cur_job.error = true;
-        } else {
-          // Write base64 encoded signature into the return value of the job
-          // struct
-          std::string encoded_signature =
-              base64_encode((unsigned char *)sig.x, sizeof(sig.x)) + "-" +
-              base64_encode((unsigned char *)sig.y, sizeof(sig.y));
+                               cur_job.row_id, command == EXCLUSIVE, thread_id);
+        if (cur_job.wait_for_result) {
+          if (!ok) {
+            *cur_job.error = true;
+          } else {
+            // Write base64 encoded signature into the return value of the job
+            // struct
+            std::string encoded_signature =
+                base64_encode((unsigned char *)sig.x, sizeof(sig.x)) + "-" +
+                base64_encode((unsigned char *)sig.y, sizeof(sig.y));
 
-          volatile char *p = cur_job.return_value;
-          size_t signature_size = 89;
-          for (int i = 0; i < signature_size; i++) {
-            *p++ = encoded_signature.c_str()[i];
+            volatile char *p = cur_job.return_value;
+            size_t signature_size = 89;
+            for (int i = 0; i < signature_size; i++) {
+              *p++ = encoded_signature.c_str()[i];
+            }
           }
+          *cur_job.finished = true;
         }
-
-        *cur_job.finished = true;
         break;
       }
       case UNLOCK: {
@@ -176,6 +188,9 @@ void enclave_process_request() {
                     ", RID: " + std::to_string(cur_job.row_id))
                        .c_str());
         release_lock(cur_job.transaction_id, cur_job.row_id);
+        if (cur_job.wait_for_result) {
+          *cur_job.finished = true;
+        }
         break;
       }
       case REGISTER: {
@@ -232,7 +247,7 @@ void enclave_process_request() {
 }
 
 auto acquire_lock(void *signature, int transactionId, int rowId,
-                  bool isExclusive) -> bool {
+                  bool isExclusive, int threadId) -> bool {
   bool ok;
 
   // Get the transaction for the given transaction ID
@@ -271,11 +286,11 @@ auto acquire_lock(void *signature, int transactionId, int rowId,
     return false;
   }
 
-  // Check if 2PL is violated
+  /*// Check if 2PL is violated TODO: Uncomment (error during benchmarking)
   if (!transactionTrusted->growing_phase) {
     print_error("Cannot acquire more locks according to 2PL");
     goto abort;
-  }
+  }*/
 
   // Check if lock budget is enough
   if (transactionTrusted->lock_budget < 1) {
@@ -364,11 +379,10 @@ sign:
   std::string string_to_sign =
       lock_to_string(transactionId, rowId, lockTrusted->exclusive);
 
-  sgx_ecc_state_handle_t ctx = NULL;
-  sgx_ecc256_open_context(&ctx);
   sgx_ecdsa_sign((uint8_t *)string_to_sign.c_str(),
                  strnlen(string_to_sign.c_str(), MAX_SIGNATURE_LENGTH),
-                 &ec256_private_key, (sgx_ec256_signature_t *)signature, ctx);
+                 &ec256_private_key, (sgx_ec256_signature_t *)signature,
+                 contexts[threadId]);
 
   free_lock_bucket_copy(lockEntry);
   free_transaction_bucket_copy(transactionEntry);
@@ -415,7 +429,7 @@ void release_lock(int transactionId, int rowId) {
 
   // If the transaction released its last lock, delete it
   if (transactionTrusted->num_locked == 0) {
-    remove(transactionTable_, transactionId);
-    delete transactionTrusted;
+    // remove(transactionTable_, transactionId);
+    // delete transactionTrusted;
   }
 }

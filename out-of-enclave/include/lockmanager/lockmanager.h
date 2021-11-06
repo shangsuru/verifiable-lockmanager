@@ -69,8 +69,10 @@ class LockManager {
 
   /**
    * Initializes the enclave and seals the public and private key for signing.
+   *
+   * @param numWorkerThreads the number of threads that work on the lock table
    */
-  LockManager();
+  LockManager(int numWorkerThreads = 1);
 
   /**
    * Destroys the enclave.
@@ -96,6 +98,7 @@ class LockManager {
    * @param rowId identifies the row to be locked
    * @param requestedMode either shared for concurrent read access or exclusive
    * for sole write access
+   * @param waitForResult parameter forwarded to create_job function
    * @returns the signature for the acquired lock
    * @throws std::domain_error, when transaction did not call
    * RegisterTransaction before or the given lock mode is unknown or when the
@@ -103,16 +106,18 @@ class LockManager {
    * request for a lock while in the shrinking phase, or when the lock budget is
    * exhausted
    */
-  auto lock(int transactionId, int rowId, bool isExclusive)
-      -> std::pair<std::string, bool>;
+  auto lock(int transactionId, int rowId, bool isExclusive,
+            bool waitForResult = true) -> std::pair<std::string, bool>;
 
   /**
    * Releases a lock for the specified row
    *
    * @param transactionId identifies the transaction making the request
    * @param rowId identifies the row to be released
+   * @param waitForResult if true makes unlock a synchronous operation, else
+   * asynchronous (no waiting for operation to be finished)
    */
-  void unlock(int transactionId, int rowId);
+  void unlock(int transactionId, int rowId, bool waitForResult = false);
 
   /**
    * This function is just for testing, to demonstrate that signatures created
@@ -169,11 +174,28 @@ class LockManager {
 
   /**
    * Initializes the configuration parameters for the enclave
+   *
+   * @param numWorkerThreads the number of threads that work on the lock table
    */
-  void configuration_init();
+  void configuration_init(int numWorkerThreads);
 
+  /**
+   * Creates a job and sends it to the enclave to get it processed by an enclave
+   * worker thread.
+   *
+   * @param command SHARED, EXCLUSIVE, REGISTER or QUIT
+   * @param transaction_id additional argument for SHARED, EXCLUSIVE or REGISTER
+   * @param row_id additional argument for SHARED or EXCLUSIVE
+   * @param lock_budget additional argument for REGISTER
+   * @param waitForResult if the function should wait for return values to be
+   * set or immediately return
+   * @returns a pair containing a boolean, that is true when the job was
+   * executed successfully and if true and the command was for a lock request,
+   * the pair also contains the signature as the return value
+   */
   auto create_enclave_job(Command command, int transaction_id = 0,
-                          int row_id = 0, int lock_budget = 0)
+                          int row_id = 0, int lock_budget = 0,
+                          bool waitForResult = true)
       -> std::pair<std::string, bool>;
 
   Arg arg;  // configuration parameters for the enclave

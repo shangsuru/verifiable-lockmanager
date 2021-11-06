@@ -258,3 +258,16 @@ TEST_F(LockManagerTest, transactionGetsDeletedAfterReleasingLastLock) {
       1));  // need to wait here because unlock is asynchronous
   EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
 }
+
+TEST_F(LockManagerTest, notWaitingForSignature) {
+  LockManager lock_manager = LockManager();
+  int lockBudget = 100;
+  EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, lockBudget));
+  for (int i = 1; i < lockBudget; i++) {
+    lock_manager.lock(kTransactionIdA, i, false,
+                      +true);  // not waiting for signature return value
+  }
+  EXPECT_TRUE(lock_manager.lock(kTransactionIdA, lockBudget, false,
+                                true)
+                  .second);  // waitung for signature return value at the end
+}

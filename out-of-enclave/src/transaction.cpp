@@ -38,10 +38,11 @@ void releaseLock(Transaction* transaction, int rowId, HashTable* lockTable) {
   bool wasOwner = false;
   for (int i = 0; i < transaction->num_locked; i++) {
     if (transaction->locked_rows[i] == rowId) {
-      memcpy((void*)&transaction->locked_rows[i],
-             (void*)&transaction->locked_rows[i + 1],
-             sizeof(int) * (transaction->num_locked - 1 - i));
+      for (int j = i; j < transaction->num_locked - 1; j++) {
+        transaction->locked_rows[j] = transaction->locked_rows[j + 1];
+      }
       wasOwner = true;
+      break;
     }
     break;
   }
