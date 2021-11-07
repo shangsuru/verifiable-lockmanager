@@ -12,7 +12,7 @@ typedef struct {
   struct Entry** table;
 } HashTable;
 
-typedef struct Entry Entry; // Required to use C++ structs as C structs
+typedef struct Entry Entry;  // Required to use C++ structs as C structs
 struct Entry {
   int key;
   void* value;
@@ -26,11 +26,12 @@ struct Job {
   unsigned int transaction_id;
   unsigned int row_id;
   unsigned int lock_budget;
+  bool wait_for_result;
   volatile char* return_value;
   volatile bool* finished;
   volatile bool* error;
 };
-typedef struct Job Job; // Required to use C++ structs as C structs
+typedef struct Job Job;  // Required to use C++ structs as C structs
 
 struct Arg {
   int num_threads;
@@ -38,4 +39,4 @@ struct Arg {
   int transaction_table_size;
   int lock_table_size;
 };
-typedef struct Arg Arg; // Required to use C++ structs as C structs
+typedef struct Arg Arg;  // Required to use C++ structs as C structs

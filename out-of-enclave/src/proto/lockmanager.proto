@@ -5,6 +5,8 @@ message LockRequest {
     uint32 transaction_id = 1;
     // Identifies the rows that the transaction wants to access
     uint32 row_id = 2;
+    // If the request should wait for the signature return value
+    bool wait_for_signature = 3;
 }
 
 message LockResponse {
@@ -15,7 +17,7 @@ message LockResponse {
     //  - the transaction did not register itself to the lock manager prior to requesting a lock
     //  - the deadlock prevention mechanism detected that this lock request would cause a deadlock
     //  - the transaction requests a lock after it already entered the shrinking phase, violating 2PL
-    optional string signature = 2;
+    string signature = 1;
 }
 
 message RegistrationRequest {

@@ -74,3 +74,5 @@ if((CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME OR LockManager_BUILD_TESTING)
  include(GoogleTest)
  add_subdirectory(tests)
 endif()
+
+add_subdirectory(evaluation)
