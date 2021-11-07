@@ -42,14 +42,14 @@
       "environment": [],
       "externalConsole": false,
       "MIMode": "gdb",
-      "miDebuggerPath":"/opt/intel/sgxsdk/bin/sgx-gdb",
+      "miDebuggerPath": "/opt/intel/sgxsdk/bin/sgx-gdb",
       "setupCommands": [
-          {
-              "description": "Enable pretty-printing for gdb",
-              "text": "-enable-pretty-printing",
-              "ignoreFailures": true
-          }
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
       ]
-  },
+    },
   ]
 }

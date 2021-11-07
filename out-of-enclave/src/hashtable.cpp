@@ -80,7 +80,8 @@ void remove(HashTable* hashTable, int key) {
 
   if (entry->key == key) {
     hashTable->table[hash(hashTable->size, key)] = entry->next;
-    delete entry;
+    // delete entry; We don't wont to delete here, as deleting untrusted memory
+    // from enclave causes problems
     return;
   }
 
@@ -89,7 +90,8 @@ void remove(HashTable* hashTable, int key) {
     if (next->key == key) {
       // delete it and return
       entry->next = next->next;
-      delete next;
+      // delete next; We don't wont to delete here, as deleting untrusted memory
+      // from enclave causes problems
       return;
     }
     entry = next;

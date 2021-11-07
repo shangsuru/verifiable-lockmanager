@@ -53,12 +53,14 @@ void releaseLock(Transaction* transaction, int rowId, HashTable* lockTable) {
   transaction->num_locked--;
   transaction->growing_phase = false;
   auto lock = (Lock*)get(lockTable, rowId);
-  release(lock, transaction->transaction_id);
-
-  if (lock->num_owners == 0) {
-    remove(lockTable, rowId);
-    delete lock;
+  if (lock != nullptr) {
+    release(lock, transaction->transaction_id);
+    if (lock->num_owners == 0) {
+      remove(lockTable, rowId);
+      // delete lock; -> issues with deleting locks in untrusted memory
+    }
   }
+  return;
 };
 
 auto hasLock(Transaction* transaction, int rowId) -> bool {
@@ -94,7 +96,7 @@ auto copy_transaction(Transaction* transaction) -> void* {
   int num_locked = transaction->num_locked;
   copy->num_locked = num_locked;
 
-  copy->locked_rows = new int[num_locked];
+  copy->locked_rows = new int[copy->locked_rows_size];
   for (int i = 0; i < num_locked; i++) {
     copy->locked_rows[i] = transaction->locked_rows[i];
   }
@@ -103,6 +105,6 @@ auto copy_transaction(Transaction* transaction) -> void* {
 }
 
 void free_transaction_copy(Transaction*& transaction) {
-  free(transaction->locked_rows);
+  delete[] transaction->locked_rows;
   delete transaction;
 }

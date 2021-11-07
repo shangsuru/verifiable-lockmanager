@@ -3,7 +3,7 @@
 Lock* newLock() {
   Lock* lock = new Lock();
   lock->exclusive = false;
-  lock->owners = (int*)malloc(sizeof(int) * kTransactionBudget);
+  lock->owners = new int[kTransactionBudget];
   lock->num_owners = 0;
   return lock;
 }
@@ -57,7 +57,7 @@ auto copy_lock(Lock* lock) -> void* {
   int num_owners = lock->num_owners;
   copy->num_owners = num_owners;
 
-  copy->owners = (int*)malloc(sizeof(int) * num_owners);
+  copy->owners = new int[kTransactionBudget];
   for (int i = 0; i < num_owners; i++) {
     copy->owners[i] = lock->owners[i];
   }
@@ -66,7 +66,6 @@ auto copy_lock(Lock* lock) -> void* {
 }
 
 void free_lock_copy(Lock*& lock) {
-  // free(lock->owners);  // TODO: failing test: multipleTransactionsSharedLock,
-  // Segmentation Fault at TXID 5
+  delete[] lock->owners;
   delete lock;
 }

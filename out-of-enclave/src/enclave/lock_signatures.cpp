@@ -42,16 +42,13 @@ auto lock_to_string(int transactionId, int rowId, bool isExclusive)
          mode + "_" + std::to_string(block_timeout);
 }
 
-auto ecdsa_close() -> int {
-  if (context == NULL) sgx_ecc256_open_context(&context);
-  return sgx_ecc256_close_context(context);
-}
-
 auto generate_key_pair() -> int {
   print_info("Creating new key pair");
-  if (context == NULL) sgx_ecc256_open_context(&context);
+  sgx_ecc_state_handle_t context;
+  sgx_ecc256_open_context(&context);
   sgx_status_t ret = sgx_ecc256_create_key_pair(&ec256_private_key,
                                                 &ec256_public_key, context);
+  sgx_ecc256_close_context(context);
   encoded_public_key = base64_encode((unsigned char *)&ec256_public_key,
                                      sizeof(ec256_public_key));
 
@@ -62,13 +59,14 @@ auto generate_key_pair() -> int {
 }
 
 auto verify(const char *message, void *signature, size_t sig_len) -> int {
-  sgx_ecc_state_handle_t ctx = NULL;
-  sgx_ecc256_open_context(&ctx);
+  sgx_ecc_state_handle_t context;
+  sgx_ecc256_open_context(&context);
   uint8_t res;
   sgx_ec256_signature_t *sig = (sgx_ec256_signature_t *)signature;
   sgx_status_t ret = sgx_ecdsa_verify((uint8_t *)message,
                                       strnlen(message, MAX_SIGNATURE_LENGTH),
-                                      &ec256_public_key, sig, &res, ctx);
+                                      &ec256_public_key, sig, &res, context);
+  sgx_ecc256_close_context(context);
   return res;
 }
 
@@ -128,5 +126,6 @@ auto unseal_keys(const uint8_t *sealed_blob, size_t sealed_size)
 
 error:
   if (unsealed_data != NULL) free(unsealed_data);
+  free(mac_text);
   return ret;
 }

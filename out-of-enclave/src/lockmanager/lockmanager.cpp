@@ -90,6 +90,11 @@ LockManager::~LockManager() {
 
   spdlog::info("Destroying enclave");
   sgx_destroy_enclave(global_eid);
+
+  delete[] lockTable->table;
+  delete[] transactionTable->table;
+  delete lockTable;
+  delete transactionTable;
 }
 
 auto LockManager::registerTransaction(int transactionId, int lockBudget)

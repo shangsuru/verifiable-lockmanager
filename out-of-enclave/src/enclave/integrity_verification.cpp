@@ -143,6 +143,8 @@ auto integrity_verified_get_locktable(
     }
   }
 
+  free(recomputed_hash);
+
   if (equal) {
     return std::make_pair((Lock *)get(copy, key), copy);
   }
@@ -183,11 +185,16 @@ auto integrity_verified_get_transactiontable(
       }
     }
   }
+  free(recomputed_hash);
+
   if (equal) {
     return std::make_pair((Transaction *)get(copy, key), copy);
   }
 
   // Hashes are not the same
+  if (copy != nullptr) {
+    free_transaction_bucket_copy(copy);
+  }
   return std::make_pair(nullptr, nullptr);
 }
 
@@ -225,7 +232,7 @@ auto copy_transaction_bucket(Entry *entry) -> Entry * {
 void free_transaction_bucket_copy(Entry *&copy) {
   auto nextEntry = copy->next;
   auto transaction = (Transaction *)copy->value;
-  // free_transaction_copy(transaction);
+  free_transaction_copy(transaction);
   delete copy;
   if (nextEntry != nullptr) {
     free_transaction_bucket_copy(nextEntry);
@@ -237,12 +244,11 @@ void update_integrity_hash_transactiontable(
     std::vector<sgx_sha256_hash_t *> &transactionTableIntegrityHashes,
     Entry *entry) {
   sgx_sha256_hash_t *p_hash = hash_transactiontable_bucket(entry);
+
   // Free old hash
-  if (transactionTableIntegrityHashes[hash(transactionTable_->size,
-                                           entry->key)] != nullptr) {
-    free(transactionTableIntegrityHashes[hash(transactionTable_->size,
-                                              entry->key)]);
-  }
+  free(transactionTableIntegrityHashes[hash(transactionTable_->size,
+                                            entry->key)]);
+
   // Update hash
   transactionTableIntegrityHashes[hash(transactionTable_->size, entry->key)] =
       p_hash;
@@ -252,10 +258,10 @@ void update_integrity_hash_locktable(
     HashTable *&lockTable_,
     std::vector<sgx_sha256_hash_t *> &lockTableIntegrityHashes, Entry *entry) {
   sgx_sha256_hash_t *p_hash = hash_locktable_bucket(entry);
+
   // Free old hash
-  if (lockTableIntegrityHashes[hash(lockTable_->size, entry->key)] != nullptr) {
-    free(lockTableIntegrityHashes[hash(lockTable_->size, entry->key)]);
-  }
+  free(lockTableIntegrityHashes[hash(lockTable_->size, entry->key)]);
+
   // Update hash
   lockTableIntegrityHashes[hash(lockTable_->size, entry->key)] = p_hash;
 }

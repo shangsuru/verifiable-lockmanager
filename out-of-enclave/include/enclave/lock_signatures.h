@@ -50,12 +50,6 @@ auto sign(const char *message, void *signature, size_t sig_len) -> int;
 auto verify(const char *message, void *signature, size_t sig_len) -> int;
 
 /**
- * Closes the ECDSA context.
- * @returns SGX_SUCCESS or error code
- */
-auto ecdsa_close() -> int;
-
-/**
  * This function is just for testing, to demonstrate that signatures created on
  * lock requests are valid.
  *
