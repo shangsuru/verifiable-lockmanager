@@ -90,12 +90,13 @@ TEST_F(LockManagerTest, lockBudgetRunsOut) {
   LockManager lock_manager = LockManager();
   EXPECT_TRUE(lock_manager.registerTransaction(kTransactionIdA, kLockBudget));
 
-  unsigned int row_id = 1;
+  int row_id = 1;
   for (; row_id <= kLockBudget; row_id++) {
     EXPECT_TRUE(lock_manager.lock(kTransactionIdA, row_id, false).second);
   }
 
-  EXPECT_FALSE(lock_manager.lock(kTransactionIdA, row_id, false).second);
+  EXPECT_FALSE(lock_manager.lock(kTransactionIdA, row_id, false)
+                   .second);  // no lock budget anymore
 };
 
 // Can upgrade a lock

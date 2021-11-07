@@ -400,7 +400,7 @@ void release_lock(unsigned int transactionId, unsigned int rowId) {
   sgx_thread_mutex_unlock(&transaction_mutex[transaction->transaction_id]);
 
   // If the transaction released its last lock, delete it
-  if (transaction->locked_rows.size() == 0) {
+  if (transaction->locked_rows_size == 0) {
     remove(transactionTable_, transactionId);
     delete transaction;
   }

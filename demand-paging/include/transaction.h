@@ -3,7 +3,6 @@
 #include <cstring>
 #include <memory>
 #include <mutex>
-#include <set>
 #include <unordered_map>
 
 #include "hashtable.h"
@@ -30,7 +29,8 @@ struct Transaction {
    */
   bool growing_phase;
   int lock_budget;
-  std::set<int> locked_rows;
+  int* locked_rows;
+  int locked_rows_size;
 };
 typedef struct Transaction Transaction;
 

@@ -69,13 +69,13 @@ TEST_F(TransactionTest, entersShrinkingPhase) {
   set(lockTable_, rowId_, (void*)lock_);
 
   auto locked_rows = transactionA_->locked_rows;
-  EXPECT_EQ(transactionA_->locked_rows.size(), 1);
-  EXPECT_TRUE(locked_rows.find(rowId_) != locked_rows.end());
+  EXPECT_EQ(transactionA_->locked_rows_size, 1);
+  EXPECT_TRUE(hasLock(transactionA_, rowId_));
   EXPECT_TRUE(transactionA_->growing_phase);
 
   releaseLock(transactionA_, rowId_, lockTable_);
 
-  EXPECT_EQ(transactionA_->locked_rows.size(), 0);
+  EXPECT_EQ(transactionA_->locked_rows_size, 0);
   EXPECT_FALSE(transactionA_->growing_phase);
 };
 
@@ -120,5 +120,5 @@ TEST_F(TransactionTest, releasesAllLocks) {
   acquireLock(transactionA_, rowId_++);
 
   // Assert that the transaction holds no locks
-  EXPECT_EQ(transactionA_->locked_rows.size(), 0);
+  EXPECT_EQ(transactionA_->locked_rows_size, 0);
 };
