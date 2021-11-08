@@ -13,7 +13,10 @@ TEST(HashTableTest, getListNotEmptyKeyExists) {
   HashTable* hashTable = newHashTable(10);
   Lock* lock = newLock();
   lock->exclusive = true;
-  lock->owners.insert(4);
+  lock->owners = new int[1];
+  lock->owners_size = 1;
+  const int val = 4;
+  lock->owners[0] = val;
 
   set(hashTable, 12, (void*)newLock());
   set(hashTable, 22, (void*)newLock());
@@ -22,9 +25,23 @@ TEST(HashTableTest, getListNotEmptyKeyExists) {
 
   Lock* value = (Lock*)get(hashTable, 32);
   EXPECT_EQ(value->exclusive, lock->exclusive);
-  EXPECT_EQ(value->owners.size(), lock->owners.size());
-  EXPECT_EQ(value->owners.find(4) != value->owners.end(),
-            lock->owners.find(4) != lock->owners.end());
+  EXPECT_EQ(value->owners_size, lock->owners_size);
+
+  bool wasFoundInValue = false;
+  for (int i = 0; i < value->owners_size; i++) {
+    if (value->owners[i] == val) {
+      wasFoundInValue = true;
+    }
+  }
+  EXPECT_TRUE(wasFoundInValue);
+
+  bool wasFoundInLock = false;
+  for (int i = 0; i < lock->owners_size; i++) {
+    if (lock->owners[i] == val) {
+      wasFoundInLock = true;
+    }
+  }
+  EXPECT_TRUE(wasFoundInLock);
 };
 
 TEST(HashTableTest, getElementNotFound) {
@@ -42,7 +59,10 @@ TEST(HashTableTest, setWhenKeyAlreadyExists) {
   HashTable* hashTable = newHashTable(10);
   Lock* lock = newLock();
   lock->exclusive = true;
-  lock->owners.insert(4);
+  lock->owners = new int[1];
+  lock->owners_size = 1;
+  const int val = 4;
+  lock->owners[0] = val;
 
   Lock* anotherLock = new Lock();
   anotherLock->exclusive = false;
@@ -54,7 +74,7 @@ TEST(HashTableTest, setWhenKeyAlreadyExists) {
 
   Lock* value = (Lock*)get(hashTable, 32);
   EXPECT_EQ(value->exclusive, lock->exclusive);
-  EXPECT_EQ(value->owners.size(), lock->owners.size());
+  EXPECT_EQ(value->owners_size, lock->owners_size);
 };
 
 TEST(HashTableTest, containsListEmpty) {
@@ -183,7 +203,9 @@ TEST(HashTableTest, changeValue) {
   HashTable* hashTable = newHashTable(10);
   Lock* lock = newLock();
   lock->exclusive = true;
-  lock->owners.insert(1);
+  lock->owners = new int[1];
+  const int val = 1;
+  lock->owners[0] = val;
 
   set(hashTable, 12, (void*)newLock());
   set(hashTable, 22, (void*)newLock());
@@ -191,12 +213,15 @@ TEST(HashTableTest, changeValue) {
   set(hashTable, 42, (void*)newLock());
 
   // Change value
-  lock->owners.insert(2);
+  lock->owners = new int[2];
+  lock->owners_size = 2;
+  lock->owners[0] = 1;
+  lock->owners[1] = 2;
   lock->exclusive = false;
 
   // Check that the values also changed within the table
   Lock* value = (Lock*)get(hashTable, 32);
-  EXPECT_EQ(value->owners.size(), 2);
+  EXPECT_EQ(value->owners_size, 2);
   EXPECT_EQ(value->exclusive, false);
 };
 

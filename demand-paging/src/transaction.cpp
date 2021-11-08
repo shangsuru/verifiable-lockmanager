@@ -66,7 +66,7 @@ void releaseLock(Transaction* transaction, int rowId, HashTable* lockTable) {
   auto lock = (Lock*)get(lockTable, rowId);
   release(lock, transaction->transaction_id);
 
-  if (lock->owners.size() == 0) {
+  if (lock->owners_size == 0) {
     remove(lockTable, rowId);
     delete lock;
   }
@@ -86,7 +86,7 @@ void releaseAllLocks(Transaction* transaction, HashTable* lockTable) {
     int locked_row = transaction->locked_rows[i];
     auto lock = (Lock*)get(lockTable, locked_row);
     release(lock, transaction->transaction_id);
-    if (lock->owners.size() == 0) {
+    if (lock->owners_size == 0) {
       remove(lockTable, locked_row);
     }
   }
