@@ -1,5 +1,5 @@
-num_threads=(8)
-num_locks=(10 100 500 1000 2500 5000 10000 20000 50000 100000 150000 200000 300000 500000)
+num_threads=(1 2 4 8)
+num_locks=(10 100 500 1000 2500 5000 10000 20000 50000 100000 150000 200000 300000 500000 700000)
 
 echo "Starting evaluation..."
 
@@ -48,3 +48,5 @@ sed -i -e "s/numWorkerThreads = [0-9]*/numWorkerThreads = 1/" benchmark.cpp
 sed -i -e "s/lockBudget = [0-9]*/lockBudget = 10/" benchmark.cpp
 sed -i -e "s/arg.lock_table_size = [0-9]*/arg.lock_table_size = 10000/" ../src/lockmanager/lockmanager.cpp
 sed -i -e "s/<TCSNum>[0-9]*/<TCSNum>3/" ../src/enclave/enclave.config.xml
+
+rm sealed_data_blob.txt
