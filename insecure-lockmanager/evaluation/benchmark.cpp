@@ -23,7 +23,8 @@ long* p = new long[bigger_than_cachesize];
 int transactionA = 1;
 int transactionB = 2;
 
-int lockBudget = 10;        // how many locks to acquire
+int lockBudget = 10;  // how many locks to acquire
+const int lockTableSize = lockBudget;
 const int repetitions = 10;  // repeats the same experiments several times
 int numWorkerThreads = 1;
 
@@ -88,7 +89,6 @@ void experiment(LockManager& lockManager, int numLocks, int numThreads) {
    * receives a request. This can be a disadvantage when RIDs are skewed.
    */
   std::set<int> waitOn;
-  const int lockTableSize = 10000;
 
   // The maximum RID is in any case one of the last requests.
   waitOn.insert(numLocks);

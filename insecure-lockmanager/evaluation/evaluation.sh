@@ -18,7 +18,6 @@ do
   sed -i -e "s/numWorkerThreads = [0-9]*/numWorkerThreads = ${thread}/" benchmark.cpp
   for locks in ${num_locks[*]}
   do
-    echo "Finished experiment with ${locks} locks and ${thread} threads"
 
     # Set number of locks to acquire
     sed -i -e "s/lockBudget = [0-9]*/lockBudget = ${locks}/" benchmark.cpp
@@ -31,6 +30,7 @@ do
     # Start the benchmarking
     ./../build/evaluation/benchmark
     
+    echo "Finished experiment with ${locks} locks and ${thread} threads"
   done
 done
 

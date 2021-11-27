@@ -1,10 +1,11 @@
-num_threads=(1 2 4 8)
-num_locks=(10 100 500 1000 2500 5000 10000 20000 50000 100000 150000 200000 300000 500000 700000)
+num_threads=(8)
+num_locks=(700000)
+output_file=out.csv
+sealed_keys_file=sealed_data_blob.txt
 
 echo "Starting evaluation..."
 
 # Delete old output file
-output_file=out.csv
 if [ -f "$output_file" ]; then
     rm $output_file
 fi
@@ -34,7 +35,9 @@ do
     cp ../build/apps/enclave.signed.so .
 
     # Remove old sealed keys, they cannot be opened by the enclave when its config changed, throwing an error
-    rm sealed_data_blob.txt
+    if [ -f "$sealed_keys_file" ]; then
+      rm $sealed_keys_file
+    fi
 
     # Start the benchmarking
     ./../build/evaluation/benchmark
@@ -49,4 +52,5 @@ sed -i -e "s/lockBudget = [0-9]*/lockBudget = 10/" benchmark.cpp
 sed -i -e "s/arg.lock_table_size = [0-9]*/arg.lock_table_size = 10000/" ../src/lockmanager/lockmanager.cpp
 sed -i -e "s/<TCSNum>[0-9]*/<TCSNum>3/" ../src/enclave/enclave.config.xml
 
-rm sealed_data_blob.txt
+rm $sealed_keys_file
+rm enclave.signed.so
