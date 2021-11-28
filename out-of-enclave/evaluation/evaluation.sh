@@ -1,5 +1,6 @@
 num_threads=(1 2 4 8)
 num_locks=(10 100 500 1000 2500 5000 10000 20000 50000 100000 150000 200000 300000 500000 700000)
+
 output_file=out.csv
 sealed_keys_file=sealed_data_blob.txt
 
@@ -14,7 +15,7 @@ fi
 cmake -DSGX_HW=ON -DSGX_MODE=Debug -DCMAKE_BUILD_TYPE=Release -S .. -B ../build >/dev/null
 
 # Comment out logging, because this would cause a costly OCALL regardless of the logging level)
-sed -i -e "s@print_debug@// print_debug@" ../src/enclave/enclave.cpp ../src/lockmanager/lockmanager.cpp
+sed -i -e "s@print_info@// print_info@" ../src/enclave/enclave.cpp ../src/enclave/lock_signatures.cpp ../src/lockmanager/lockmanager.cpp
 
 for thread in ${num_threads[*]}
 do
@@ -54,7 +55,7 @@ sed -i -e "s/numWorkerThreads = [0-9]*/numWorkerThreads = 1/" benchmark.cpp
 sed -i -e "s/lockBudget = [0-9]*/lockBudget = 10/" benchmark.cpp
 sed -i -e "s/arg.lock_table_size = [0-9]*/arg.lock_table_size = 10000/" ../src/lockmanager/lockmanager.cpp
 sed -i -e "s/<TCSNum>[0-9]*/<TCSNum>3/" ../src/enclave/enclave.config.xml
-sed -i -e "s@// print_debug@print_debug@" ../src/enclave/enclave.cpp ../src/lockmanager/lockmanager.cpp
+sed -i -e "s@// print_info@print_info@" ../src/enclave/enclave.cpp ../src/enclave/lock_signatures.cpp ../src/lockmanager/lockmanager.cpp
 
 rm $sealed_keys_file
 rm enclave.signed.so

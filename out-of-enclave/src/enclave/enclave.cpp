@@ -129,7 +129,8 @@ void enclave_process_request() {
       continue;
     }
 
-    print_info(("Worker " + std::to_string(thread_id) + " got a job").c_str());
+    auto log = ("Worker " + std::to_string(thread_id) + " got a job").c_str();
+    print_info(log);
     Job cur_job = queue[thread_id].front();
     Command command = cur_job.command;
 
@@ -148,15 +149,17 @@ void enclave_process_request() {
       case SHARED:
       case EXCLUSIVE: {
         if (command == EXCLUSIVE) {
-          print_info(
+          auto log =
               ("(EXCLUSIVE) TXID: " + std::to_string(cur_job.transaction_id) +
                ", RID: " + std::to_string(cur_job.row_id))
-                  .c_str());
+                  .c_str();
+          print_info(log);
         } else {
-          print_info(
+          auto log =
               ("(SHARED) TXID: " + std::to_string(cur_job.transaction_id) +
                ", RID: " + std::to_string(cur_job.row_id))
-                  .c_str());
+                  .c_str();
+          print_info(log);
         }
 
         // Acquire lock and receive signature
@@ -184,9 +187,10 @@ void enclave_process_request() {
         break;
       }
       case UNLOCK: {
-        print_info(("(UNLOCK) TXID: " + std::to_string(cur_job.transaction_id) +
+        auto log = ("(UNLOCK) TXID: " + std::to_string(cur_job.transaction_id) +
                     ", RID: " + std::to_string(cur_job.row_id))
-                       .c_str());
+                       .c_str();
+        print_info(log);
         release_lock(cur_job.transaction_id, cur_job.row_id);
         if (cur_job.wait_for_result) {
           *cur_job.finished = true;
@@ -197,26 +201,30 @@ void enclave_process_request() {
         auto transactionId = cur_job.transaction_id;
         auto lockBudget = cur_job.lock_budget;
 
-        print_info(("Registering transaction " + std::to_string(transactionId))
-                       .c_str());
+        auto log = ("Registering transaction " + std::to_string(transactionId))
+                       .c_str();
+        print_info(log);
 
         auto [transaction, entry] = integrity_verified_get_transactiontable(
             transactionTable_, transactionTableIntegrityHashes, transactionId);
         if (entry == nullptr) {
           print_error(
-              "Integrity verification failed on transaction table when "
+              "Integrity verification failed on transaction "
+              "table when "
               "registering");
           *cur_job.error = true;
         }
         if (transaction == nullptr || transaction->transaction_id != 0) {
-          // New transaction objects, that are created for new, not-yet
-          // registered transaction beforehand by the untrusted application
-          // always have their transaction ID set to 0 to differentiate them
-          // from already registered transactions
+          // New transaction objects, that are created for new,
+          // not-yet registered transaction beforehand by the
+          // untrusted application always have their transaction
+          // ID set to 0 to differentiate them from already
+          // registered transactions
           print_error("Transaction is already registered");
           *cur_job.error = true;
         } else {
-          // Register transaction by setting transaction ID and lock budget
+          // Register transaction by setting transaction ID and
+          // lock budget
           transaction->transaction_id = transactionId;
           transaction->lock_budget = lockBudget;
           transaction->aborted = false;
