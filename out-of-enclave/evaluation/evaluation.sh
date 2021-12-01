@@ -1,4 +1,4 @@
-num_threads=(1 2 4 8)
+num_threads=(1) # only tested single-threaded
 num_locks=(10 100 500 1000 2500 5000 10000 20000 50000 100000 150000 200000 300000 500000 700000)
 
 output_file=out.csv

@@ -186,27 +186,6 @@ void experiment(LockManager& lockManager, int numLocks, int numThreads) {
       }
     }
   }
-
-  // Locks are released in the same manner as they are acquired.
-  for (int base = 0; base < numLocks;
-       base +=
-       lockTableSize) {  // iterate over the multiples of the lock table size
-    for (int i = 1; i <= partitionSize; i++) {
-      for (int threadId = 0; threadId < numThreads;
-           threadId++) {  // iterate over the thread partitions
-        int rowId = base + threadId * partitionSize + i;
-        if (rowId > numLocks) continue;
-
-        if (waitOn.find(rowId) != waitOn.end()) {
-          lockManager.unlock(transactionA, rowId, true);
-          lockManager.unlock(transactionB, rowId, true);
-        } else {
-          lockManager.unlock(transactionA, rowId, false);
-          lockManager.unlock(transactionB, rowId, false);
-        }
-      }
-    }
-  }
 }
 
 auto main() -> int {
