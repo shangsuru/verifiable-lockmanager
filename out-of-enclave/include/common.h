@@ -6,10 +6,14 @@
  * This struct is used either as a transaction table, where the keys
  * resemble the TXIDs and the value the transaction structs or a lock table,
  * with RIDs as keys and lock structs as values.
+ *
+ * It implements Chained Hashing, where for each entry in the table a linked
+ * list, called bucket, is maintained that can store collisions.
  */
 typedef struct {
-  int size;
-  struct Entry** table;
+  int size;                   // number of buckets
+  struct Entry** table;       // list of linked list of entires, i.e. buckets
+  unsigned int* bucketSizes;  // list of number of entries for each bucket
 } HashTable;
 
 typedef struct Entry Entry;  // Required to use C++ structs as C structs

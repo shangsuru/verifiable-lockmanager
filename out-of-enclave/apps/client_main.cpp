@@ -11,7 +11,7 @@ void RunClient() {
 
   int transactionA = 1;
   int transactionB = 2;
-  int lockBudget = 100000;
+  int lockBudget = 10000;
   client.registerTransaction(transactionA, lockBudget);
   client.registerTransaction(transactionB, lockBudget);
   for (int rowId = 1; rowId <= lockBudget; rowId++) {

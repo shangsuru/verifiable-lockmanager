@@ -5,7 +5,7 @@
 
 class LockManagerTest : public ::testing::Test {
  protected:
-  void SetUp() override { spdlog::set_level(spdlog::level::info); };
+  void SetUp() override { spdlog::set_level(spdlog::level::off); };
 
   const unsigned int kTransactionIdA = 1;
   const unsigned int kTransactionIdB = 2;

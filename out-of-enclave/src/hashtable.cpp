@@ -7,6 +7,7 @@ HashTable* newHashTable(int size) {
   for (int i = 0; i < size; i++) {
     hashTable->table[i] = nullptr;
   }
+  hashTable->bucketSizes = new unsigned int[size];
   return hashTable;
 };
 
@@ -35,7 +36,8 @@ auto get(Entry* entry, int key) -> void* {
 }
 
 void set(HashTable* hashTable, int key, void* value) {
-  Entry* entry = hashTable->table[hash(hashTable->size, key)];
+  int position = hash(hashTable->size, key);
+  Entry* entry = hashTable->table[position];
 
   Entry* entryToInsert = new Entry();
   entryToInsert->key = key;
@@ -43,7 +45,8 @@ void set(HashTable* hashTable, int key, void* value) {
   entryToInsert->next = nullptr;
 
   if (entry == nullptr) {
-    hashTable->table[hash(hashTable->size, key)] = entryToInsert;
+    hashTable->table[position] = entryToInsert;
+    hashTable->bucketSizes[position]++;
     return;
   }
 
@@ -56,6 +59,7 @@ void set(HashTable* hashTable, int key, void* value) {
   }
 
   entry->next = entryToInsert;  // Add new entry at the end of the list
+  hashTable->bucketSizes[position]++;
 }
 
 auto contains(HashTable* hashTable, int key) -> bool {
@@ -72,16 +76,18 @@ auto contains(HashTable* hashTable, int key) -> bool {
 }
 
 void remove(HashTable* hashTable, int key) {
-  Entry* entry = hashTable->table[hash(hashTable->size, key)];
+  int position = hash(hashTable->size, key);
+  Entry* entry = hashTable->table[position];
 
   if (entry == nullptr) {
     return;
   }
 
   if (entry->key == key) {
-    hashTable->table[hash(hashTable->size, key)] = entry->next;
-    // delete entry; We don't wont to delete here, as deleting untrusted memory
-    // from enclave causes problems
+    hashTable->table[position] = entry->next;
+    hashTable->bucketSizes[position]--;
+    // delete entry; We don't want to free the memory here, as deleting
+    // untrusted memory from within the enclave causes an error
     return;
   }
 
@@ -90,8 +96,9 @@ void remove(HashTable* hashTable, int key) {
     if (next->key == key) {
       // delete it and return
       entry->next = next->next;
-      // delete next; We don't wont to delete here, as deleting untrusted memory
-      // from enclave causes problems
+      hashTable->bucketSizes[position]--;
+      // delete next; We don't want to free the memory here, as deleting
+      // untrusted memory from within the enclave causes causes an error
       return;
     }
     entry = next;

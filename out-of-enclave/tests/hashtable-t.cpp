@@ -3,6 +3,12 @@
 #include "hashtable.h"
 #include "lock.h"
 
+/*
+ ********************************
+ * GET
+ ********************************
+ */
+
 TEST(HashTableTest, getWhenListEmpty) {
   HashTable* hashTable = newHashTable(10);
   void* value = get(hashTable, 102);
@@ -36,6 +42,12 @@ TEST(HashTableTest, getElementNotFound) {
   EXPECT_EQ(value, nullptr);
 };
 
+/*
+ ********************************
+ * SET
+ ********************************
+ */
+
 TEST(HashTableTest, setWhenKeyAlreadyExists) {
   HashTable* hashTable = newHashTable(10);
   Lock* lock = newLock();
@@ -55,6 +67,12 @@ TEST(HashTableTest, setWhenKeyAlreadyExists) {
   EXPECT_EQ(value->exclusive, lock->exclusive);
   EXPECT_EQ(value->num_owners, lock->num_owners);
 };
+
+/*
+ ********************************
+ * CONTAINS
+ ********************************
+ */
 
 TEST(HashTableTest, containsListEmpty) {
   HashTable* hashTable = newHashTable(10);
@@ -80,6 +98,12 @@ TEST(HashTableTest, containsFalse) {
 
   EXPECT_FALSE(contains(hashTable, 32));
 };
+
+/*
+ ********************************
+ * REMOVE
+ ********************************
+ */
 
 TEST(HashTableTest, removeEmptyList) {
   HashTable* hashTable = newHashTable(10);
@@ -178,18 +202,24 @@ TEST(HashTableTest, removeElementNotFound) {
   EXPECT_TRUE(contains(hashTable, 42));
 };
 
+/*
+ ********************************
+ * MODIFYING POINTERS
+ ********************************
+ */
+
 TEST(HashTableTest, changeValue) {
   HashTable* hashTable = newHashTable(10);
-  Lock* lock = newLock();
+  Lock* lock = newLock();  // create a lock
   lock->exclusive = true;
   lock->num_owners = 4;
 
   set(hashTable, 12, (void*)newLock());
   set(hashTable, 22, (void*)newLock());
-  set(hashTable, 32, (void*)lock);
+  set(hashTable, 32, (void*)lock);  // insert it into the table
   set(hashTable, 42, (void*)newLock());
 
-  // Change value
+  // Change some values on the lock pointer
   lock->num_owners = 6;
   lock->exclusive = false;
 
@@ -198,3 +228,35 @@ TEST(HashTableTest, changeValue) {
   EXPECT_EQ(value->num_owners, 6);
   EXPECT_EQ(value->exclusive, false);
 };
+
+/*
+ ********************************
+ * BUCKET SIZES
+ ********************************
+ */
+
+TEST(HashTableTest, computesBucketSizesCorrectly) {
+  HashTable* hashTable = newHashTable(4);
+  set(hashTable, 4, (void*)newLock());
+  set(hashTable, 1, (void*)newLock());
+  set(hashTable, 5, (void*)newLock());
+  set(hashTable, 9, (void*)newLock());
+  set(hashTable, 3, (void*)newLock());
+
+  /**
+   * Visualization of the hash table after those five operations:
+   * [0] -> 4
+   * [1] -> 1, 5, 9
+   * [2] ->
+   * [3] -> 3
+   */
+
+  remove(hashTable, 5);
+
+  // Verify bucket sizes
+  // First bucket contains 1 element, a.s.o
+  EXPECT_EQ(hashTable->bucketSizes[0], 1);
+  EXPECT_EQ(hashTable->bucketSizes[1], 2);
+  EXPECT_EQ(hashTable->bucketSizes[2], 0);
+  EXPECT_EQ(hashTable->bucketSizes[3], 1);
+}
