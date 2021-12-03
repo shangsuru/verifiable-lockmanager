@@ -41,13 +41,10 @@ void release(Lock* lock, int transactionId) {
       for (int j = i; j < lock->num_owners - 1; j++) {
         lock->owners[j] = lock->owners[j + 1];
       }
-      wasOwner = true;
+      lock->exclusive = false;
+      lock->num_owners--;
       break;
     }
-  }
-  if (wasOwner) {
-    lock->exclusive = false;
-    lock->num_owners--;
   }
 }
 

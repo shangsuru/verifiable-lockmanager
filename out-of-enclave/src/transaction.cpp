@@ -56,21 +56,18 @@ void releaseLock(Transaction* transaction, int rowId, HashTable* lockTable) {
     }
   }
 
-  if (!wasOwner) {
-    return;
-  }
-
-  transaction->num_locked--;
-  transaction->growing_phase = false;
-  auto lock = (Lock*)get(lockTable, rowId);
-  if (lock != nullptr) {
-    release(lock, transaction->transaction_id);
-    if (lock->num_owners == 0) {
-      remove(lockTable, rowId);
-      // delete lock; -> issues with deleting locks in untrusted memory
+  if (wasOwner) {
+    transaction->num_locked--;
+    transaction->growing_phase = false;
+    auto lock = (Lock*)get(lockTable, rowId);
+    if (lock != nullptr) {
+      release(lock, transaction->transaction_id);
+      if (lock->num_owners == 0) {
+        remove(lockTable, rowId);
+        // delete lock; -> issues with deleting locks in untrusted memory
+      }
     }
   }
-  return;
 };
 
 auto hasLock(Transaction* transaction, int rowId) -> bool {

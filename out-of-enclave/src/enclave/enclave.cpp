@@ -280,119 +280,80 @@ auto acquire_lock(void *signature, int transactionId, int rowId,
     return false;
   }
 
+  if (transactionTrusted->lock_budget < 1) {
+    print_error("Lock budget is exhausted");
+    return false;
+  }
+
   // Get the lock object for the given row ID
   auto lockUntrusted = (Lock *)get(lockTable_, rowId);
-  auto [lockTrusted, lockEntry] = integrity_verified_get_locktable(
-      lockTable_, lockTableIntegrityHashes, rowId);
-  if (lockEntry == nullptr) {
-    print_error(
-        "Integrity verification failed on lock table when acquiring a lock");
-    return false;
-  }
-  if (lockTrusted == nullptr) {
-    print_error("Lock not allocated in untrusted app");
-    return false;
-  }
 
-  /*// Check if 2PL is violated TODO: Uncomment (error during benchmarking)
-  if (!transactionTrusted->growing_phase) {
-    print_error("Cannot acquire more locks according to 2PL");
-    goto abort;
-  }*/
+  auto [bucket, numEntries] = getBucket(lockTable_, rowId);
 
-  // Check if lock budget is enough
-  if (transactionTrusted->lock_budget < 1) {
-    print_error("Lock budget exhausted");
-    goto abort;
-  }
-
-  // Check for upgrade request
-  if (hasLock(transactionTrusted, rowId) && isExclusive &&
-      !lockTrusted->exclusive) {
-    // Apply operation on temporary trusted copy
-    ok = upgrade(lockTrusted, transactionId);
-
-    // Update lock table hash
-    update_integrity_hash_locktable(lockTable_, lockTableIntegrityHashes,
-                                    lockEntry);
-
-    // Make changes in untrusted memory
-    upgrade(lockUntrusted, transactionId);
-    if (!ok) {
-      goto abort;
+  uint32_t *serialized = locktable_bucket_to_uint32_t(bucket, numEntries);
+  if (numEntries == 1 &&
+      serialized[2] == 0) {  // only one empty lock with no owners
+    // note: untrusted part adds empty lock because we cannot allocate memory in
+    // untrusted part from within the enclave
+    if (lockTableIntegrityHashes[hash(lockTable_->size, rowId)] != nullptr) {
+      print_error(
+          "Integrity verification of lock bucket failed: Bucket should be "
+          "empty");
+      return false;
     }
-    goto sign;
+  } else {
+    sgx_sha256_hash_t *p_hash =
+        serialized[(numEntries - 1) * sizeOfSerializedLockEntry + 2] == 0
+            ?  // is the last entry an empty lock and should be ignored in the
+               // hash?
+            hash_locktable_bucket(serialized, numEntries - 1)
+            : hash_locktable_bucket(serialized, numEntries);
+    // skip the uninitialized lock struct at the beginning
+    sgx_sha256_hash_t *stored_hash =
+        lockTableIntegrityHashes[hash(lockTable_->size, rowId)];
+
+    bool equal = true;
+    // If both are nullptr, they are equal
+    if (!(p_hash == nullptr && stored_hash == nullptr)) {
+      if (p_hash == nullptr || stored_hash == nullptr) {
+        equal = false;  // if only one is nullptr they are unequal
+      } else {          // none is nullptr: compare values
+        for (int i = 0; i < SGX_SHA256_HASH_SIZE; i++) {
+          auto a = (*p_hash)[i];
+          auto b = (*stored_hash)[i];
+          if (a != b) {
+            equal = false;
+          }
+        }
+      }
+    }
+    free(p_hash);
+    if (!equal) {
+      print_error(
+          "Integrity verification of lock bucket failed: Hashes are not equal");
+      return false;
+    }
   }
 
-  // Acquire lock in requested mode (shared, exclusive)
-  if (!hasLock(transactionTrusted, rowId)) {
-    bool ok = addLock(transactionTrusted, rowId, isExclusive, lockTrusted);
-    update_integrity_hash_transactiontable(
-        transactionTable_, transactionTableIntegrityHashes, transactionEntry);
-    update_integrity_hash_locktable(lockTable_, lockTableIntegrityHashes,
-                                    lockEntry);
-
-    // Repeat operation in untrusted part
-    addLock(transactionUntrusted, rowId, isExclusive, lockUntrusted);
-
-    if (ok) {
-      goto sign;
-    }
-    goto abort;
-  }
-
-  print_error("Request for already acquired lock");
-
-abort:
-  // Abort transaction in both trusted and untrusted memory
-  for (int i = 0; i < transactionTrusted->num_locked; i++) {
-    int locked_row = transactionTrusted->locked_rows[i];
-    auto [lockToReleaseTrusted, trustedBucket] =
-        integrity_verified_get_locktable(lockTable_, lockTableIntegrityHashes,
-                                         locked_row);
-    if (trustedBucket == nullptr) {
-      print_error("Integrity verification failed");
-    }
-    auto lockToReleaseUntrusted = (Lock *)get(lockTable_, locked_row);
-
-    release(lockToReleaseTrusted, transactionTrusted->transaction_id);
-    release(lockToReleaseUntrusted, transactionTrusted->transaction_id);
-    if (lockToReleaseUntrusted->num_owners == 0) {
-      remove(lockTable_, locked_row);
-    }
-    update_integrity_hash_locktable(lockTable_, lockTableIntegrityHashes,
-                                    trustedBucket);
-    free_lock_bucket_copy(trustedBucket);
-  }
-  transactionTrusted->transaction_id = 0;
-  transactionTrusted->num_locked = 0;
-  transactionTrusted->aborted = true;
-
-  transactionUntrusted->transaction_id = 0;
-  transactionUntrusted->num_locked = 0;
-  transactionUntrusted->aborted = true;
-
-  // Recompute the hash over the bucket in protected memory
+  // Update stored hash
+  add_lock_trusted(transactionTrusted, rowId, isExclusive, serialized);
+  update_integrity_hash_locktable(serialized, hash(lockTable_->size, rowId),
+                                  numEntries, lockTableIntegrityHashes);
   update_integrity_hash_transactiontable(
       transactionTable_, transactionTableIntegrityHashes, transactionEntry);
 
-  transaction_count--;
-  remove(transactionTable_, transactionTrusted->transaction_id);
+  // Repeat operation in untrusted part
+  addLock(transactionUntrusted, rowId, isExclusive, lockUntrusted);
 
-  free_lock_bucket_copy(lockEntry);
-  free_transaction_bucket_copy(transactionEntry);
-  return false;
-
-sign:
+  // Sign the lock
   std::string string_to_sign =
-      lock_to_string(transactionId, rowId, lockTrusted->exclusive);
+      lock_to_string(transactionId, rowId, isExclusive);
 
   sgx_ecdsa_sign((uint8_t *)string_to_sign.c_str(),
                  strnlen(string_to_sign.c_str(), MAX_SIGNATURE_LENGTH),
                  &ec256_private_key, (sgx_ec256_signature_t *)signature,
                  contexts[threadId]);
 
-  free_lock_bucket_copy(lockEntry);
   free_transaction_bucket_copy(transactionEntry);
   return true;
 }
@@ -410,37 +371,56 @@ void release_lock(int transactionId, int rowId) {
     return;
   }
 
-  // Get the lock from untrusted memory and a trusted copy
-  auto [lockTrusted, lockEntry] = integrity_verified_get_locktable(
-      lockTable_, lockTableIntegrityHashes, rowId);
+  // Get the lock object for the given row ID
   auto lockUntrusted = (Lock *)get(lockTable_, rowId);
 
-  if (lockTrusted == nullptr) {
-    print_error("Lock does not exist");
+  auto [bucket, numEntries] = getBucket(lockTable_, rowId);
+  uint32_t *serialized = locktable_bucket_to_uint32_t(bucket, numEntries);
+  sgx_sha256_hash_t *p_hash = hash_locktable_bucket(serialized, numEntries);
+  sgx_sha256_hash_t *stored_hash =
+      lockTableIntegrityHashes[hash(lockTable_->size, rowId)];
+
+  bool equal = true;
+  // If both are nullptr, they are equal
+  if (!(p_hash == nullptr && stored_hash == nullptr)) {
+    if (p_hash == nullptr || stored_hash == nullptr) {
+      equal = false;  // if only one is nullptr they are unequal
+    } else {          // none is nullptr: compare values
+      for (int i = 0; i < SGX_SHA256_HASH_SIZE; i++) {
+        auto a = (*p_hash)[i];
+        auto b = (*stored_hash)[i];
+        if (a != b) {
+          equal = false;
+        }
+      }
+    }
+  }
+
+  free(p_hash);
+  if (!equal) {
+    print_error("Integrity verification of lock bucket failed during UNLOCK");
     return;
   }
 
-  // Release lock in trusted memory and update integrity hash
-  HashTable *trustedLockTable = newHashTable(lockTable_->size);
-  trustedLockTable->table[hash(trustedLockTable->size, rowId)] = lockEntry;
-  releaseLock(transactionTrusted, rowId, trustedLockTable);
+  // Update stored hash
+  bool entryWasDeleted =
+      release_lock_trusted(transactionTrusted, rowId, serialized, numEntries);
+  if (entryWasDeleted) {
+    numEntries--;
+  }
+  update_integrity_hash_locktable(serialized, hash(lockTable_->size, rowId),
+                                  numEntries, lockTableIntegrityHashes);
+
   update_integrity_hash_transactiontable(
       transactionTable_, transactionTableIntegrityHashes, transactionEntry);
-  update_integrity_hash_locktable(lockTable_, lockTableIntegrityHashes,
-                                  lockEntry);
 
   // Repeat operation in untrusted memory
   releaseLock(transactionUntrusted, rowId, lockTable_);
-
-  delete[] trustedLockTable->table;
-  delete trustedLockTable;
 
   // If the transaction released its last lock,
   // delete it
   if (transactionTrusted->num_locked == 0) {
     remove(transactionTable_, transactionId);
   }
-
-  free_lock_bucket_copy(lockEntry);
   free_transaction_bucket_copy(transactionEntry);
 }

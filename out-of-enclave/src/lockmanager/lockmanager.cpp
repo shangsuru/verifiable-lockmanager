@@ -39,7 +39,7 @@ void LockManager::configuration_init(int numWorkerThreads) {
       numWorkerThreads + 1;  // one single thread for transaction table
   arg.tx_thread_id = arg.num_threads - 1;
   arg.lock_table_size = 10000;
-  arg.transaction_table_size = 200;
+  arg.transaction_table_size = 2;
 }
 
 LockManager::LockManager(int numWorkerThreads) {

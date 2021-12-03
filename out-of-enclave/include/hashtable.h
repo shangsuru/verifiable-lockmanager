@@ -27,6 +27,18 @@ Entry* newEntry(int key, void* value);
 int hash(int size, int key);
 
 /**
+ * Returns the bucket of the hashtable
+ *
+ * @param table the hashtable struct
+ * @param key the key of the lock or transaction (the key will be hashed to
+ * determine its position in the table)
+ *
+ * @returns a pointer to the head entry of the bucket and the number of entries
+ * in that bucket
+ */
+std::pair<Entry*, int> getBucket(HashTable* table, int key);
+
+/**
  * Retrieves the value for the given key from a hashtable.
  *
  * @param hashTable either the lock or transaction table to execute the

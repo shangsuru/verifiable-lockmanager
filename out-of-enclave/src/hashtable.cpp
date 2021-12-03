@@ -8,6 +8,9 @@ HashTable* newHashTable(int size) {
     hashTable->table[i] = nullptr;
   }
   hashTable->bucketSizes = new unsigned int[size];
+  for (int i = 0; i < size; i++) {
+    hashTable->bucketSizes[i] = 0;
+  }
   return hashTable;
 };
 
@@ -16,6 +19,11 @@ Entry* newEntry(int key, void* value) {
   entry->key = key;
   entry->value = value;
   return entry;
+}
+
+std::pair<Entry*, int> getBucket(HashTable* table, int key) {
+  int position = hash(table->size, key);
+  return std::make_pair(table->table[position], table->bucketSizes[position]);
 }
 
 int hash(int size, int key) { return key % size; }

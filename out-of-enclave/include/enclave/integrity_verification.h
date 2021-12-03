@@ -9,15 +9,7 @@
 #include "sgx_trts.h"
 #include "transaction.h"
 
-/**
- * This function takes an entry of a lock table and serializes it into uint8_t*,
- * which is the required parameter type for the sgx_sha256_hash function.
- *
- * @param entry the entry that should be serialized to a uint8_t* (the
- * entry should contain locks as values)
- * @param result the serialized entry
- */
-void locktable_entry_to_uint8_t(Entry *entry, uint8_t *&result);
+extern int sizeOfSerializedLockEntry;
 
 /**
  * This function takes an entry of a lock table and serializes it into uint8_t*,
@@ -62,41 +54,25 @@ void update_integrity_hash_transactiontable(
  * Computes the hash over the given bucket from the lock table and updates the
  * integrity hashes stored inside the enclave.
  *
- * @param lockTable_ the lock table to compute the hash over
- * @param lockTableIntegrityHashes where to save the newly computed hash
- * @param entry the bucket to compute the new integrity hash over
+ * @param bucket
+ * @param key
+ * @param numEntries
+ * @param lockTableIntegrityHashes
  */
 void update_integrity_hash_locktable(
-    HashTable *&lockTable_,
-    std::vector<sgx_sha256_hash_t *> &lockTableIntegrityHashes, Entry *entry);
+    uint32_t *bucket, int key, int numEntries,
+    std::vector<sgx_sha256_hash_t *> &lockTableIntegrityHashes);
 
 /**
- * Copies the whole bucket from untrusted to protected memory. The entries are
- * assumed to contain locks.
- *
- * @param entry entry from untrusted memory to copy
- * @returns copy in protected memory
- */
-auto copy_lock_bucket(Entry *entry) -> Entry *;
-
-/**
- * Frees the memory allocated by copy_lock_bucket()
- *
- * @param copy the bucket created by copy_lock_bucket()
- */
-void free_lock_bucket_copy(Entry *&copy);
-
-/**
- * Hashes a bucket of the lock table. The hash is saved by the enclave and can
- * be used to detect if the contents of the bucket was altered, by computing
- * the hash again and comparing it with the saved hash. If
- * they don't match, then something inside the bucket changed. The hash does not
- * include locks without owners.
+ * Hashes a bucket of the lock table. The hash is saved by the enclave
+ * and can be used to detect if the contents of the bucket was altered, by
+ * computing the hash again and comparing it with the saved hash. If they don't
+ * match, then something inside the bucket changed.
  *
  * @param bucket the bucket to compute the hash over
  * @returns the hash over the given bucket
  */
-auto hash_locktable_bucket(Entry *bucket) -> sgx_sha256_hash_t *;
+auto hash_transactiontable_bucket(Entry *bucket) -> sgx_sha256_hash_t *;
 
 /**
  * Hashes a bucket of the transaction table. The hash is saved by the enclave
@@ -108,23 +84,8 @@ auto hash_locktable_bucket(Entry *bucket) -> sgx_sha256_hash_t *;
  * @param bucket the bucket to compute the hash over
  * @returns the hash over the given bucket
  */
-auto hash_transactiontable_bucket(Entry *bucket) -> sgx_sha256_hash_t *;
-
-/**
- * Gets the entry from the lock table, but verifies the integrity of the
- * corresponding bucket via integrity hashes.
- *
- * @param lockTable_ the lock table to get the lock from
- * @param lockTableIntegrityhashes hash over each bucket of the transaction
- * table
- * @param key the row ID
- * @returns the lock for the corresponding key, or
- * nullptr, when the verification of the hashes failed
- */
-auto integrity_verified_get_locktable(
-    HashTable *&lockTable_,
-    std::vector<sgx_sha256_hash_t *> &lockTableIntegrityHashes, int key)
-    -> std::pair<Lock *, Entry *>;
+auto hash_locktable_bucket(uint32_t *bucket, int numEntries)
+    -> sgx_sha256_hash_t *;
 
 /**
  * Verifies the integrity hashes on a copy of the bucket in protected
@@ -150,3 +111,40 @@ auto integrity_verified_get_transactiontable(
     HashTable *&transactionTable_,
     std::vector<sgx_sha256_hash_t *> transactionTableIntegrityHashes, int key)
     -> std::pair<Transaction *, Entry *>;
+
+/**
+ * Serializes an entire bucket of the lock table into an uint32_t array that is
+ * memory efficient and can be directly passed as a parameter to Intel SGX's
+ * hash function for integrity verification.
+ *
+ * @param bucket a pointer to the first entry of the bucket
+ * @param numEntries how many entries are in the given bucket
+ * @returns the serialized bucket
+ */
+auto locktable_bucket_to_uint32_t(Entry *&bucket, int numEntries) -> uint32_t *;
+
+/**
+ * Adds a lock in the serialized bucket
+ * @param transaction the (trusted) transaction that wants to acquire the lock
+ * @param rowId the rowId of the lock to acquire
+ * @param isExclusive if the lock should be exclusive or shared
+ * @param serializedLockBucket
+ * @returns true if the lock was acquired successfully, or false if the lock
+ * couldn't get acquired, e.g. because it is already exclusive or integrity
+ * verification failed.
+ */
+auto add_lock_trusted(Transaction *transaction, int rowId, bool isExclusive,
+                      uint32_t *serializedLockBucket) -> bool;
+
+/**
+ * Removes a lock in the serialized bucket
+ * @param transaction the (trusted) transaction that wants to release the lock
+ * @param rowId the rowId of the lock to release
+ * @param bucket the serialized bucket
+ * @param numEntries how many entries the serialized bucket has
+ * @returns true if the lock was acquired successfully, or false if the lock
+ * couldn't get acquired, e.g. because it is already exclusive or integrity
+ * verification failed.
+ */
+auto release_lock_trusted(Transaction *transaction, int rowId, uint32_t *bucket,
+                          int numEntries) -> bool;

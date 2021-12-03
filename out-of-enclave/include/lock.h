@@ -14,7 +14,7 @@ using std::memcpy;
  * have to set an upper limit on the number of owners of a lock, i.e. the number
  * of concurrent transactions.
  */
-const int kTransactionBudget = 200;
+const int kTransactionBudget = 2;
 
 /**
  * The internal representation of a lock for the lock manager.
