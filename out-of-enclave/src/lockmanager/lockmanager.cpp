@@ -53,8 +53,7 @@ LockManager::LockManager(int numWorkerThreads) {
   }
 
   lockTable = newHashTable(arg.lock_table_size);
-  transactionTable = newHashTable(arg.transaction_table_size);
-  enclave_init_values(global_eid, arg, lockTable, transactionTable);
+  enclave_init_values(global_eid, arg, lockTable);
 
   // Create worker threads inside the enclave to serve lock requests and
   // registrations of transactions
@@ -92,21 +91,11 @@ LockManager::~LockManager() {
   sgx_destroy_enclave(global_eid);
 
   delete[] lockTable->table;
-  delete[] transactionTable->table;
   delete lockTable;
-  delete transactionTable;
 }
 
 auto LockManager::registerTransaction(int transactionId, int lockBudget)
     -> bool {
-  new_transaction_mut.lock();
-  auto transaction = (Transaction *)get(transactionTable, transactionId);
-  if (transaction != nullptr && transaction->transaction_id != 0) {
-    spdlog::error("Transaction already registered");
-    return false;
-  }
-  set(transactionTable, transactionId, (void *)newTransaction(lockBudget));
-  new_transaction_mut.unlock();
   return create_enclave_job(REGISTER, transactionId, 0, lockBudget).second;
 };
 

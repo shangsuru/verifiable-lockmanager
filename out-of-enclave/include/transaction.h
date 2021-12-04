@@ -42,11 +42,12 @@ typedef struct Transaction Transaction;
  * application always have their transaction ID set to -1 to differentiate them
  * from transaction objects refering to already registered transactions.
  *
+ * @param transactionId identifies the transaction
  * @param lockBudget maximum number of locks the transaction is allowed to
  * acquire
  * @returns a pointer to the transaction struct
  */
-Transaction* newTransaction(int lockBudget);
+Transaction* newTransaction(int transactionId, int lockBudget);
 
 /**
  * When the transaction acquires a new lock, the row ID that lock refers to is

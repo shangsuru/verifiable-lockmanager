@@ -1,9 +1,8 @@
 #include "transaction.h"
 
-Transaction* newTransaction(int lockBudget) {
+Transaction* newTransaction(int transactionId, int lockBudget) {
   Transaction* transaction = new Transaction();
-  transaction->transaction_id =
-      0;  // zero for newly initialized transaction structs!
+  transaction->transaction_id = transactionId;
   transaction->aborted = false;
   transaction->growing_phase = true;
   transaction->lock_budget = lockBudget;

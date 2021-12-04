@@ -65,7 +65,6 @@ void print_warn(const char *str);
 class LockManager {
  public:
   HashTable *lockTable;
-  HashTable *transactionTable;
 
   /**
    * Initializes the enclave and seals the public and private key for signing.

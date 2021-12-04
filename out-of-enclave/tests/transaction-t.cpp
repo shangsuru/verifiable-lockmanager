@@ -12,10 +12,8 @@ class TransactionTest : public ::testing::Test {
  protected:
   void SetUp() override {
     lock_ = newLock();
-    transactionA_ = newTransaction(kLockBudget_);
-    transactionA_->transaction_id = kTransactionIdA_;
-    transactionB_ = newTransaction(kLockBudget_);
-    transactionB_->transaction_id = kTransactionIdB_;
+    transactionA_ = newTransaction(kTransactionIdA_, kLockBudget_);
+    transactionB_ = newTransaction(kTransactionIdB_, kLockBudget_);
     lockTable_ = newHashTable(100);
   };
 

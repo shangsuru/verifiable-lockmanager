@@ -7,142 +7,11 @@ int sizeOfSerializedLockEntry =
 const int serializedLockBucketSize = 70 * sizeOfSerializedLockEntry;
 uint32_t *serializedLockBucket = new uint32_t[serializedLockBucketSize];
 
-auto hash_transactiontable_bucket(Entry *bucket) -> sgx_sha256_hash_t * {
-  if (bucket == nullptr ||
-      ((Transaction *)bucket->value)->transaction_id == 0) {
-    // Bucket is empty or contains only unregistered transaction
-    return nullptr;
-  }
-
-  Entry *entry = bucket;
-  const int numTransactionEntryFields = 6;
-  uint32_t size =
-      numTransactionEntryFields +
-      SGX_SHA256_HASH_SIZE;  // size of the serialized entry, see function
-                             // transactiontable_entry_to_uint8_t
-  uint8_t *data = new uint8_t[size];  // the serialized entry with transaction
-  sgx_status_t ret;                   // status code of sgx library calls
-
-  // To hold the hash over the entries in the bucket
-  sgx_sha256_hash_t *p_hash =
-      (sgx_sha256_hash_t *)malloc(sizeof(sgx_sha256_hash_t));
-
-  // Need to initialize a handle struct, when we incrementally build the hash
-  sgx_sha_state_handle_t *p_sha_handle =
-      (sgx_sha_state_handle_t *)malloc(sizeof(sgx_sha_state_handle_t));
-  ret = sgx_sha256_init(p_sha_handle);
-  if (ret != SGX_SUCCESS) {
-    print_error("Initializing SHA handler failed");
-  }
-
-  do {  // Update the hash with each entry in the bucket
-    // Only include registered transactions
-    if (((Transaction *)entry->value)->transaction_id != 0) {
-      transactiontable_entry_to_uint8_t(entry, data);
-      ret = sgx_sha256_update(data, size, *p_sha_handle);
-      if (ret != SGX_SUCCESS) {
-        print_error("Updating transaction table hash failed");
-      }
-    }
-    entry = entry->next;
-  } while (entry != nullptr);
-
-  delete[] data;
-  ret = sgx_sha256_get_hash(*p_sha_handle, p_hash);
-  if (ret != SGX_SUCCESS) {
-    print_error("Getting hash failed");
-  }
-
-  ret = sgx_sha256_close(*p_sha_handle);
-  if (ret != SGX_SUCCESS) {
-    print_error("Closing SHA handle failed");
-  }
-  free(p_sha_handle);
-  return p_hash;
-}
-
-auto integrity_verified_get_transactiontable(
-    HashTable *&transactionTable_,
-    std::vector<sgx_sha256_hash_t *> transactionTableIntegrityHashes, int key)
-    -> std::pair<Transaction *, Entry *> {
-  int index = hash(transactionTable_->size, key);
-  Entry *entry = transactionTable_->table[index];
-
-  // Need to copy bucket from untrusted to protected memory to prevent malicious
-  // modifications during integrity verification
-  Entry *copy = copy_transaction_bucket(entry);
-
-  // Verify the integrity of the bucket by checking if recomputed and saved hash
-  // are the same
-  sgx_sha256_hash_t *recomputed_hash = hash_transactiontable_bucket(entry);
-  sgx_sha256_hash_t *saved_hash = transactionTableIntegrityHashes[index];
-
-  bool equal = true;
-  // If both are nullptr, they are equal
-  if (!(recomputed_hash == nullptr && saved_hash == nullptr)) {
-    if (recomputed_hash == nullptr || saved_hash == nullptr) {
-      equal = false;  // if only one is nullptr they are unequal
-    } else {          // none is nullptr: compare values
-      for (int i = 0; i < SGX_SHA256_HASH_SIZE; i++) {
-        auto a = (*recomputed_hash)[i];
-        auto b = (*saved_hash)[i];
-        if (a != b) {
-          equal = false;
-        }
-      }
-    }
-  }
-  free(recomputed_hash);
-
-  if (equal) {
-    return std::make_pair((Transaction *)get(copy, key), copy);
-  }
-
-  // Hashes are not the same
-  if (copy != nullptr) {
-    free_transaction_bucket_copy(copy);
-  }
-  return std::make_pair(nullptr, nullptr);
-}
-
-auto copy_transaction_bucket(Entry *entry) -> Entry * {
-  if (entry == nullptr) {
-    return nullptr;
-  }
-
-  Entry *copy =
-      newEntry(entry->key, copy_transaction((Transaction *)entry->value));
-  copy->next = copy_transaction_bucket(entry->next);
-  return copy;
-}
-
-void free_transaction_bucket_copy(Entry *&copy) {
-  auto nextEntry = copy->next;
-  auto transaction = (Transaction *)copy->value;
-  free_transaction_copy(transaction);
-  delete copy;
-  if (nextEntry != nullptr) {
-    free_transaction_bucket_copy(nextEntry);
-  }
-}
-
-void update_integrity_hash_transactiontable(
-    HashTable *&transactionTable_,
-    std::vector<sgx_sha256_hash_t *> &transactionTableIntegrityHashes,
-    Entry *entry) {
-  sgx_sha256_hash_t *p_hash = hash_transactiontable_bucket(entry);
-
-  // Free old hash
-  free(transactionTableIntegrityHashes[hash(transactionTable_->size,
-                                            entry->key)]);
-
-  // Update hash
-  transactionTableIntegrityHashes[hash(transactionTable_->size, entry->key)] =
-      p_hash;
-}
-
 auto hash_locktable_bucket(uint32_t *bucket, int numEntries)
     -> sgx_sha256_hash_t * {
+  if (numEntries == 0) {
+    return nullptr;
+  }
   sgx_sha256_hash_t *p_hash =
       (sgx_sha256_hash_t *)malloc(sizeof(sgx_sha256_hash_t));
   // because the bucket contains "numEntries" entries of size
@@ -156,16 +25,8 @@ auto hash_locktable_bucket(uint32_t *bucket, int numEntries)
 void update_integrity_hash_locktable(
     uint32_t *bucket, int key, int numEntries,
     std::vector<sgx_sha256_hash_t *> &lockTableIntegrityHashes) {
-  // Free old hash
   free(lockTableIntegrityHashes[key]);
-
-  // Update hash
-  if (numEntries == 0) {
-    lockTableIntegrityHashes[key] = nullptr;
-  } else {
-    sgx_sha256_hash_t *p_hash = hash_locktable_bucket(bucket, numEntries);
-    lockTableIntegrityHashes[key] = p_hash;
-  }
+  lockTableIntegrityHashes[key] = hash_locktable_bucket(bucket, numEntries);
 }
 
 void transactiontable_entry_to_uint8_t(Entry *&entry, uint8_t *&result) {
@@ -267,21 +128,6 @@ auto add_lock_trusted(Transaction *transaction, int rowId, bool isExclusive,
     }
   }
 
-  if (ret) {
-    if (transaction->num_locked == 0) {
-      transaction->locked_rows = new int[1];
-      transaction->locked_rows[0] = rowId;
-    } else {
-      transaction->locked_rows =
-          (int *)realloc(transaction->locked_rows,
-                         sizeof(int) * (transaction->num_locked + 1));
-      transaction->locked_rows[transaction->num_locked] = rowId;
-    }
-
-    transaction->num_locked++;
-    transaction->lock_budget--;
-  }
-
   return ret;
 }
 
@@ -290,18 +136,12 @@ auto release_lock_trusted(Transaction *transaction, int rowId, uint32_t *bucket,
   bool wasOwner = false;
   for (int i = 0; i < transaction->num_locked; i++) {
     if (transaction->locked_rows[i] == rowId) {
-      for (int j = i; j < transaction->num_locked - 1; j++) {
-        transaction->locked_rows[j] = transaction->locked_rows[j + 1];
-      }
       wasOwner = true;
       break;
     }
   }
 
   if (wasOwner) {
-    transaction->num_locked--;
-    transaction->growing_phase = false;
-
     int transactionId = transaction->transaction_id;
     // Find the lock inside the serialized bucket
     int i = 0;  // start index of the serialized lock entry
@@ -335,6 +175,29 @@ auto release_lock_trusted(Transaction *transaction, int rowId, uint32_t *bucket,
       }
       return true;
     }
-    return false;
   }
+  return false;
+}
+
+auto verify_against_stored_hash(uint32_t *serialized, int numEntries,
+                                sgx_sha256_hash_t *stored_hash) -> bool {
+  sgx_sha256_hash_t *p_hash = hash_locktable_bucket(serialized, numEntries);
+
+  bool equal = true;
+  // If both are nullptr, they are equal
+  if (!(p_hash == nullptr && stored_hash == nullptr)) {
+    if (p_hash == nullptr || stored_hash == nullptr) {
+      equal = false;  // if only one is nullptr they are unequal
+    } else {          // none is nullptr: compare values
+      for (int i = 0; i < SGX_SHA256_HASH_SIZE; i++) {
+        auto a = (*p_hash)[i];
+        auto b = (*stored_hash)[i];
+        if (a != b) {
+          equal = false;
+        }
+      }
+    }
+  }
+  free(p_hash);
+  return equal;
 }

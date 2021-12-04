@@ -12,45 +12,6 @@
 extern int sizeOfSerializedLockEntry;
 
 /**
- * This function takes an entry of a lock table and serializes it into uint8_t*,
- * which is the required parameter type for the sgx_sha256_hash function.
- *
- * @param entry the entry that should be serialized to a uint8_t* (the
- * entry should contain transactions as values)
- * @param result the serialized entry
- */
-void transactiontable_entry_to_uint8_t(Entry *&entry, uint8_t *&result);
-
-/**
- * Copies the whole bucket from untrusted to protected memory. The entries
- * are assumed to contain transactions.
- *
- * @param entry entry from untrusted memory to copy
- * @returns copy in protected memory
- */
-auto copy_transaction_bucket(Entry *entry) -> Entry *;
-
-/**
- * Frees the memory allocated by copy_transaction_bucket()
- *
- * @param copy the bucket created by copy_transaction_bucket()
- */
-void free_transaction_bucket_copy(Entry *&copy);
-
-/**
- * Computes the hash over the given bucket from the transaction table and
- * updates the integrity hashes stored inside the enclave.
- *
- * @param transactionTable_ the transaction table to compute the hash over
- * @param transactionTableIntegrityHashes where to save the newly computed hash
- * @param entry the bucket to compute the new integrity hash over
- */
-void update_integrity_hash_transactiontable(
-    HashTable *&transactionTable_,
-    std::vector<sgx_sha256_hash_t *> &transactionTableIntegrityHashes,
-    Entry *entry);
-
-/**
  * Computes the hash over the given bucket from the lock table and updates the
  * integrity hashes stored inside the enclave.
  *
@@ -148,3 +109,18 @@ auto add_lock_trusted(Transaction *transaction, int rowId, bool isExclusive,
  */
 auto release_lock_trusted(Transaction *transaction, int rowId, uint32_t *bucket,
                           int numEntries) -> bool;
+
+/**
+ * Checks if the stored hash is the same as the hash of the given serialized
+ * bucket
+ *
+ * @param serialized serialized form of the recently fetched lock table bucket
+ * @param numEntries how many entries the given lock table bucket contains
+ * @param storedHash the previously computed hash over the lock table bucket
+ * @returns true if the integrity verification was successful, i.e., the hash
+ * computed over the bucket in untrusted memory is the same as the one
+ * previously computed and stored inside the enclave, meaning no change was done
+ * to the lock table in untrusted memory
+ */
+auto verify_against_stored_hash(uint32_t *serialized, int numEntries,
+                                sgx_sha256_hash_t *stored_hash) -> bool;

@@ -23,7 +23,7 @@ long* p = new long[bigger_than_cachesize];
 int transactionA = 1;
 int transactionB = 2;
 
-int lockBudget = 10000;     // how many locks to acquire
+int lockBudget = 10;     // how many locks to acquire
 const int repetitions = 1;  // repeats the same experiments several times
 int numWorkerThreads = 1;
 const int lockTableSize = 10000;  // lockBudget;

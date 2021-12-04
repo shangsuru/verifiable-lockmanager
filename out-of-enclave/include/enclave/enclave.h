@@ -27,10 +27,9 @@ HashTable *transactionTable_;
 // Keeps track of a lock object for each row ID
 HashTable *lockTable_;
 
-/* Contains a list of hashes over the buckets of the table, which is used to
- * verify the integrity of the lock table. If the hash is recomputed and has
+/* Contains a list of hashes over the buckets of the lock table, which is used
+ * to verify the integrity of the lock table: If the hash is recomputed and has
  * changed, it means the contents of the bucket changed.*/
-std::vector<sgx_sha256_hash_t *> transactionTableIntegrityHashes;
 std::vector<sgx_sha256_hash_t *> lockTableIntegrityHashes;
 
 // Contains configuration parameters
@@ -46,11 +45,9 @@ extern int transactionCount;
  * @param arg configuration parameters
  * @param lock_table pointer to lock table whose memory was allocated in the
  * untrusted part
- * @param transaction_table pointer to transaction table whose memory was
  * allocated in the untrusted part
  */
-void enclave_init_values(Arg arg, HashTable *lock_table,
-                         HashTable *transaction_table);
+void enclave_init_values(Arg arg, HashTable *lock_table);
 
 /**
  * Function that receives a job from the untrusted application.
