@@ -27,7 +27,17 @@ auto addLock(Transaction* transaction, int rowId, bool isExclusive, Lock* lock)
   }
 
   if (ret) {
-    transaction->locked_rows[transaction->num_locked++] = rowId;
+    if (transaction->num_locked == 0) {
+      transaction->locked_rows = new int[1];
+      transaction->locked_rows[0] = rowId;
+    } else {
+      transaction->locked_rows =
+          (int*)realloc(transaction->locked_rows,
+                        sizeof(int) * (transaction->num_locked + 1));
+      transaction->locked_rows[transaction->num_locked] = rowId;
+    }
+
+    transaction->num_locked++;
     transaction->lock_budget--;
   }
 
@@ -96,7 +106,11 @@ auto copy_transaction(Transaction* transaction) -> void* {
   int num_locked = transaction->num_locked;
   copy->num_locked = num_locked;
 
-  copy->locked_rows = new int[copy->locked_rows_size];
+  if (copy->num_locked > 0) {
+    copy->locked_rows = new int[copy->num_locked];
+  } else {
+    copy->locked_rows = nullptr;
+  }
   for (int i = 0; i < num_locked; i++) {
     copy->locked_rows[i] = transaction->locked_rows[i];
   }

@@ -16,7 +16,7 @@ TEST(LockTest, sharedAccess) {
   getSharedAccess(lock, 4);
 
   EXPECT_FALSE(lock->exclusive);
-  EXPECT_EQ(lock->owners.size(), 4);
+  EXPECT_EQ(lock->owners_size, 4);
 };
 
 // Exclusive access works
@@ -24,8 +24,16 @@ TEST(LockTest, exclusiveAccess) {
   Lock* lock = newLock();
   getExclusiveAccess(lock, kTransactionIdA);
   EXPECT_TRUE(lock->exclusive);
-  EXPECT_EQ(lock->owners.size(), 1);
-  EXPECT_TRUE(lock->owners.find(kTransactionIdA) != lock->owners.end());
+  EXPECT_EQ(lock->owners_size, 1);
+
+  bool containsId = false;
+  for (int i = 0; i < lock->owners_size; i++) {
+    if (lock->owners[i] == kTransactionIdA) {
+      containsId = true;
+    }
+  }
+
+  EXPECT_TRUE(containsId);
 }
 
 // Cannot acquire shared access on an exclusive lock
@@ -55,8 +63,16 @@ TEST(LockTest, upgrade) {
   EXPECT_TRUE(getSharedAccess(lock, kTransactionIdA));
   EXPECT_TRUE(upgrade(lock, kTransactionIdA));
   EXPECT_TRUE(lock->exclusive);
-  EXPECT_EQ(lock->owners.size(), 1);
-  EXPECT_TRUE(lock->owners.find(kTransactionIdA) != lock->owners.end());
+  EXPECT_EQ(lock->owners_size, 1);
+
+  bool containsId = false;
+  for (int i = 0; i < lock->owners_size; i++) {
+    if (lock->owners[i] == kTransactionIdA) {
+      containsId = true;
+    }
+  }
+
+  EXPECT_TRUE(containsId);
 }
 
 TEST(LockTest, releaseUnownedLock) {
@@ -66,6 +82,14 @@ TEST(LockTest, releaseUnownedLock) {
   release(lock, kTransactionIdB);
   // This has no effect, A still owns the lock
   EXPECT_TRUE(lock->exclusive);
-  EXPECT_EQ(lock->owners.size(), 1);
-  EXPECT_TRUE(lock->owners.find(kTransactionIdA) != lock->owners.end());
+  EXPECT_EQ(lock->owners_size, 1);
+
+  bool containsId = false;
+  for (int i = 0; i < lock->owners_size; i++) {
+    if (lock->owners[i] == kTransactionIdA) {
+      containsId = true;
+    }
+  }
+
+  EXPECT_TRUE(containsId);
 }

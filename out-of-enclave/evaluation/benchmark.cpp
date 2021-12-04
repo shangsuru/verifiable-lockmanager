@@ -23,19 +23,10 @@ long* p = new long[bigger_than_cachesize];
 int transactionA = 1;
 int transactionB = 2;
 
-/*
-vector<int> lockBudgets = {
-    10,    100,   500,   1000,   2500,   5000,
-    10000, 20000, 50000, 100000, 150000, 200000};  // how many locks to acquire
-    */
-vector<int> lockBudgets = {10};
-const int lockTableSize = 10000;
-const int repetitions = 10;  // repeats the same experiments several times
-int numWorkerThreads =
-    1;  // this is just written to the CSV file and has no influence
-        // on the actual number of worker threads. These need to be
-        // adapted separately in the respective lockmanager.cpp file
-        // (search for "arg.num_threads")
+int lockBudget = 10000;     // how many locks to acquire
+const int repetitions = 1;  // repeats the same experiments several times
+int numWorkerThreads = 1;
+const int lockTableSize = lockBudget;
 
 void flushCache() {
   for (int i = 0; i < bigger_than_cachesize; i++) {
@@ -51,7 +42,7 @@ void flushCache() {
  */
 void writeToCSV(string filename, vector<vector<long>> values) {
   ofstream file;
-  file.open(filename + ".csv");
+  file.open(filename + ".csv", std::ios_base::app);
 
   for (const auto& row : values) {
     for (int i = 0; i < row.size() - 1; i++) {
@@ -151,7 +142,7 @@ void experiment(LockManager& lockManager, int numLocks, int numThreads) {
       for (int threadId = 0; threadId < numThreads;
            threadId++) {  // iterate over the thread partitions
         int rowId = base + threadId * partitionSize + i;
-
+        if (rowId > numLocks) continue;
         /**
          * Usually clients waited until their lock request returns the
          * signature, so all requests from a single client would end up being
@@ -165,7 +156,7 @@ void experiment(LockManager& lockManager, int numLocks, int numThreads) {
         if (waitOn.find(rowId) != waitOn.end()) {
           lockManager.lock(transactionA, rowId, false, true);
         } else {
-          lockManager.lock(transactionA, rowId, false, false);
+          lockManager.lock(transactionA, rowId, false, true);
         }
       }
     }
@@ -184,11 +175,12 @@ void experiment(LockManager& lockManager, int numLocks, int numThreads) {
       for (int threadId = 0; threadId < numThreads;
            threadId++) {  // iterate over the thread partitions
         int rowId = base + threadId * partitionSize + i;
+        if (rowId > numLocks) continue;
 
         if (waitOn.find(rowId) != waitOn.end()) {
           lockManager.lock(transactionB, rowId, false, true);
         } else {
-          lockManager.lock(transactionB, rowId, false, false);
+          lockManager.lock(transactionB, rowId, false, true);
         }
       }
     }
@@ -202,13 +194,14 @@ void experiment(LockManager& lockManager, int numLocks, int numThreads) {
       for (int threadId = 0; threadId < numThreads;
            threadId++) {  // iterate over the thread partitions
         int rowId = base + threadId * partitionSize + i;
+        if (rowId > numLocks) continue;
 
         if (waitOn.find(rowId) != waitOn.end()) {
           lockManager.unlock(transactionA, rowId, true);
           lockManager.unlock(transactionB, rowId, true);
         } else {
-          lockManager.unlock(transactionA, rowId, false);
-          lockManager.unlock(transactionB, rowId, false);
+          lockManager.unlock(transactionA, rowId, true);
+          lockManager.unlock(transactionB, rowId, true);
         }
       }
     }
@@ -219,34 +212,31 @@ auto main() -> int {
   spdlog::set_level(spdlog::level::err);
 
   vector<vector<long>> contentCSVFile;
-  for (int lockBudget :
-       lockBudgets) {  // Show effect of increasing number of locks
-    vector<long> durations;
-    for (int i = 0; i < repetitions; i++) {  // To make result more stable
-      auto lockManager = LockManager(numWorkerThreads);
-      lockManager.registerTransaction(transactionA, lockBudget);
-      lockManager.registerTransaction(transactionB, lockBudget);
 
-      //=========== TIME MEASUREMENT ================
-      auto begin = high_resolution_clock::now();
-      experiment(lockManager, lockBudget, numWorkerThreads);
-      auto end = high_resolution_clock::now();
-      //=============================================
+  vector<long> durations;
+  for (int i = 0; i < repetitions; i++) {  // To make result more stable
+    auto lockManager = LockManager(numWorkerThreads);
+    lockManager.registerTransaction(transactionA, lockBudget);
+    lockManager.registerTransaction(transactionB, lockBudget);
 
-      long duration = duration_cast<nanoseconds>(end - begin).count();
-      durations.push_back(duration);
+    //=========== TIME MEASUREMENT ================
+    auto begin = high_resolution_clock::now();
+    experiment(lockManager, lockBudget, numWorkerThreads);
+    auto end = high_resolution_clock::now();
+    //=============================================
 
-      vector<long> rowInCSVFile = {numWorkerThreads, lockBudget, duration};
-      contentCSVFile.push_back(rowInCSVFile);
+    long duration = duration_cast<nanoseconds>(end - begin).count();
+    durations.push_back(duration);
 
-      sleep_for(seconds(1));  // because unlock is asynchronous
-      flushCache();
-    }
+    vector<long> rowInCSVFile = {numWorkerThreads, lockBudget, duration};
+    contentCSVFile.push_back(rowInCSVFile);
 
-    long time = reduce(durations.begin(), durations.end()) / durations.size();
-    spdlog::error("Finished experiment for lock budget " +
-                  std::to_string(lockBudget));
+    sleep_for(seconds(1));  // because unlock is asynchronous
+    flushCache();
   }
+
+  long time = reduce(durations.begin(), durations.end()) / durations.size();
+
   writeToCSV("out", contentCSVFile);
   return 0;
 }

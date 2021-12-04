@@ -71,7 +71,6 @@ auto verify(const char *message, void *signature, size_t sig_len) -> int {
 }
 
 auto get_block_timeout() -> int {
-  print_warn("Lock timeout not yet implemented");
   // TODO: Implement getting the lock timeout
   return 0;
 };

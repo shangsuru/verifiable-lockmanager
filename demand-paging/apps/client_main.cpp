@@ -10,7 +10,7 @@ void RunClient() {
 
   int transactionA = 1;
   int transactionB = 2;
-  int lockBudget = 10000;
+  int lockBudget = 11000;
   client.registerTransaction(transactionA, lockBudget);
   client.registerTransaction(transactionB, lockBudget);
 

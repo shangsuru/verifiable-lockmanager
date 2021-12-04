@@ -302,16 +302,22 @@ void transactiontable_entry_to_uint8_t(Entry *&entry, uint8_t *&result) {
   result[5] = transaction->locked_rows_size;
   result[6] = num_locked;
 
-  sgx_sha256_hash_t *p_hash =
-      (sgx_sha256_hash_t *)malloc(sizeof(sgx_sha256_hash_t));
-  sgx_status_t ret = sgx_sha256_msg((uint8_t *)transaction->locked_rows,
-                                    sizeof(int) * num_locked, p_hash);
-  if (ret != SGX_SUCCESS) {
-    print_error("Error when serializing transaction");
-  }
+  if (num_locked > 0) {
+    sgx_sha256_hash_t *p_hash =
+        (sgx_sha256_hash_t *)malloc(sizeof(sgx_sha256_hash_t));
+    sgx_status_t ret = sgx_sha256_msg((uint8_t *)transaction->locked_rows,
+                                      sizeof(int) * num_locked, p_hash);
+    if (ret != SGX_SUCCESS) {
+      print_error("Error when serializing transaction");
+    }
 
-  for (int i = 0; i < SGX_SHA256_HASH_SIZE; i++) {
-    result[7 + i] = (*p_hash)[i];
+    for (int i = 0; i < SGX_SHA256_HASH_SIZE; i++) {
+      result[7 + i] = (*p_hash)[i];
+    }
+    free(p_hash);
+  } else {
+    for (int i = 0; i < SGX_SHA256_HASH_SIZE; i++) {
+      result[7 + i] = 0;
+    }
   }
-  free(p_hash);
 }

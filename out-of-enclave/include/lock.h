@@ -7,6 +7,13 @@
 
 using std::memcpy;
 
+/**
+ * Used to set the size of the owners list of a lock. As of right now, there is
+ * no way implemented to dynamically resize untrusted memory from the trusted
+ * region. Therefore we allocate as much memory as we could possibly need. So we
+ * have to set an upper limit on the number of owners of a lock, i.e. the number
+ * of concurrent transactions.
+ */
 const int kTransactionBudget = 200;
 
 /**
