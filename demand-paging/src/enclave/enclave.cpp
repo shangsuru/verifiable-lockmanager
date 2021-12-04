@@ -332,11 +332,11 @@ auto acquire_lock(void *signature, unsigned int transactionId,
     set(lockTable_, rowId, (void *)lock);
   }
 
-  /*// Check if 2PL is violated TODO: Uncomment (error during evaluation)
+  // Check if 2PL is violated
   if (!transaction->growing_phase) {
     print_error("Cannot acquire more locks according to 2PL");
     goto abort;
-  }*/
+  }
 
   // Check if lock budget is enough
   if (transaction->lock_budget < 1) {
@@ -344,6 +344,7 @@ auto acquire_lock(void *signature, unsigned int transactionId,
     goto abort;
   }
 
+  // Comment out for evaluation ->
   // Check for upgrade request
   if (hasLock(transaction, rowId) && isExclusive && !lock->exclusive) {
     if (upgrade(lock, transactionId)) {
@@ -354,6 +355,7 @@ auto acquire_lock(void *signature, unsigned int transactionId,
 
   // Acquire lock in requested mode (shared, exclusive)
   if (!hasLock(transaction, rowId)) {
+    // <- Comment out for evaluation
     sgx_thread_mutex_lock(&transaction_mutex[transaction->transaction_id]);
     ok = addLock(transaction, rowId, isExclusive, lock);
     sgx_thread_mutex_unlock(&transaction_mutex[transaction->transaction_id]);
@@ -362,7 +364,9 @@ auto acquire_lock(void *signature, unsigned int transactionId,
       goto sign;
     }
     goto abort;
+    // Comment out for evaluation ->
   }
+  // <- Comment out for evaluation
 
   print_error("Request for already acquired lock");
 
