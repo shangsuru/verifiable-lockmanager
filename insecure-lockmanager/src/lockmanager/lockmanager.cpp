@@ -50,7 +50,6 @@ LockManager::LockManager(int numWorkerThreads) {
 
 // TODO: Destructor never called (esp. on CTRL+C shutdown)!
 LockManager::~LockManager() {
-  /*
   // Send QUIT to worker threads
   create_job(QUIT);
 
@@ -63,7 +62,6 @@ LockManager::~LockManager() {
 
   spdlog::info("Freeing threads");
   free(threads);
-  */
 }
 
 auto LockManager::registerTransaction(unsigned int transactionId) -> bool {
@@ -305,13 +303,14 @@ auto LockManager::acquire_lock(unsigned int transactionId, unsigned int rowId,
     set(lockTable_, rowId, (void *)lock);
   }
 
-  /*// Check if 2PL is violated // TODO: Uncomment
+  // Check if 2PL is violated
   if (!transaction->growing_phase) {
     spdlog::error("Cannot acquire more locks according to 2PL");
     abort_transaction(transaction);
     return false;
-  }*/
+  }
 
+  // Comment out for evaluation ->
   // Check for upgrade request
   if (hasLock(transaction, rowId) && isExclusive && !lock->exclusive) {
     ret = upgrade(lock, transactionId);
@@ -325,13 +324,16 @@ auto LockManager::acquire_lock(unsigned int transactionId, unsigned int rowId,
 
   // Acquire lock in requested mode (shared, exclusive)
   if (!hasLock(transaction, rowId)) {
+    // <- Comment out for evaluation
     ret = addLock(transaction, rowId, isExclusive, lock);
     if (!ret) {
       abort_transaction(transaction);
       return false;
     }
     return ret;
+    // Comment out for evaluation ->
   }
+  // <- Comment out for evaluation
 
   spdlog::error("Request for already acquired lock");
   abort_transaction(transaction);

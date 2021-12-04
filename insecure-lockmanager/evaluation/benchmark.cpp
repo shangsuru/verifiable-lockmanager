@@ -25,7 +25,7 @@ int transactionB = 2;
 
 int lockBudget = 10;  // how many locks to acquire
 const int lockTableSize = lockBudget;
-const int repetitions = 10;  // repeats the same experiments several times
+const int repetitions = 1;
 int numWorkerThreads = 1;
 
 void flushCache() {
@@ -182,27 +182,6 @@ void experiment(LockManager& lockManager, int numLocks, int numThreads) {
           lockManager.lock(transactionB, rowId, false, true);
         } else {
           lockManager.lock(transactionB, rowId, false, false);
-        }
-      }
-    }
-  }
-
-  // Locks are released in the same manner as they are acquired.
-  for (int base = 0; base < numLocks;
-       base +=
-       lockTableSize) {  // iterate over the multiples of the lock table size
-    for (int i = 1; i <= partitionSize; i++) {
-      for (int threadId = 0; threadId < numThreads;
-           threadId++) {  // iterate over the thread partitions
-        int rowId = base + threadId * partitionSize + i;
-        if (rowId > numLocks) continue;
-
-        if (waitOn.find(rowId) != waitOn.end()) {
-          lockManager.unlock(transactionA, rowId, true);
-          lockManager.unlock(transactionB, rowId, true);
-        } else {
-          lockManager.unlock(transactionA, rowId, false);
-          lockManager.unlock(transactionB, rowId, false);
         }
       }
     }

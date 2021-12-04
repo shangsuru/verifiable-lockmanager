@@ -9,6 +9,10 @@ if [ -f "$output_file" ]; then
     rm $output_file
 fi
 
+# Comment out sections that are not supposed to be included in the evaluation (upgrading locks and checking if a lock is already owned)
+sed -i "s@// Comment out for evaluation ->@/* // Comment out for evaluation ->@" ../src/lockmanager/lockmanager.cpp
+sed -i "s@// <- Comment out for evaluation@*/ // <- Comment out for evaluation@" ../src/lockmanager/lockmanager.cpp
+
 # Compile the project in release mode
 cmake -DCMAKE_BUILD_TYPE=Release -S .. -B ../build >/dev/null
 
@@ -21,8 +25,7 @@ do
 
     # Set number of locks to acquire
     sed -i -e "s/lockBudget = [0-9]*/lockBudget = ${locks}/" benchmark.cpp
-    # Set lock table size to the number of locks (to avoid collisions having an effect on the evaluation)
-    sed -i -e "s/arg.lock_table_size = [0-9]*/arg.lock_table_size = ${locks}/" ../src/lockmanager/lockmanager.cpp
+    
 
     # Build the project
     cmake --build ../build >/dev/null
@@ -37,4 +40,5 @@ done
 # Reset everything to its original values
 sed -i -e "s/numWorkerThreads = [0-9]*/numWorkerThreads = 1/" benchmark.cpp
 sed -i -e "s/lockBudget = [0-9]*/lockBudget = 10/" benchmark.cpp
-sed -i -e "s/arg.lock_table_size = [0-9]*/arg.lock_table_size = 10000/" ../src/lockmanager/lockmanager.cpp
+sed -i "s@/\* // Comment out for evaluation ->@// Comment out for evaluation ->@" ../src/lockmanager/lockmanager.cpp
+sed -i "s@\*/ // <- Comment out for evaluation@// <- Comment out for evaluation@" ../src/lockmanager/lockmanager.cpp
