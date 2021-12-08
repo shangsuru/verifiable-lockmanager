@@ -1,9 +1,17 @@
 # TrustDBle Lockmanager
 
-A Trusted Lock Manager, which allows the use of different isolation levels. The Lock Manager will run inside an Intel SGX Trusted Execution Environment to ensure that peers cannot manipulate the locking.
+This project aims to build a Byzantine-fault tolerant pessimistic lock manager using 2PL. For security, the lock manager resides inside a Trusted Execution Environment.
+The subfolders of this project showcase different kinds of implementations of this lock manager for evaluation purposes:
+
+- Insecure Lockmanager
+- Demand Paging Lockmanager
+- Unprotected Memory Lockmanager
+- Out-of-enclave Lockmanager
+
+---
 
 ## Project Structure
-All (sub)folders containing C++ code follow the project structure describe in this [book](https://cliutils.gitlab.io/modern-cmake/chapters/basics/structure.html) (please make sure to read it if you want to contribute).
+All (sub)folders containing C++ code follow the project structure described in this [book](https://cliutils.gitlab.io/modern-cmake/chapters/basics/structure.html) (please make sure to read it if you want to contribute).
 ```
 ├── .githooks/                      # Contains custom git hooks that we use for this repo, inspired by https://gist.github.com/damienrg/411f63a5120206bb887929f4830ad0d0
 │   ├── pre-commit.d                # Scripts that are executed before a commit is preformed
@@ -28,6 +36,8 @@ All (sub)folders containing C++ code follow the project structure describe in th
 ├── tests/                          #
 ```
 
+---
+
 ## Getting Started 
 
 1. Clone this repo with 
@@ -38,28 +48,16 @@ git clone git@bitbucket.org:trustdble/trustdble-lockmanager.git
 ```
 git config core.hookspath .githooks
 ```
-3. Configure the build
-```
-# add -GNinja to build with Ninja instead of unix Makefiles
-# add -DWITH_ASAN=TRUE to build with address sanitizer enabled
-cmake -S . -B build
-```
-4. Build the code
-```
-cmake --build build
-```
-5. Run the tests or build the documentation by specifying the corresponding target
-```
-cmake --build build --target test | docs
-```
 
-You can use e.g. `--gtest_filter=*unlock` or `--gtest_repeat=100` when running test executables to filter for specific tests or run tests multiple times to test for concurrency related errors.
+3. Go into one of the subfolders representing the differentlock manager implementations for further instructions on how to compile and run the project. 
+
+---
 
 ## Developing and debugging inside a Docker container
 
-To be able to run the SGX code in simulation mode without special hardware, 
+If your processor does not support Intel SGX, you can also run the code inside a Docker container. To be able to run the SGX code in simulation mode without special hardware, 
 make sure to install the Remote-Containers extension of VSCode.
-Re-open the workspace in the devcontainer (command "Remote-Containers: Open folder in container").
+Re-open the workspace in the devcontainer (command `Remote-Containers: Open folder in container`).
 
 1. Inside the container you should be able to build the code in SGX SIM mode:
    `cmake -DSGX_HW=OFF -DSGX_MODE=Debug -DCMAKE_BUILD_TYPE=Debug -S . -B build`
@@ -67,6 +65,8 @@ Re-open the workspace in the devcontainer (command "Remote-Containers: Open fold
 2. Build the application: `cd build && make -j 5`
 
 3. Start a debugging session from within VSCode
+
+---
 
 ## Requirements
 
@@ -88,6 +88,8 @@ sudo apt-get -y install doxygen plantuml graphviz
 brew install doxygen plantuml graphviz
 ```
 
+---
+
 ## Git Hooks
 This project uses pre-commit and pre-push scripts to ensure the quality of code.
 See the description under [Project Structure](#Project-Structure) for a short explanation of each hook.
@@ -96,6 +98,8 @@ The hooks are installed by running `git config core.hookspath .githooks`.
 Use `git push/commit --dry-run` to run the hooks without actually executing the git command. Alternatively, run the hook script directly, e.g., `.githooks/pre-push.d/01_doxygen.sh` (Note some hook script might require you to stage files (`git add`) or use an additional flag).​
 
 Use `git push/commit --no-verify` to skip the execution of hooks and only perform the corresponding git command (only do this if you know what are you doing).
+
+---
 
 ## Troubleshooting
 

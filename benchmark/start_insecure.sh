@@ -1,1 +1,0 @@
-./../insecure-lockmanager/build/apps/serverMain
