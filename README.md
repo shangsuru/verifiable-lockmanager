@@ -3,10 +3,9 @@
 This project aims to build a Byzantine-fault tolerant pessimistic lock manager using 2PL. For security, the lock manager resides inside a Trusted Execution Environment.
 The subfolders of this project showcase different kinds of implementations of this lock manager for evaluation purposes:
 
-- Insecure Lockmanager
-- Demand Paging Lockmanager
-- Unprotected Memory Lockmanager
-- Out-of-enclave Lockmanager
+- Insecure Lockmanager: insecure implementation without Intel SGX
+- Demand Paging Lockmanager: implementation with Intel SGX, where paging sets in when the memory limit of the enclave is reached
+- Out-of-enclave Lockmanager: dynamically growing locktable is stored outside of the enclave, in unprotected memory, to avoid paging
 
 ---
 
