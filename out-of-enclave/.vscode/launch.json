@@ -1,0 +1,55 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "serverMain",
+      "type": "gdb",
+      "request": "launch",
+      "target": "serverMain",
+      "cwd": "${workspaceRoot}/build/apps",
+      "valuesFormatting": "parseText",
+      "gdbpath": "/opt/intel/sgxsdk/bin/sgx-gdb"
+    },
+    {
+      "name": "hashtable_test",
+      "type": "gdb",
+      "request": "launch",
+      "target": "hashtable_test",
+      "cwd": "${workspaceRoot}/build/tests",
+      "valuesFormatting": "parseText",
+      "gdbpath": "/usr/bin/gdb"
+    },
+    {
+      "name": "transaction_test",
+      "type": "gdb",
+      "request": "launch",
+      "target": "transaction_test",
+      "cwd": "${workspaceRoot}/build/tests",
+      "valuesFormatting": "parseText",
+      "gdbpath": "/usr/bin/gdb"
+    },
+    {
+      "name": "lockmanager_test",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/tests/lockmanager_test",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${workspaceRoot}/build/tests",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "miDebuggerPath": "/opt/intel/sgxsdk/bin/sgx-gdb",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
+      ]
+    },
+  ]
+}

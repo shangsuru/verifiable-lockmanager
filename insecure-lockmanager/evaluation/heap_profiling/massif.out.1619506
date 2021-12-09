@@ -1,0 +1,1015 @@
+desc: (none)
+cmd: ./benchmark
+time_unit: i
+#-----------
+snapshot=0
+#-----------
+time=0
+mem_heap_B=0
+mem_heap_extra_B=0
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=1
+#-----------
+time=5026638
+mem_heap_B=169450878
+mem_heap_extra_B=4338
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=2
+#-----------
+time=4269061810
+mem_heap_B=169450909
+mem_heap_extra_B=4347
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=3
+#-----------
+time=4269073504
+mem_heap_B=169451006
+mem_heap_extra_B=4370
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=4
+#-----------
+time=156095473900
+mem_heap_B=169451037
+mem_heap_extra_B=4379
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=5
+#-----------
+time=156128339207
+mem_heap_B=172732500
+mem_heap_extra_B=54380
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=6
+#-----------
+time=163996294353
+mem_heap_B=172733045
+mem_heap_extra_B=54443
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=7
+#-----------
+time=164033499451
+mem_heap_B=173647862
+mem_heap_extra_B=508242
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=8
+#-----------
+time=164082287700
+mem_heap_B=174826710
+mem_heap_extra_B=1093154
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=9
+#-----------
+time=164148942047
+mem_heap_B=176424661
+mem_heap_extra_B=1885851
+mem_stacks_B=0
+heap_tree=detailed
+n4: 176424661 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 167772160 0x125E44: _GLOBAL__sub_I_p (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+  n1: 167772160 0x14EB3C: __libc_csu_init (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+   n0: 167772160 0x4AF003F: (below main) (libc-start.c:264)
+ n0: 4067493 in 31 places, all below massif's threshold (1.00%)
+ n1: 2307120 0x488B783: std::pair<std::_Rb_tree_iterator<int>, bool> std::_Rb_tree<int, int, std::_Identity<int>, std::less<int>, std::allocator<int> >::_M_insert_unique<int const&>(int const&) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+  n0: 2307120 in 2 places, all below massif's threshold (1.00%)
+ n1: 2277888 0x4871C30: void std::deque<Job, std::allocator<Job> >::_M_push_back_aux<Job const&>(Job const&) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+  n2: 2277888 0x4861931: LockManager::send_job(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n1: 2277376 0x48619B2: LockManager::create_job(Command, unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 2277376 0x1270F0: experiment(LockManager&, int, int) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+     n0: 2277376 0x126005: main (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+   n0: 512 in 1 place, below massif's threshold (1.00%)
+#-----------
+snapshot=10
+#-----------
+time=164198893040
+mem_heap_B=177616597
+mem_heap_extra_B=2477163
+mem_stacks_B=0
+heap_tree=detailed
+n5: 177616597 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 167772160 0x125E44: _GLOBAL__sub_I_p (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+  n1: 167772160 0x14EB3C: __libc_csu_init (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+   n0: 167772160 0x4AF003F: (below main) (libc-start.c:264)
+ n1: 3052080 0x488B783: std::pair<std::_Rb_tree_iterator<int>, bool> std::_Rb_tree<int, int, std::_Identity<int>, std::less<int>, std::allocator<int> >::_M_insert_unique<int const&>(int const&) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+  n0: 3052080 in 2 places, all below massif's threshold (1.00%)
+ n0: 2675997 in 30 places, all below massif's threshold (1.00%)
+ n1: 2136456 0x488B9C1: newLock() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+  n1: 2136456 0x4861C84: LockManager::acquire_lock(unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n1: 2136456 0x4862409: LockManager::process_request() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 2136456 0x486305C: LockManager::create_worker_thread(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+     n1: 2136456 0x48B0608: start_thread (pthread_create.c:477)
+      n0: 2136456 0x4BEB292: clone (clone.S:95)
+ n1: 1979904 0x4871C30: void std::deque<Job, std::allocator<Job> >::_M_push_back_aux<Job const&>(Job const&) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+  n2: 1979904 0x4861931: LockManager::send_job(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n1: 1979392 0x48619B2: LockManager::create_job(Command, unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 1979392 0x1270F0: experiment(LockManager&, int, int) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+     n0: 1979392 0x126005: main (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+   n0: 512 in 1 place, below massif's threshold (1.00%)
+#-----------
+snapshot=11
+#-----------
+time=164231671179
+mem_heap_B=178397845
+mem_heap_extra_B=2864643
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=12
+#-----------
+time=164300573716
+mem_heap_B=180036245
+mem_heap_extra_B=3677443
+mem_stacks_B=0
+heap_tree=detailed
+n4: 180036245 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 167772160 0x125E44: _GLOBAL__sub_I_p (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+  n1: 167772160 0x14EB3C: __libc_csu_init (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+   n0: 167772160 0x4AF003F: (below main) (libc-start.c:264)
+ n2: 4564240 0x488B783: std::pair<std::_Rb_tree_iterator<int>, bool> std::_Rb_tree<int, int, std::_Identity<int>, std::less<int>, std::allocator<int> >::_M_insert_unique<int const&>(int const&) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+  n1: 2282120 0x488B5CA: addLock(Transaction*, int, bool, Lock*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n1: 2282120 0x4861BD0: LockManager::acquire_lock(unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 2282120 0x4862409: LockManager::process_request() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+     n1: 2282120 0x486305C: LockManager::create_worker_thread(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+      n1: 2282120 0x48B0608: start_thread (pthread_create.c:477)
+       n0: 2282120 0x4BEB292: clone (clone.S:95)
+  n1: 2282120 0x488BA8D: getSharedAccess(Lock*, int) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n1: 2282120 0x488B598: addLock(Transaction*, int, bool, Lock*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 2282120 0x4861BD0: LockManager::acquire_lock(unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+     n1: 2282120 0x4862409: LockManager::process_request() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+      n1: 2282120 0x486305C: LockManager::create_worker_thread(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+       n1: 2282120 0x48B0608: start_thread (pthread_create.c:477)
+        n0: 2282120 0x4BEB292: clone (clone.S:95)
+ n0: 4504877 in 31 places, all below massif's threshold (1.00%)
+ n1: 3194968 0x488B9C1: newLock() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+  n1: 3194968 0x4861C84: LockManager::acquire_lock(unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n1: 3194968 0x4862409: LockManager::process_request() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 3194968 0x486305C: LockManager::create_worker_thread(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+     n1: 3194968 0x48B0608: start_thread (pthread_create.c:477)
+      n0: 3194968 0x4BEB292: clone (clone.S:95)
+#-----------
+snapshot=13
+#-----------
+time=164352315713
+mem_heap_B=181264245
+mem_heap_extra_B=4286723
+mem_stacks_B=0
+heap_tree=detailed
+n4: 181264245 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 167772160 0x125E44: _GLOBAL__sub_I_p (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+  n1: 167772160 0x14EB3C: __libc_csu_init (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+   n0: 167772160 0x4AF003F: (below main) (libc-start.c:264)
+ n2: 5331840 0x488B783: std::pair<std::_Rb_tree_iterator<int>, bool> std::_Rb_tree<int, int, std::_Identity<int>, std::less<int>, std::allocator<int> >::_M_insert_unique<int const&>(int const&) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+  n1: 2665920 0x488B5CA: addLock(Transaction*, int, bool, Lock*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n1: 2665920 0x4861BD0: LockManager::acquire_lock(unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 2665920 0x4862409: LockManager::process_request() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+     n1: 2665920 0x486305C: LockManager::create_worker_thread(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+      n1: 2665920 0x48B0608: start_thread (pthread_create.c:477)
+       n0: 2665920 0x4BEB292: clone (clone.S:95)
+  n1: 2665920 0x488BA8D: getSharedAccess(Lock*, int) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n1: 2665920 0x488B598: addLock(Transaction*, int, bool, Lock*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 2665920 0x4861BD0: LockManager::acquire_lock(unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+     n1: 2665920 0x4862409: LockManager::process_request() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+      n1: 2665920 0x486305C: LockManager::create_worker_thread(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+       n1: 2665920 0x48B0608: start_thread (pthread_create.c:477)
+        n0: 2665920 0x4BEB292: clone (clone.S:95)
+ n0: 4427957 in 31 places, all below massif's threshold (1.00%)
+ n1: 3732288 0x488B9C1: newLock() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+  n1: 3732288 0x4861C84: LockManager::acquire_lock(unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n1: 3732288 0x4862409: LockManager::process_request() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 3732288 0x486305C: LockManager::create_worker_thread(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+     n1: 3732288 0x48B0608: start_thread (pthread_create.c:477)
+      n0: 3732288 0x4BEB292: clone (clone.S:95)
+#-----------
+snapshot=14
+#-----------
+time=164404729461
+mem_heap_B=182504533
+mem_heap_extra_B=4902099
+mem_stacks_B=0
+heap_tree=detailed
+n4: 182504533 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 167772160 0x125E44: _GLOBAL__sub_I_p (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+  n1: 167772160 0x14EB3C: __libc_csu_init (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+   n0: 167772160 0x4AF003F: (below main) (libc-start.c:264)
+ n2: 6107120 0x488B783: std::pair<std::_Rb_tree_iterator<int>, bool> std::_Rb_tree<int, int, std::_Identity<int>, std::less<int>, std::allocator<int> >::_M_insert_unique<int const&>(int const&) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+  n1: 3053560 0x488B5CA: addLock(Transaction*, int, bool, Lock*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n1: 3053560 0x4861BD0: LockManager::acquire_lock(unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 3053560 0x4862409: LockManager::process_request() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+     n1: 3053560 0x486305C: LockManager::create_worker_thread(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+      n1: 3053560 0x48B0608: start_thread (pthread_create.c:477)
+       n0: 3053560 0x4BEB292: clone (clone.S:95)
+  n1: 3053560 0x488BA8D: getSharedAccess(Lock*, int) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n1: 3053560 0x488B598: addLock(Transaction*, int, bool, Lock*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 3053560 0x4861BD0: LockManager::acquire_lock(unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+     n1: 3053560 0x4862409: LockManager::process_request() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+      n1: 3053560 0x486305C: LockManager::create_worker_thread(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+       n1: 3053560 0x48B0608: start_thread (pthread_create.c:477)
+        n0: 3053560 0x4BEB292: clone (clone.S:95)
+ n0: 4350269 in 31 places, all below massif's threshold (1.00%)
+ n1: 4274984 0x488B9C1: newLock() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+  n1: 4274984 0x4861C84: LockManager::acquire_lock(unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n1: 4274984 0x4862409: LockManager::process_request() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 4274984 0x486305C: LockManager::create_worker_thread(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+     n1: 4274984 0x48B0608: start_thread (pthread_create.c:477)
+      n0: 4274984 0x4BEB292: clone (clone.S:95)
+#-----------
+snapshot=15
+#-----------
+time=164457651688
+mem_heap_B=183757301
+mem_heap_extra_B=5523451
+mem_stacks_B=0
+heap_tree=detailed
+n5: 183757301 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 167772160 0x125E44: _GLOBAL__sub_I_p (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+  n1: 167772160 0x14EB3C: __libc_csu_init (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+   n0: 167772160 0x4AF003F: (below main) (libc-start.c:264)
+ n2: 6889920 0x488B783: std::pair<std::_Rb_tree_iterator<int>, bool> std::_Rb_tree<int, int, std::_Identity<int>, std::less<int>, std::allocator<int> >::_M_insert_unique<int const&>(int const&) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+  n1: 3444960 0x488B5CA: addLock(Transaction*, int, bool, Lock*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n1: 3444960 0x4861BD0: LockManager::acquire_lock(unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 3444960 0x4862409: LockManager::process_request() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+     n1: 3444960 0x486305C: LockManager::create_worker_thread(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+      n1: 3444960 0x48B0608: start_thread (pthread_create.c:477)
+       n0: 3444960 0x4BEB292: clone (clone.S:95)
+  n1: 3444960 0x488BA8D: getSharedAccess(Lock*, int) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n1: 3444960 0x488B598: addLock(Transaction*, int, bool, Lock*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 3444960 0x4861BD0: LockManager::acquire_lock(unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+     n1: 3444960 0x4862409: LockManager::process_request() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+      n1: 3444960 0x486305C: LockManager::create_worker_thread(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+       n1: 3444960 0x48B0608: start_thread (pthread_create.c:477)
+        n0: 3444960 0x4BEB292: clone (clone.S:95)
+ n1: 4822944 0x488B9C1: newLock() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+  n1: 4822944 0x4861C84: LockManager::acquire_lock(unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n1: 4822944 0x4862409: LockManager::process_request() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 4822944 0x486305C: LockManager::create_worker_thread(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+     n1: 4822944 0x48B0608: start_thread (pthread_create.c:477)
+      n0: 4822944 0x4BEB292: clone (clone.S:95)
+ n0: 2205253 in 30 places, all below massif's threshold (1.00%)
+ n2: 2067024 0x488BC8E: set(HashTable*, int, void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+  n1: 2066976 0x4861C96: LockManager::acquire_lock(unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n1: 2066976 0x4862409: LockManager::process_request() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 2066976 0x486305C: LockManager::create_worker_thread(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+     n1: 2066976 0x48B0608: start_thread (pthread_create.c:477)
+      n0: 2066976 0x4BEB292: clone (clone.S:95)
+  n0: 48 in 1 place, below massif's threshold (1.00%)
+#-----------
+snapshot=16
+#-----------
+time=164529924857
+mem_heap_B=185467221
+mem_heap_extra_B=6371747
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=17
+#-----------
+time=164565580888
+mem_heap_B=188813908
+mem_heap_extra_B=6454500
+mem_stacks_B=0
+heap_tree=detailed
+n6: 188813908 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 167772160 0x125E44: _GLOBAL__sub_I_p (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+  n1: 167772160 0x14EB3C: __libc_csu_init (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+   n0: 167772160 0x4AF003F: (below main) (libc-start.c:264)
+ n2: 8000000 0x488B783: std::pair<std::_Rb_tree_iterator<int>, bool> std::_Rb_tree<int, int, std::_Identity<int>, std::less<int>, std::allocator<int> >::_M_insert_unique<int const&>(int const&) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+  n1: 4000000 0x488B5CA: addLock(Transaction*, int, bool, Lock*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n1: 4000000 0x4861BD0: LockManager::acquire_lock(unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 4000000 0x4862409: LockManager::process_request() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+     n1: 4000000 0x486305C: LockManager::create_worker_thread(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+      n1: 4000000 0x48B0608: start_thread (pthread_create.c:477)
+       n0: 4000000 0x4BEB292: clone (clone.S:95)
+  n1: 4000000 0x488BA8D: getSharedAccess(Lock*, int) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n1: 4000000 0x488B598: addLock(Transaction*, int, bool, Lock*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 4000000 0x4861BD0: LockManager::acquire_lock(unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+     n1: 4000000 0x4862409: LockManager::process_request() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+      n1: 4000000 0x486305C: LockManager::create_worker_thread(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+       n1: 4000000 0x48B0608: start_thread (pthread_create.c:477)
+        n0: 4000000 0x4BEB292: clone (clone.S:95)
+ n1: 5600000 0x488B9C1: newLock() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+  n1: 5600000 0x4861C84: LockManager::acquire_lock(unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n1: 5600000 0x4862409: LockManager::process_request() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 5600000 0x486305C: LockManager::create_worker_thread(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+     n1: 5600000 0x48B0608: start_thread (pthread_create.c:477)
+      n0: 5600000 0x4BEB292: clone (clone.S:95)
+ n1: 3199488 0x4871C30: void std::deque<Job, std::allocator<Job> >::_M_push_back_aux<Job const&>(Job const&) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+  n2: 3199488 0x4861931: LockManager::send_job(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n2: 3198976 0x48619B2: LockManager::create_job(Command, unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 3198976 0x1271C0: experiment(LockManager&, int, int) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+     n0: 3198976 0x126005: main (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+    n0: 0 in 1 place, below massif's threshold (1.00%)
+   n0: 512 in 1 place, below massif's threshold (1.00%)
+ n2: 2400048 0x488BC8E: set(HashTable*, int, void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+  n1: 2400000 0x4861C96: LockManager::acquire_lock(unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n1: 2400000 0x4862409: LockManager::process_request() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 2400000 0x486305C: LockManager::create_worker_thread(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+     n1: 2400000 0x48B0608: start_thread (pthread_create.c:477)
+      n0: 2400000 0x4BEB292: clone (clone.S:95)
+  n0: 48 in 1 place, below massif's threshold (1.00%)
+ n0: 1842212 in 29 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=18
+#-----------
+time=272619145232
+mem_heap_B=188814965
+mem_heap_extra_B=6454571
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=19
+#-----------
+time=272663372908
+mem_heap_B=189231573
+mem_heap_extra_B=6729859
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=20
+#-----------
+time=272722072453
+mem_heap_B=189773701
+mem_heap_extra_B=7088483
+mem_stacks_B=0
+heap_tree=detailed
+n6: 189773701 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 167772160 0x125E44: _GLOBAL__sub_I_p (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+  n1: 167772160 0x14EB3C: __libc_csu_init (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+   n0: 167772160 0x4AF003F: (below main) (libc-start.c:264)
+ n2: 9597200 0x488B783: std::pair<std::_Rb_tree_iterator<int>, bool> std::_Rb_tree<int, int, std::_Identity<int>, std::less<int>, std::allocator<int> >::_M_insert_unique<int const&>(int const&) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+  n1: 4798600 0x488B5CA: addLock(Transaction*, int, bool, Lock*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n1: 4798600 0x4861BD0: LockManager::acquire_lock(unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 4798600 0x4862409: LockManager::process_request() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+     n1: 4798600 0x486305C: LockManager::create_worker_thread(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+      n1: 4798600 0x48B0608: start_thread (pthread_create.c:477)
+       n0: 4798600 0x4BEB292: clone (clone.S:95)
+  n1: 4798600 0x488BA8D: getSharedAccess(Lock*, int) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n1: 4798600 0x488B598: addLock(Transaction*, int, bool, Lock*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 4798600 0x4861BD0: LockManager::acquire_lock(unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+     n1: 4798600 0x4862409: LockManager::process_request() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+      n1: 4798600 0x486305C: LockManager::create_worker_thread(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+       n1: 4798600 0x48B0608: start_thread (pthread_create.c:477)
+        n0: 4798600 0x4BEB292: clone (clone.S:95)
+ n1: 5600000 0x488B9C1: newLock() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+  n1: 5600000 0x4861C84: LockManager::acquire_lock(unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n1: 5600000 0x4862409: LockManager::process_request() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 5600000 0x486305C: LockManager::create_worker_thread(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+     n1: 5600000 0x48B0608: start_thread (pthread_create.c:477)
+      n0: 5600000 0x4BEB292: clone (clone.S:95)
+ n1: 2562048 0x4871C30: void std::deque<Job, std::allocator<Job> >::_M_push_back_aux<Job const&>(Job const&) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+  n2: 2562048 0x4861931: LockManager::send_job(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n2: 2561536 0x48619B2: LockManager::create_job(Command, unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 2561536 0x1271C0: experiment(LockManager&, int, int) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+     n0: 2561536 0x126005: main (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+    n0: 0 in 1 place, below massif's threshold (1.00%)
+   n0: 512 in 1 place, below massif's threshold (1.00%)
+ n2: 2400048 0x488BC8E: set(HashTable*, int, void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+  n1: 2400000 0x4861C96: LockManager::acquire_lock(unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n1: 2400000 0x4862409: LockManager::process_request() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 2400000 0x486305C: LockManager::create_worker_thread(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+     n1: 2400000 0x48B0608: start_thread (pthread_create.c:477)
+      n0: 2400000 0x4BEB292: clone (clone.S:95)
+  n0: 48 in 1 place, below massif's threshold (1.00%)
+ n0: 1842245 in 29 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=21
+#-----------
+time=272771132666
+mem_heap_B=190224037
+mem_heap_extra_B=7386491
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=22
+#-----------
+time=272824254844
+mem_heap_B=190709830
+mem_heap_extra_B=7707914
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=23
+#-----------
+time=272879816095
+mem_heap_B=191217269
+mem_heap_extra_B=8043611
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=24
+#-----------
+time=272940663888
+mem_heap_B=191771526
+mem_heap_extra_B=8410090
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=25
+#-----------
+time=272982862468
+mem_heap_B=192155349
+mem_heap_extra_B=8663819
+mem_stacks_B=0
+heap_tree=detailed
+n5: 192155349 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 167772160 0x125E44: _GLOBAL__sub_I_p (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+  n1: 167772160 0x14EB3C: __libc_csu_init (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+   n0: 167772160 0x4AF003F: (below main) (libc-start.c:264)
+ n2: 13566560 0x488B783: std::pair<std::_Rb_tree_iterator<int>, bool> std::_Rb_tree<int, int, std::_Identity<int>, std::less<int>, std::allocator<int> >::_M_insert_unique<int const&>(int const&) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+  n1: 6783280 0x488B5CA: addLock(Transaction*, int, bool, Lock*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n1: 6783280 0x4861BD0: LockManager::acquire_lock(unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 6783280 0x4862409: LockManager::process_request() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+     n1: 6783280 0x486305C: LockManager::create_worker_thread(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+      n1: 6783280 0x48B0608: start_thread (pthread_create.c:477)
+       n0: 6783280 0x4BEB292: clone (clone.S:95)
+  n1: 6783280 0x488BA8D: getSharedAccess(Lock*, int) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n1: 6783280 0x488B598: addLock(Transaction*, int, bool, Lock*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 6783280 0x4861BD0: LockManager::acquire_lock(unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+     n1: 6783280 0x4862409: LockManager::process_request() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+      n1: 6783280 0x486305C: LockManager::create_worker_thread(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+       n1: 6783280 0x48B0608: start_thread (pthread_create.c:477)
+        n0: 6783280 0x4BEB292: clone (clone.S:95)
+ n1: 5600000 0x488B9C1: newLock() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+  n1: 5600000 0x4861C84: LockManager::acquire_lock(unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n1: 5600000 0x4862409: LockManager::process_request() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 5600000 0x486305C: LockManager::create_worker_thread(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+     n1: 5600000 0x48B0608: start_thread (pthread_create.c:477)
+      n0: 5600000 0x4BEB292: clone (clone.S:95)
+ n0: 2816581 in 30 places, all below massif's threshold (1.00%)
+ n2: 2400048 0x488BC8E: set(HashTable*, int, void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+  n1: 2400000 0x4861C96: LockManager::acquire_lock(unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n1: 2400000 0x4862409: LockManager::process_request() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 2400000 0x486305C: LockManager::create_worker_thread(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+     n1: 2400000 0x48B0608: start_thread (pthread_create.c:477)
+      n0: 2400000 0x4BEB292: clone (clone.S:95)
+  n0: 48 in 1 place, below massif's threshold (1.00%)
+#-----------
+snapshot=26
+#-----------
+time=273048187857
+mem_heap_B=192748054
+mem_heap_extra_B=9055922
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=27
+#-----------
+time=273116060513
+mem_heap_B=193364021
+mem_heap_extra_B=9463339
+mem_stacks_B=0
+heap_tree=detailed
+n5: 193364021 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 167772160 0x125E44: _GLOBAL__sub_I_p (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+  n1: 167772160 0x14EB3C: __libc_csu_init (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+   n0: 167772160 0x4AF003F: (below main) (libc-start.c:264)
+ n2: 15581120 0x488B783: std::pair<std::_Rb_tree_iterator<int>, bool> std::_Rb_tree<int, int, std::_Identity<int>, std::less<int>, std::allocator<int> >::_M_insert_unique<int const&>(int const&) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+  n1: 7790560 0x488B5CA: addLock(Transaction*, int, bool, Lock*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n1: 7790560 0x4861BD0: LockManager::acquire_lock(unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 7790560 0x4862409: LockManager::process_request() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+     n1: 7790560 0x486305C: LockManager::create_worker_thread(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+      n1: 7790560 0x48B0608: start_thread (pthread_create.c:477)
+       n0: 7790560 0x4BEB292: clone (clone.S:95)
+  n1: 7790560 0x488BA8D: getSharedAccess(Lock*, int) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n1: 7790560 0x488B598: addLock(Transaction*, int, bool, Lock*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 7790560 0x4861BD0: LockManager::acquire_lock(unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+     n1: 7790560 0x4862409: LockManager::process_request() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+      n1: 7790560 0x486305C: LockManager::create_worker_thread(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+       n1: 7790560 0x48B0608: start_thread (pthread_create.c:477)
+        n0: 7790560 0x4BEB292: clone (clone.S:95)
+ n1: 5600000 0x488B9C1: newLock() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+  n1: 5600000 0x4861C84: LockManager::acquire_lock(unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n1: 5600000 0x4862409: LockManager::process_request() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 5600000 0x486305C: LockManager::create_worker_thread(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+     n1: 5600000 0x48B0608: start_thread (pthread_create.c:477)
+      n0: 5600000 0x4BEB292: clone (clone.S:95)
+ n2: 2400048 0x488BC8E: set(HashTable*, int, void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+  n1: 2400000 0x4861C96: LockManager::acquire_lock(unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n1: 2400000 0x4862409: LockManager::process_request() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 2400000 0x486305C: LockManager::create_worker_thread(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+     n1: 2400000 0x48B0608: start_thread (pthread_create.c:477)
+      n0: 2400000 0x4BEB292: clone (clone.S:95)
+  n0: 48 in 1 place, below massif's threshold (1.00%)
+ n0: 2010693 in 30 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=28
+#-----------
+time=273151143789
+mem_heap_B=194375252
+mem_heap_extra_B=9641388
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=29
+#-----------
+time=273205760809
+mem_heap_B=200014420
+mem_heap_extra_B=9729500
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=30
+#-----------
+time=285065736145
+mem_heap_B=200014453
+mem_heap_extra_B=9729555
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=31
+#-----------
+time=285065736325
+mem_heap_B=200014453
+mem_heap_extra_B=9729555
+mem_stacks_B=0
+heap_tree=peak
+n6: 200014453 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 167772160 0x125E44: _GLOBAL__sub_I_p (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+  n1: 167772160 0x14EB3C: __libc_csu_init (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+   n0: 167772160 0x4AF003F: (below main) (libc-start.c:264)
+ n2: 16000000 0x488B783: std::pair<std::_Rb_tree_iterator<int>, bool> std::_Rb_tree<int, int, std::_Identity<int>, std::less<int>, std::allocator<int> >::_M_insert_unique<int const&>(int const&) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+  n1: 8000000 0x488B5CA: addLock(Transaction*, int, bool, Lock*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n1: 8000000 0x4861BD0: LockManager::acquire_lock(unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 8000000 0x4862409: LockManager::process_request() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+     n1: 8000000 0x486305C: LockManager::create_worker_thread(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+      n1: 8000000 0x48B0608: start_thread (pthread_create.c:477)
+       n0: 8000000 0x4BEB292: clone (clone.S:95)
+  n1: 8000000 0x488BA8D: getSharedAccess(Lock*, int) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n1: 8000000 0x488B598: addLock(Transaction*, int, bool, Lock*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 8000000 0x4861BD0: LockManager::acquire_lock(unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+     n1: 8000000 0x4862409: LockManager::process_request() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+      n1: 8000000 0x486305C: LockManager::create_worker_thread(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+       n1: 8000000 0x48B0608: start_thread (pthread_create.c:477)
+        n0: 8000000 0x4BEB292: clone (clone.S:95)
+ n1: 6400000 0x4871C30: void std::deque<Job, std::allocator<Job> >::_M_push_back_aux<Job const&>(Job const&) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+  n2: 6400000 0x4861931: LockManager::send_job(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n2: 6399488 0x48619B2: LockManager::create_job(Command, unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 6399488 0x12729F: experiment(LockManager&, int, int) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+     n0: 6399488 0x126005: main (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+    n0: 0 in 2 places, all below massif's threshold (1.00%)
+   n0: 512 in 1 place, below massif's threshold (1.00%)
+ n1: 5600000 0x488B9C1: newLock() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+  n1: 5600000 0x4861C84: LockManager::acquire_lock(unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n1: 5600000 0x4862409: LockManager::process_request() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 5600000 0x486305C: LockManager::create_worker_thread(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+     n1: 5600000 0x48B0608: start_thread (pthread_create.c:477)
+      n0: 5600000 0x4BEB292: clone (clone.S:95)
+ n2: 2400048 0x488BC8E: set(HashTable*, int, void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+  n1: 2400000 0x4861C96: LockManager::acquire_lock(unsigned int, unsigned int, bool) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+   n1: 2400000 0x4862409: LockManager::process_request() (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+    n1: 2400000 0x486305C: LockManager::create_worker_thread(void*) (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/src/liblckMgr.so)
+     n1: 2400000 0x48B0608: start_thread (pthread_create.c:477)
+      n0: 2400000 0x4BEB292: clone (clone.S:95)
+  n0: 48 in 1 place, below massif's threshold (1.00%)
+ n0: 1842245 in 29 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=32
+#-----------
+time=285109955869
+mem_heap_B=198685830
+mem_heap_extra_B=9304378
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=33
+#-----------
+time=285158720256
+mem_heap_B=197221317
+mem_heap_extra_B=8835827
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=34
+#-----------
+time=285207745286
+mem_heap_B=195753318
+mem_heap_extra_B=8366266
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=35
+#-----------
+time=285257663774
+mem_heap_B=194257589
+mem_heap_extra_B=7887787
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=36
+#-----------
+time=285309381595
+mem_heap_B=192705782
+mem_heap_extra_B=7391330
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=37
+#-----------
+time=285361782400
+mem_heap_B=191133910
+mem_heap_extra_B=6888418
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=38
+#-----------
+time=285414683502
+mem_heap_B=189546405
+mem_heap_extra_B=6380627
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=39
+#-----------
+time=285467800174
+mem_heap_B=187952885
+mem_heap_extra_B=5870811
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=40
+#-----------
+time=285522386906
+mem_heap_B=186314726
+mem_heap_extra_B=5346834
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=41
+#-----------
+time=285577943433
+mem_heap_B=184648086
+mem_heap_extra_B=4813610
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=42
+#-----------
+time=285636618734
+mem_heap_B=182887478
+mem_heap_extra_B=4250410
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=43
+#-----------
+time=285697449726
+mem_heap_B=181058245
+mem_heap_extra_B=3665219
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=44
+#-----------
+time=285762759549
+mem_heap_B=179093278
+mem_heap_extra_B=3036618
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=45
+#-----------
+time=285829391698
+mem_heap_B=177088630
+mem_heap_extra_B=2395274
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=46
+#-----------
+time=285897263295
+mem_heap_B=175042597
+mem_heap_extra_B=1740899
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=47
+#-----------
+time=285966147103
+mem_heap_B=172963989
+mem_heap_extra_B=1075827
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=48
+#-----------
+time=286038400275
+mem_heap_B=170775989
+mem_heap_extra_B=375939
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=49
+#-----------
+time=286076515864
+mem_heap_B=169614965
+mem_heap_extra_B=4443
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=50
+#-----------
+time=286076516223
+mem_heap_B=169615478
+mem_heap_extra_B=4490
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=51
+#-----------
+time=302116916947
+mem_heap_B=169615509
+mem_heap_extra_B=4515
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=52
+#-----------
+time=302116917127
+mem_heap_B=169615478
+mem_heap_extra_B=4490
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=53
+#-----------
+time=302116918043
+mem_heap_B=169615509
+mem_heap_extra_B=4515
+mem_stacks_B=0
+heap_tree=detailed
+n2: 169615509 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 167772160 0x125E44: _GLOBAL__sub_I_p (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+  n1: 167772160 0x14EB3C: __libc_csu_init (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+   n0: 167772160 0x4AF003F: (below main) (libc-start.c:264)
+ n0: 1843349 in 33 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=54
+#-----------
+time=302116919870
+mem_heap_B=169615509
+mem_heap_extra_B=4515
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=55
+#-----------
+time=302116920221
+mem_heap_B=169615478
+mem_heap_extra_B=4490
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=56
+#-----------
+time=302116920484
+mem_heap_B=169615438
+mem_heap_extra_B=4474
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=57
+#-----------
+time=302116920669
+mem_heap_B=169615398
+mem_heap_extra_B=4458
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=58
+#-----------
+time=302116920901
+mem_heap_B=169615294
+mem_heap_extra_B=4410
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=59
+#-----------
+time=302116921925
+mem_heap_B=169614709
+mem_heap_extra_B=4411
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=60
+#-----------
+time=302116922105
+mem_heap_B=169614678
+mem_heap_extra_B=4386
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=61
+#-----------
+time=302116922285
+mem_heap_B=169614677
+mem_heap_extra_B=4347
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=62
+#-----------
+time=302116922473
+mem_heap_B=169614644
+mem_heap_extra_B=4308
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=63
+#-----------
+time=303666109327
+mem_heap_B=169614692
+mem_heap_extra_B=4340
+mem_stacks_B=0
+heap_tree=detailed
+n2: 169614692 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 167772160 0x125E44: _GLOBAL__sub_I_p (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+  n1: 167772160 0x14EB3C: __libc_csu_init (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+   n0: 167772160 0x4AF003F: (below main) (libc-start.c:264)
+ n0: 1842532 in 37 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=64
+#-----------
+time=303666109535
+mem_heap_B=169449620
+mem_heap_extra_B=4300
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=65
+#-----------
+time=303666110435
+mem_heap_B=169449663
+mem_heap_extra_B=4313
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=66
+#-----------
+time=303666111131
+mem_heap_B=169449678
+mem_heap_extra_B=4338
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=67
+#-----------
+time=303666111908
+mem_heap_B=169454246
+mem_heap_extra_B=4362
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=68
+#-----------
+time=303666112820
+mem_heap_B=169454263
+mem_heap_extra_B=4385
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=69
+#-----------
+time=303666113701
+mem_heap_B=169450167
+mem_heap_extra_B=4377
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=70
+#-----------
+time=303666113904
+mem_heap_B=169449715
+mem_heap_extra_B=4381
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=71
+#-----------
+time=303666115634
+mem_heap_B=169450739
+mem_heap_extra_B=4389
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=72
+#-----------
+time=303666118321
+mem_heap_B=169450696
+mem_heap_extra_B=4376
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=73
+#-----------
+time=303666127459
+mem_heap_B=169451208
+mem_heap_extra_B=4408
+mem_stacks_B=0
+heap_tree=detailed
+n2: 169451208 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 167772160 0x125E44: _GLOBAL__sub_I_p (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+  n1: 167772160 0x14EB3C: __libc_csu_init (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+   n0: 167772160 0x4AF003F: (below main) (libc-start.c:264)
+ n0: 1679048 in 44 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=74
+#-----------
+time=303666129235
+mem_heap_B=169459400
+mem_heap_extra_B=4416
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=75
+#-----------
+time=303666145068
+mem_heap_B=169451208
+mem_heap_extra_B=4408
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=76
+#-----------
+time=303666147302
+mem_heap_B=169450736
+mem_heap_extra_B=4392
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=77
+#-----------
+time=303666149539
+mem_heap_B=169450712
+mem_heap_extra_B=4376
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=78
+#-----------
+time=303666149875
+mem_heap_B=169450320
+mem_heap_extra_B=4320
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=79
+#-----------
+time=303666150202
+mem_heap_B=169449768
+mem_heap_extra_B=4288
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=80
+#-----------
+time=303666150396
+mem_heap_B=169448576
+mem_heap_extra_B=4240
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=81
+#-----------
+time=303666161802
+mem_heap_B=169375700
+mem_heap_extra_B=4188
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=82
+#-----------
+time=303666163658
+mem_heap_B=169374676
+mem_heap_extra_B=4180
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=83
+#-----------
+time=303666165824
+mem_heap_B=169374624
+mem_heap_extra_B=4112
+mem_stacks_B=0
+heap_tree=detailed
+n2: 169374624 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 167772160 0x125E44: _GLOBAL__sub_I_p (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+  n1: 167772160 0x14EB3C: __libc_csu_init (in /home/hhelm/workspace/trustdble-lockmanager/insecure-lockmanager/build/evaluation/benchmark)
+   n0: 167772160 0x4AF003F: (below main) (libc-start.c:264)
+ n0: 1602464 in 45 places, all below massif's threshold (1.00%)
