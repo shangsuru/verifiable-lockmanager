@@ -31,3 +31,7 @@ The paging overhead folder contains an experiment from [ShieldStore](https://git
 # Switchless
 
 The switchless folder contains code from the [Intel SGX Linux SDK code samples](https://github.com/intel/linux-sgx/tree/master/SampleCode) on switchless calls, a performance optimization for ECALLS and OCALLS. It demonstrates that with that feature enabled, ECALLS and OCALLS run a lot faster.
+
+# Untrusted
+
+This is a modification of the out-of-enclave lockmanager, without integrity verification. I.e., it accesses the locktable from untrusted memory and is used in the evaluation to show the difference in performance between accessing the locktable from within the enclave, like in the Demand Paging Lockmanager, and untrusted memory. This way, the paging overhead becomes clearly visible.
