@@ -1,4 +1,4 @@
-# TrustDBle Lockmanager
+# Verifiable Lockmanager
 
 This project aims to build a Byzantine-fault tolerant pessimistic lock manager using 2PL. For security, the lock manager resides inside a Trusted Execution Environment.
 The subfolders of this project showcase different kinds of implementations of this lock manager for evaluation purposes:
@@ -6,6 +6,10 @@ The subfolders of this project showcase different kinds of implementations of th
 - Insecure Lockmanager: insecure implementation without Intel SGX
 - Demand Paging Lockmanager: implementation with Intel SGX, where paging sets in when the memory limit of the enclave is reached
 - Out-of-enclave Lockmanager: dynamically growing locktable is stored outside of the enclave, in unprotected memory, to avoid paging
+
+Further resources:
+
+- [El-Hindi, Muhammad, et al. "TrustDBle: Towards trustable shared databases." Third International Symposium on Foundations and Applications of Blockchain. 2020](https://scfab.github.io/2020/FAB2020_p7.pdf)
 
 ---
 
@@ -41,7 +45,7 @@ All (sub)folders containing C++ code follow the project structure described in t
 
 1. Clone this repo with 
 ```
-git clone git@bitbucket.org:trustdble/trustdble-lockmanager.git
+git clone https://github.com/shangsuru/verifiable-lockmanager.git
 ```  
 2. Install the githooks via
 ```
